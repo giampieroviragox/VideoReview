@@ -1,4 +1,3 @@
-import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 
 export default function Dashboard() {
@@ -11,7 +10,6 @@ export default function Dashboard() {
                     </Link>
                     <div className="flex-row gap-4 align-center">
                         <span className="text-secondary">Dashboard</span>
-                        <UserButton afterSignOutUrl="/" />
                     </div>
                 </div>
             </nav>
