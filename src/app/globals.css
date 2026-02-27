@@ -1879,6 +1879,191 @@ footer {
   font-size: 15px;
 }
 
+/* DEMO TUTORIAL */
+.demo-tutorial-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: all;
+}
+
+.demo-t-spotlight {
+  position: absolute;
+  border-radius: 14px;
+  box-shadow:
+    0 0 0 9999px rgba(6, 6, 12, 0.68),
+    0 0 0 2px rgba(255, 92, 53, 0.7),
+    0 0 24px rgba(255, 92, 53, 0.32);
+  pointer-events: none;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.demo-t-arrow {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.demo-t-card {
+  position: absolute;
+  pointer-events: all;
+  opacity: 0;
+  transform: translateY(8px) scale(0.97);
+  transition: opacity .35s cubic-bezier(0.16, 1, 0.3, 1), transform .35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.demo-t-card.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  animation: demo-tip-float 3s ease-in-out 0.5s infinite;
+}
+
+.demo-t-card-inner {
+  background: #14151e;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 14px 16px 12px;
+  width: 230px;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 0 0 1px rgba(255, 92, 53, 0.1), 0 12px 40px rgba(0, 0, 0, 0.7);
+  position: relative;
+}
+
+.demo-t-card-inner::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 16px;
+  right: 16px;
+  height: 1px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(255, 92, 53, 0.5), transparent);
+}
+
+.demo-t-card-inner::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: #14151e;
+  transform: rotate(45deg);
+}
+
+.demo-t-card.caret-top .demo-t-card-inner::after {
+  top: -6px;
+  left: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.demo-t-card.caret-bottom .demo-t-card-inner::after {
+  bottom: -6px;
+  left: 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.demo-t-card.caret-left .demo-t-card-inner::after {
+  left: -6px;
+  top: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.demo-t-step-badge {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #ff5c35;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.demo-t-step-badge::before {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 1px;
+  background: #ff5c35;
+}
+
+.demo-t-progress {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+
+.demo-t-prog-dot {
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.15);
+  width: 20px;
+}
+
+.demo-t-prog-dot.active {
+  background: #ff5c35;
+  width: 28px;
+}
+
+.demo-t-prog-dot.done {
+  background: rgba(255, 92, 53, 0.4);
+}
+
+.demo-t-card-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f0f0f5;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  margin-bottom: 14px;
+}
+
+.demo-t-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.demo-t-skip {
+  font-size: 12px;
+  color: rgba(240, 240, 245, 0.3);
+  cursor: pointer;
+  padding: 4px 2px;
+  background: none;
+  border: none;
+}
+
+.demo-t-next {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: #ff5c35;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+}
+
+.demo-t-next-icon {
+  font-size: 11px;
+}
+
+@keyframes demo-tip-float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-4px) scale(1); }
+}
+
 @media (max-width: 1200px) {
   .demo-modal {
     width: min(100%, 640px);
@@ -1940,5 +2125,20 @@ footer {
   .demo-fine-print {
     font-size: 9px;
     margin-bottom: 12px;
+  }
+
+  .demo-t-card-inner {
+    width: 204px;
+    padding: 12px;
+  }
+
+  .demo-t-card-text {
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
+
+  .demo-t-next {
+    padding: 7px 12px;
+    font-size: 12px;
   }
 }
