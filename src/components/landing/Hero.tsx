@@ -13,16 +13,16 @@ export default function Hero() {
 
             <div className="wrap" style={{ display: 'flex', alignItems: 'center', gap: 'var(--s8)', position: 'relative' }}>
                 <div className="hero-content">
-                    <div className="tag hero-tag reveal visible">
+                    <div className="tag hero-tag reveal visible" style={{ transitionDelay: '0.1s' }}>
                         <span className="tag-dot animate-pulse"></span>
                         Video Review Platform
                     </div>
-                    <h1 className="display hero-title reveal visible">
+                    <h1 className="display hero-title reveal visible" style={{ transitionDelay: '0.2s' }}>
                         Raccogli recensioni<br />
                         <em className="animate-shimmer">video autentiche</em><br />
                         che vendono.
                     </h1>
-                    <p className="hero-sub reveal visible">
+                    <p className="hero-sub reveal visible" style={{ transitionDelay: '0.3s' }}>
                         Invita i tuoi clienti, offri un <strong>reward</strong> su misura
                         e trasforma la loro voce in social proof irresistibile.
                         Niente script, niente fiction &mdash; solo verità che converte.
