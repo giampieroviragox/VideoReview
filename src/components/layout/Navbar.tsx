@@ -1,39 +1,54 @@
 "use client";
 
 import Link from "next/link";
-import { SignInButton, SignUpButton, UserButton, SignedIn, SignedOut } from "@clerk/nextjs";
+import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs";
+import { useEffect, useState } from "react";
 
 export default function Navbar() {
+    const { isSignedIn } = useUser();
+    const [scrolled, setScrolled] = useState(false);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            setScrolled(window.scrollY > 40);
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
     return (
-        <nav className="navbar">
-            <div className="container nav-container">
-                <Link href="/" className="logo">
-                    Rewid<span className="text-primary-accent">.</span>
-                </Link>
+        <nav className={scrolled ? 'scrolled' : ''}>
+            <div className="wrap">
+                <div className="nav-inner">
+                    <Link href="/" className="logo">
+                        <div className="logo-mark">▶</div>
+                        VR
+                    </Link>
 
-                <div className="nav-links">
-                    <Link href="#how-it-works" className="nav-link">Come funziona</Link>
-                    <Link href="#pricing" className="nav-link">Prezzi</Link>
-                    <Link href="#faq" className="nav-link">FAQ</Link>
-                </div>
+                    <ul className="nav-links" style={{ margin: 0, padding: 0 }}>
+                        <li><Link href="#come-funziona">Come funziona</Link></li>
+                        <li><Link href="#features">Features</Link></li>
+                        <li><Link href="#pricing">Pricing</Link></li>
+                        <li><Link href="#casi-uso">Use Cases</Link></li>
+                    </ul>
 
-                <div className="auth-actions">
-                    <SignedOut>
-                        <div className="flex-row gap-4">
-                            <SignInButton mode="modal">
-                                <button className="nav-link bg-none border-none pointer">Accedi</button>
-                            </SignInButton>
-                            <SignUpButton mode="modal">
-                                <button className="btn btn-primary">Registrati</button>
-                            </SignUpButton>
-                        </div>
-                    </SignedOut>
-                    <SignedIn>
-                        <div className="flex-row gap-4 align-center">
-                            <Link href="/dashboard" className="nav-link">Dashboard</Link>
-                            <UserButton afterSignOutUrl="/" />
-                        </div>
-                    </SignedIn>
+                    <div className="nav-cta">
+                        {!isSignedIn ? (
+                            <>
+                                <SignInButton mode="modal">
+                                    <button className="btn btn-ghost" style={{ padding: '10px 20px', fontSize: '11px' }}>Login</button>
+                                </SignInButton>
+                                <SignUpButton mode="modal">
+                                    <button className="btn btn-primary" style={{ padding: '10px 20px', fontSize: '11px' }}>Inizia gratis &rarr;</button>
+                                </SignUpButton>
+                            </>
+                        ) : (
+                            <>
+                                <Link href="/dashboard" className="btn btn-ghost" style={{ padding: '10px 20px', fontSize: '11px' }}>Dashboard</Link>
+                                <UserButton afterSignOutUrl="/" />
+                            </>
+                        )}
+                    </div>
                 </div>
             </div>
         </nav>

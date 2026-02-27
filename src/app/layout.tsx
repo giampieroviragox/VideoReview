@@ -23,7 +23,7 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="it">
-        <body className={inter.variable}>{children}</body>
+        <body>{children}</body>
       </html>
     </ClerkProvider>
   );
