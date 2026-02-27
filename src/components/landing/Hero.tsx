@@ -1,9 +1,13 @@
 "use client";
 
-import Link from "next/link";
+import { useState } from "react";
+import DemoModal from "@/components/landing/DemoModal";
 
 export default function Hero() {
+    const [demoOpen, setDemoOpen] = useState(false);
+
     return (
+        <>
         <section className="hero">
             <div className="hero-bg">
                 <div className="hero-grid"></div>
@@ -29,7 +33,9 @@ export default function Hero() {
                     </p>
                     <div className="hero-actions reveal visible">
                         <a href="#cta" className="btn btn-primary btn-lg">Join the Waitlist <span style={{ opacity: 0.7 }}>&rarr;</span></a>
-                        <a href="#how-it-works" className="btn btn-ghost btn-lg">View demo</a>
+                        <button type="button" className="btn btn-ghost btn-lg" onClick={() => setDemoOpen(true)}>
+                            View demo
+                        </button>
                     </div>
                     <div className="hero-note reveal visible">
                         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style={{ marginRight: '4px' }}>
@@ -80,5 +86,7 @@ export default function Hero() {
                 </div>
             </div>
         </section>
+        {demoOpen && <DemoModal onClose={() => setDemoOpen(false)} />}
+        </>
     );
 }
