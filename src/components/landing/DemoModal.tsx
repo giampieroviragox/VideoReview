@@ -30,7 +30,10 @@ export default function DemoModal({ onClose }: DemoModalProps) {
   const questionRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const mirroredStreamRef = useRef<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mirrorCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const mirrorFrameRef = useRef<number | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number>(0);
@@ -50,6 +53,20 @@ export default function DemoModal({ onClose }: DemoModalProps) {
     }
   };
 
+  const stopMirroredStream = () => {
+    if (mirrorFrameRef.current) {
+      cancelAnimationFrame(mirrorFrameRef.current);
+      mirrorFrameRef.current = null;
+    }
+
+    if (mirroredStreamRef.current) {
+      mirroredStreamRef.current.getTracks().forEach((track) => track.stop());
+      mirroredStreamRef.current = null;
+    }
+
+    mirrorCanvasRef.current = null;
+  };
+
   useEffect(() => {
     scrollYRef.current = window.scrollY;
     document.documentElement.classList.add("no-scroll");
@@ -62,6 +79,7 @@ export default function DemoModal({ onClose }: DemoModalProps) {
 
     return () => {
       stopTimer();
+      stopMirroredStream();
       stopStream();
       document.documentElement.classList.remove("no-scroll");
       document.body.classList.remove("no-scroll");
@@ -198,17 +216,20 @@ export default function DemoModal({ onClose }: DemoModalProps) {
 
       streamRef.current = stream;
       if (!videoRef.current) return;
+      videoRef.current.pause();
+      videoRef.current.controls = false;
+      videoRef.current.src = "";
       videoRef.current.srcObject = stream;
       videoRef.current.muted = true;
       await videoRef.current.play();
       setRecorderState("previewing");
     } catch {
-      setError("Impossibile accedere alla fotocamera. Verifica i permessi del browser.");
+      setError("Unable to access the camera. Please check your browser permissions.");
     }
   };
 
   const startRecording = () => {
-    if (!streamRef.current) return;
+    if (!streamRef.current || !videoRef.current) return;
 
     chunksRef.current = [];
     setDurationSeconds(0);
@@ -221,7 +242,47 @@ export default function DemoModal({ onClose }: DemoModalProps) {
         ? "video/webm;codecs=vp8,opus"
         : "video/webm";
 
-    const recorder = new MediaRecorder(streamRef.current, { mimeType });
+    stopMirroredStream();
+
+    const sourceTrack = streamRef.current.getVideoTracks()[0];
+    const settings = sourceTrack?.getSettings();
+    const width = settings.width ?? videoRef.current.videoWidth ?? 1280;
+    const height = settings.height ?? videoRef.current.videoHeight ?? 720;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      setError("Unable to start recording. Canvas is not available in this browser.");
+      setRecorderState("previewing");
+      return;
+    }
+
+    const drawMirroredFrame = () => {
+      if (!videoRef.current) return;
+      ctx.save();
+      ctx.clearRect(0, 0, width, height);
+      ctx.translate(width, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(videoRef.current, 0, 0, width, height);
+      ctx.restore();
+      mirrorFrameRef.current = requestAnimationFrame(drawMirroredFrame);
+    };
+
+    drawMirroredFrame();
+
+    const canvasStream = canvas.captureStream(30);
+    const mergedStream = new MediaStream(canvasStream.getVideoTracks());
+    streamRef.current.getAudioTracks().forEach((track) => {
+      mergedStream.addTrack(track.clone());
+    });
+
+    mirrorCanvasRef.current = canvas;
+    mirroredStreamRef.current = mergedStream;
+
+    const recorder = new MediaRecorder(mergedStream, { mimeType });
     mediaRecorderRef.current = recorder;
 
     recorder.ondataavailable = (event) => {
@@ -232,6 +293,7 @@ export default function DemoModal({ onClose }: DemoModalProps) {
 
     recorder.onstop = () => {
       stopTimer();
+      stopMirroredStream();
       stopStream();
 
       const blob = new Blob(chunksRef.current, { type: "video/webm" });
@@ -273,6 +335,13 @@ export default function DemoModal({ onClose }: DemoModalProps) {
       URL.revokeObjectURL(recordedVideoUrl);
     }
     setRecordedVideoUrl(null);
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.controls = false;
+      videoRef.current.srcObject = null;
+      videoRef.current.src = "";
+      videoRef.current.muted = true;
+    }
     setRecorderState("idle");
     await startCamera();
   };
@@ -293,23 +362,23 @@ export default function DemoModal({ onClose }: DemoModalProps) {
 
   const controlsHint =
     recorderState === "recording"
-      ? "Registrazione in corso..."
+      ? "Recording in progress..."
       : recorderState === "recorded"
-        ? "Video registrato"
-        : "Premi ● per iniziare";
+        ? "Video recorded"
+        : "Press ● to start";
 
   const tutorialCopy =
     tutorialStep === 1
       ? {
-          badge: "Nota per te · 1 di 2",
-          text: "Il reward al cliente e` completamente facoltativo — puoi invitarlo senza offrire nulla.",
-          next: "Avanti",
+          badge: "Note for you · 1 of 2",
+          text: "The customer reward is completely optional — you can invite them without offering anything.",
+          next: "Next",
           icon: "→",
         }
       : {
-          badge: "Nota per te · 2 di 2",
-          text: "Fai una domanda al cliente o lascia a lui decidere di cosa parlare.",
-          next: "Inizia la demo",
+          badge: "Note for you · 2 of 2",
+          text: "Ask the customer a specific question, or let them decide what they want to talk about.",
+          next: "Start the demo",
           icon: "✓",
         };
   const tutorialVisible = tutorialStep > 0 && !isSubmitted;
@@ -323,9 +392,9 @@ export default function DemoModal({ onClose }: DemoModalProps) {
 
         {isSubmitted && (
           <div className="demo-modal-success">
-            <h3>Grazie per la risposta</h3>
-            <p>Esperienza completata: questo e` il flusso che vedra` il tuo cliente.</p>
-            <button className="btn btn-ghost" onClick={onClose}>Chiudi demo</button>
+            <h3>Thanks for your response</h3>
+            <p>Demo completed: this is the exact flow your customer will experience.</p>
+            <button className="btn btn-ghost" onClick={onClose}>Close demo</button>
           </div>
         )}
 
@@ -333,7 +402,7 @@ export default function DemoModal({ onClose }: DemoModalProps) {
           <div className="demo-modal-brand-logo">AC</div>
           <div>
             <div className="demo-modal-brand-name">ACME Corp</div>
-            <div className="demo-modal-brand-sub">ti ha invitato a parlare di loro</div>
+            <div className="demo-modal-brand-sub">invited you to share your experience</div>
           </div>
         </div>
 
@@ -346,16 +415,16 @@ export default function DemoModal({ onClose }: DemoModalProps) {
         <div className="demo-reward-hint" ref={rewardRef}>
           <div className="demo-reward-icon">🎁</div>
           <div>
-            <div className="demo-reward-title">Rispondi e ricevi 30 giorni Premium gratis</div>
-            <div className="demo-reward-sub">Il reward viene inviato subito dopo la pubblicazione del video</div>
+            <div className="demo-reward-title">Reply and get 30 days of Premium for free</div>
+            <div className="demo-reward-sub">The reward is sent right after the video is published</div>
           </div>
         </div>
 
         <div className="demo-modal-question-box" ref={questionRef}>
-          <div className="demo-modal-question-label">Domanda 1 di 1</div>
+          <div className="demo-modal-question-label">Question 1 of 1</div>
           <div className="demo-modal-question-text">
-            Qual e` l&apos;<span className="demo-accent-1">elemento</span> che piu` hai{" "}
-            <span className="demo-accent-2">apprezzato</span> del prodotto?
+            What is the <span className="demo-accent-1">one thing</span> you{" "}
+            <span className="demo-accent-2">liked most</span> about the product?
           </div>
         </div>
 
@@ -363,7 +432,7 @@ export default function DemoModal({ onClose }: DemoModalProps) {
           <div className="demo-recorder-video-wrap">
             <video
               ref={videoRef}
-              className="demo-recorder-video"
+              className={`demo-recorder-video ${recorderState !== "recorded" ? "is-mirrored" : ""}`}
               playsInline
               autoPlay={recorderState !== "recorded"}
             />
@@ -372,11 +441,11 @@ export default function DemoModal({ onClose }: DemoModalProps) {
               <div className="demo-recorder-empty">
                 <div className="demo-recorder-avatar">🎙</div>
                 <p>
-                  Clicca per attivare la fotocamera
+                  Click to enable your camera
                   <br />
-                  e iniziare a registrare
+                  and start recording
                 </p>
-                <button className="demo-camera-btn" onClick={startCamera}>Attiva fotocamera</button>
+                <button className="demo-camera-btn" onClick={startCamera}>Enable camera</button>
               </div>
             )}
 
@@ -390,8 +459,6 @@ export default function DemoModal({ onClose }: DemoModalProps) {
 
           <div className="demo-controls-bar">
             <div className="demo-controls-left">
-              <button className="demo-ctrl-btn" type="button" aria-label="Microfono">🎙</button>
-              <button className="demo-ctrl-btn" type="button" aria-label="Fotocamera">📷</button>
               <span className="demo-controls-hint">{controlsHint}</span>
             </div>
             {(recorderState === "previewing" || recorderState === "recording") && (
@@ -400,7 +467,7 @@ export default function DemoModal({ onClose }: DemoModalProps) {
               </button>
             )}
             {recorderState === "recorded" && (
-              <button className="demo-retake-btn" onClick={handleRetake}>Riregistra</button>
+              <button className="demo-retake-btn" onClick={handleRetake}>Retake</button>
             )}
           </div>
           <div className="demo-recorder-actions">
@@ -413,9 +480,9 @@ export default function DemoModal({ onClose }: DemoModalProps) {
           onClick={handleSubmit}
           disabled={recorderState !== "recorded" || isSubmitting}
         >
-          {isSubmitting ? "Invio in corso..." : "Rispondi e ricevi il tuo reward  →"}
+          {isSubmitting ? "Submitting..." : "Reply and get your reward  →"}
         </button>
-        <p className="demo-fine-print">Powered by VR · Il tuo video sara` revisionato prima della pubblicazione</p>
+        <p className="demo-fine-print">Powered by VR · Your video will be reviewed before publication</p>
 
         {tutorialVisible && tutorialGeometry && (
           <div className="demo-tutorial-layer">
@@ -458,7 +525,7 @@ export default function DemoModal({ onClose }: DemoModalProps) {
                 </div>
                 <div className="demo-t-card-text">{tutorialCopy.text}</div>
                 <div className="demo-t-actions">
-                  <button className="demo-t-skip" onClick={() => setTutorialStep(0)}>Salta</button>
+                  <button className="demo-t-skip" onClick={() => setTutorialStep(0)}>Skip</button>
                   <button className="demo-t-next" onClick={() => setTutorialStep(tutorialStep === 1 ? 2 : 0)}>
                     <span>{tutorialCopy.next}</span>
                     <span className="demo-t-next-icon">{tutorialCopy.icon}</span>

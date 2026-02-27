@@ -22,12 +22,11 @@ export default function Hero() {
                         Video Review Platform
                     </div>
                     <h1 className="display hero-title reveal visible" style={{ transitionDelay: '0.2s' }}>
-                        Collect<br />
-                        <em className="animate-shimmer">video reviews</em><br />
-                        from your clients and reward them.
+                        Collect <em className="animate-shimmer">video reviews</em><br />
+                        and reward your clients
                     </h1>
                     <p className="hero-sub reveal visible" style={{ transitionDelay: '0.3s' }}>
-                        Invite your customers, offer a tailored <strong>reward</strong>
+                        Invite your customers, offer a tailored <strong>reward</strong>{" "}
                         and transform their voice into irresistible social proof.
                         No scripts, no fiction &mdash; just truth that converts.
                     </p>
@@ -42,7 +41,7 @@ export default function Hero() {
                             <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" />
                             <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                         </svg>
-                        No credit card required &nbsp;&middot;&nbsp; 5-minute setup &nbsp;&middot;&nbsp; 14-day trial
+                        No credit card required &nbsp;&middot;&nbsp; Unlimited integrations via Webhooks
                     </div>
                 </div>
 

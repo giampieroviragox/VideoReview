@@ -7,7 +7,6 @@ import HowItWorks from "@/components/landing/HowItWorks";
 import UseCases from "@/components/landing/UseCases";
 import RewardEngine from "@/components/landing/RewardEngine";
 import Features from "@/components/landing/Features";
-import Testimonials from "@/components/landing/Testimonials";
 import Pricing from "@/components/landing/Pricing";
 import FAQ from "@/components/landing/FAQ";
 import CTA from "@/components/landing/CTA";
@@ -25,7 +24,6 @@ export default function Home() {
       <UseCases />
       <RewardEngine />
       <Features />
-      <Testimonials />
       <Pricing />
       <FAQ />
       <CTA />

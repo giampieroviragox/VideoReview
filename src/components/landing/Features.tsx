@@ -3,7 +3,7 @@
 export default function Features() {
     const featuresList = [
         { icon: "🎨", title: "Custom Branding", desc: "Customize every pixel of the widget and the collection page. Colors, fonts, and logo for a consistent brand experience." },
-        { icon: "📊", title: "Conversion Tracking", desc: "Measure how many sales are generated directly from videos. Advanced analytics for every single review." },
+        { icon: "⚙️", title: "Automation Workflows", desc: "Build automated flows for invites, follow-ups, and reminders. Trigger emails and actions through flexible workflow logic." },
         { icon: "🛡️", title: "Smart Moderation", desc: "Approve videos before they go live. Automatic filters for audio/video quality and sensitive content." },
         { icon: "📱", title: "Mobile Optimized", desc: "Native browser recording UI. Smooth, fast, and frictionless on any smartphone." },
         { icon: "🔄", title: "API Automations", desc: "Connect VR to your CRM or billing system. Send rewards and unlock features automatically via webhook." },
@@ -16,7 +16,7 @@ export default function Features() {
                 <div className="section-header reveal visible">
                     <div className="tag section-tag"><span className="tag-dot animate-pulse"></span>Features</div>
                     <h2 className="heading section-title">Everything you need to scale your social proof.</h2>
-                    <p className="section-sub">From automatic invitations to ROI analysis, VR is the all-in-one platform for video marketing.</p>
+                    <p className="section-sub">From automatic invitations to reusable workflows, VR is the all-in-one platform for video marketing.</p>
                 </div>
                 <div className="features-grid">
                     {featuresList.map((f, i) => (

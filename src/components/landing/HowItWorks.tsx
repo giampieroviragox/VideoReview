@@ -22,12 +22,11 @@ export default function HowItWorks() {
                     </div>
                     <div className="step-card card card-glow reveal visible reveal-delay-2">
                         <div className="step-num">03</div>
-                        <h3 className="step-title">Publish, measure, convert</h3>
-                        <p className="step-desc">Approve with one click, embed anywhere with 1 line of code. Integrated analytics show the real impact on conversions for every video review.</p>
+                        <h3 className="step-title">Publish, reuse, distribute</h3>
+                        <p className="step-desc">Approve with one click, then share every review across your social channels, use it in your ads, or embed it directly into your site and landing pages.</p>
                     </div>
                 </div>
             </div>
         </section>
     );
 }
-

@@ -5,15 +5,10 @@ export default function SocialProof() {
         <section className="social-proof-section" style={{ padding: 'var(--s6) 0', borderBottom: '1px solid var(--ink-3)' }}>
             <div className="wrap">
                 <div style={{ textAlign: 'center', marginBottom: 'var(--s5)' }}>
-                    <p className="label" style={{ color: 'var(--fog)', opacity: 0.6 }}>Social proof for over 500+ ambitious teams</p>
+                    <p className="label" style={{ color: 'var(--fog)', opacity: 0.6 }}>Private beta for ambitious teams</p>
                 </div>
                 <div className="logos-grid">
-                    <div className="logo-item">TechFlow</div>
-                    <div className="logo-item">ShopUp</div>
-                    <div className="logo-item">EduBase</div>
-                    <div className="logo-item">GrowthMind</div>
-                    <div className="logo-item">CloudScale</div>
-                    <div className="logo-item">DevOps.io</div>
+                    <div className="logo-placeholder">Do you want your logo here? Try me!</div>
                 </div>
             </div>
         </section>

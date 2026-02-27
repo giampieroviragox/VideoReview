@@ -15,40 +15,43 @@ export default function UseCases() {
                         <div className="use-case-kicker">SaaS &middot; freemium</div>
                         <h3 className="heading use-case-title">Free &rarr; Premium<br />with review reward</h3>
                         <p className="use-case-desc">Invite free users to record a video review. In exchange, automatically unlock 30 days of the Pro plan. Win-win: you get social proof, they get a free upgrade.</p>
-                        <span className="use-case-pill">🎁 Reward: 30d Premium</span>
-                        &nbsp;
-                        <span className="use-case-pill">📈 +23% trial conversion</span>
+                        <div className="use-case-pills">
+                            <span className="use-case-pill">🎁 Reward: 30d Premium</span>
+                            <span className="use-case-pill">📈 Trial conversion uplift</span>
+                        </div>
                     </div>
                     <div className="use-case-card card card-glow reveal visible reveal-delay-1">
                         <span className="use-case-icon">🛒</span>
                         <div className="use-case-kicker">E-commerce &middot; post-purchase</div>
                         <h3 className="heading use-case-title">Automatic post-purchase<br />video UGC</h3>
                         <p className="use-case-desc">Automatic email 7 days after the order. The customer shows the product in use, receives a 15% coupon. The video goes directly to the product page and crushes purchase doubts.</p>
-                        <span className="use-case-pill">💳 Reward: 15% coupon</span>
-                        &nbsp;
-                        <span className="use-case-pill">🎬 Authentic UGC</span>
+                        <div className="use-case-pills">
+                            <span className="use-case-pill">💳 Reward: 15% coupon</span>
+                            <span className="use-case-pill">🎬 Authentic UGC</span>
+                        </div>
                     </div>
                     <div className="use-case-card card card-glow reveal visible reveal-delay-2">
                         <span className="use-case-icon">🏢</span>
                         <div className="use-case-kicker">Agency &middot; B2B</div>
                         <h3 className="heading use-case-title">Video case studies<br />for agency clients</h3>
                         <p className="use-case-desc">Turn final client feedback into professional video case studies. Structure prompts, approve content, use the video in pitches and proposals. Close more deals with real proof.</p>
-                        <span className="use-case-pill">🏆 No reward &mdash; relationship</span>
-                        &nbsp;
-                        <span className="use-case-pill">📋 Guided prompts</span>
+                        <div className="use-case-pills">
+                            <span className="use-case-pill">🏆 No reward &mdash; relationship</span>
+                            <span className="use-case-pill">📋 Guided prompts</span>
+                        </div>
                     </div>
                     <div className="use-case-card card card-glow reveal visible reveal-delay-3">
                         <span className="use-case-icon">🎓</span>
                         <div className="use-case-kicker">EdTech &middot; community</div>
                         <h3 className="heading use-case-title">Testimonials from<br />top students</h3>
                         <p className="use-case-desc">Identify users with highest engagement, invite them to tell their transformation story. Reward: access to advanced course or mentoring session. Powerful content for enrollment landing page.</p>
-                        <span className="use-case-pill">🎓 Reward: advanced course</span>
-                        &nbsp;
-                        <span className="use-case-pill">✨ Emotional social proof</span>
+                        <div className="use-case-pills">
+                            <span className="use-case-pill">🎓 Reward: advanced course</span>
+                            <span className="use-case-pill">✨ Emotional social proof</span>
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
     );
 }
-

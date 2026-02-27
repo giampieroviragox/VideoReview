@@ -28,9 +28,9 @@ export default function CTA() {
             setStatus("success");
             setMessage(data.message);
             setEmail("");
-        } catch (err: any) {
+        } catch (err) {
             setStatus("error");
-            setMessage(err.message);
+            setMessage(err instanceof Error ? err.message : "Something went wrong.");
         }
     };
 
@@ -41,7 +41,7 @@ export default function CTA() {
                     <div className="tag" style={{ display: 'inline-flex', marginBottom: 'var(--s5)' }}>
                         <span className="tag-dot"></span>Waitlist Open
                     </div>
-                    <h2 className="display cta-title">Your next sale<br />is closed by a video.</h2>
+                    <h2 className="display cta-title">Your next client is waiting for a reason to trust you.</h2>
                     <p className="cta-sub">
                         We are in private beta. Join to get <br />
                         <strong>priority access</strong> and 3 months of Pro for free.
@@ -57,7 +57,7 @@ export default function CTA() {
                             <input
                                 type="email"
                                 className="cta-input"
-                                placeholder="your-email@example.com"
+                                placeholder="hello@email.com"
                                 required
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
