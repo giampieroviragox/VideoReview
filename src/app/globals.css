@@ -96,6 +96,12 @@ body {
   overflow-x: hidden;
 }
 
+body.no-scroll,
+html.no-scroll {
+  overflow: hidden !important;
+  height: 100%;
+}
+
 /* UTILITIES */
 .wrap {
   max-width: var(--max-w);
@@ -457,6 +463,9 @@ nav.scrolled {
   display: flex;
   flex-direction: column;
   padding: 100px var(--s5) var(--s8);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   transform: translateY(-100%);
   transition: transform 0.5s var(--ease-out);
   opacity: 0;

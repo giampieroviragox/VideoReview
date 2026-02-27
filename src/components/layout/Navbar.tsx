@@ -46,17 +46,31 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
-    if (menuOpen) {
-      document.body.classList.add("no-scroll");
-      document.documentElement.classList.add("no-scroll");
-    } else {
+    if (!menuOpen) {
       document.body.classList.remove("no-scroll");
       document.documentElement.classList.remove("no-scroll");
+      return;
     }
+
+    const scrollY = window.scrollY;
+
+    document.body.classList.add("no-scroll");
+    document.documentElement.classList.add("no-scroll");
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
 
     return () => {
       document.body.classList.remove("no-scroll");
       document.documentElement.classList.remove("no-scroll");
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.right = "";
+      document.body.style.width = "";
+      window.scrollTo(0, scrollY);
     };
   }, [menuOpen]);
 
