@@ -30,16 +30,16 @@ export default function SubmissionForm({
 
     const validateInfo = useCallback(() => {
         if (!name.trim()) {
-            setFormError("Inserisci il tuo nome");
+            setFormError("Please enter your name");
             return false;
         }
         if (!email.trim()) {
-            setFormError("Inserisci la tua email");
+            setFormError("Please enter your email");
             return false;
         }
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
-            setFormError("Inserisci un indirizzo email valido");
+            setFormError("Please enter a valid email address");
             return false;
         }
         setFormError(null);
@@ -102,16 +102,16 @@ export default function SubmissionForm({
                     if (xhr.status >= 200 && xhr.status < 300) {
                         resolve();
                     } else {
-                        reject(new Error(`Upload fallito (status ${xhr.status})`));
+                        reject(new Error(`Upload failed (status ${xhr.status})`));
                     }
                 });
 
                 xhr.addEventListener("error", () => {
-                    reject(new Error("Errore di rete durante l'upload"));
+                    reject(new Error("Network error during upload"));
                 });
 
                 xhr.addEventListener("abort", () => {
-                    reject(new Error("Upload annullato"));
+                    reject(new Error("Upload cancelled"));
                 });
 
                 xhr.open("PUT", uploadUrl, true);
@@ -136,14 +136,14 @@ export default function SubmissionForm({
 
             if (!submissionRes.ok) {
                 const data = await submissionRes.json();
-                throw new Error(data.error || "Errore nel salvataggio della recensione");
+                throw new Error(data.error || "Error saving the review");
             }
 
             setStep("success");
         } catch (err) {
             console.error("Submission error:", err);
             setUploadError(
-                err instanceof Error ? err.message : "Errore durante l'invio"
+                err instanceof Error ? err.message : "Error during submission"
             );
             setStep("record");
         }
@@ -179,11 +179,11 @@ export default function SubmissionForm({
             {step === "info" && (
                 <form className="info-form" onSubmit={handleInfoSubmit}>
                     <div className="form-group">
-                        <label htmlFor="reviewer-name">Il tuo nome</label>
+                        <label htmlFor="reviewer-name">Your name</label>
                         <input
                             id="reviewer-name"
                             type="text"
-                            placeholder="Mario Rossi"
+                            placeholder="John Doe"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             autoComplete="name"
@@ -191,11 +191,11 @@ export default function SubmissionForm({
                         />
                     </div>
                     <div className="form-group">
-                        <label htmlFor="reviewer-email">La tua email</label>
+                        <label htmlFor="reviewer-email">Your email</label>
                         <input
                             id="reviewer-email"
                             type="email"
-                            placeholder="mario@example.com"
+                            placeholder="john@example.com"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             autoComplete="email"
@@ -204,7 +204,7 @@ export default function SubmissionForm({
                     </div>
                     {formError && <div className="form-error">{formError}</div>}
                     <button type="submit" className="btn btn-primary btn-large">
-                        Continua →
+                        Continue →
                     </button>
                 </form>
             )}
@@ -216,7 +216,7 @@ export default function SubmissionForm({
                         <div className="form-error upload-retry-error">
                             {uploadError}
                             <br />
-                            <small>Riprova a inviare il video.</small>
+                            <small>Try submitting the video again.</small>
                         </div>
                     )}
                     <VideoRecorder
@@ -228,7 +228,7 @@ export default function SubmissionForm({
                             className="btn btn-primary btn-large submit-btn"
                             onClick={handleSubmit}
                         >
-                            ✅ Invia la tua recensione
+                            ✅ Submit your review
                         </button>
                     )}
                 </div>
@@ -240,11 +240,11 @@ export default function SubmissionForm({
                     <div className="upload-animation">
                         <div className="spinner" />
                     </div>
-                    <h2>Invio in corso...</h2>
+                    <h2>Submitting...</h2>
                     <p className="upload-status">
                         {uploadProgress < 100
-                            ? "Caricamento del video..."
-                            : "Salvataggio della recensione..."}
+                            ? "Uploading video..."
+                            : "Saving review..."}
                     </p>
                     <div className="progress-bar-container large">
                         <div
@@ -260,10 +260,10 @@ export default function SubmissionForm({
             {step === "success" && (
                 <div className="success-step">
                     <div className="success-icon">🎉</div>
-                    <h2>Grazie, {name}!</h2>
-                    <p>La tua video recensione è stata inviata con successo.</p>
+                    <h2>Thank you, {name}!</h2>
+                    <p>Your video review has been successfully submitted.</p>
                     <p className="success-subtitle">
-                        Sarà revisata dal team di {companyName}.
+                        It will be reviewed by the {companyName} team.
                     </p>
                 </div>
             )}

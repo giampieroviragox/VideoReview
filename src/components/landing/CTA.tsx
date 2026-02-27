@@ -22,7 +22,7 @@ export default function CTA() {
             const data = await res.json();
 
             if (!res.ok) {
-                throw new Error(data.error || "Qualcosa è andato storto.");
+                throw new Error(data.error || "Something went wrong.");
             }
 
             setStatus("success");
@@ -39,12 +39,12 @@ export default function CTA() {
             <div className="wrap">
                 <div className="cta-box reveal visible">
                     <div className="tag" style={{ display: 'inline-flex', marginBottom: 'var(--s5)' }}>
-                        <span className="tag-dot"></span>Waitlist Aperta
+                        <span className="tag-dot"></span>Waitlist Open
                     </div>
-                    <h2 className="display cta-title">La tua prossima vendita<br />la chiude un video.</h2>
+                    <h2 className="display cta-title">Your next sale<br />is closed by a video.</h2>
                     <p className="cta-sub">
-                        Siamo in fase di beta privata. Iscriviti per ottenere <br />
-                        <strong>accesso prioritario</strong> e il piano Pro gratis per 3 mesi.
+                        We are in private beta. Join to get <br />
+                        <strong>priority access</strong> and 3 months of Pro for free.
                     </p>
 
                     {status === "success" ? (
@@ -57,7 +57,7 @@ export default function CTA() {
                             <input
                                 type="email"
                                 className="cta-input"
-                                placeholder="la-tua@email.com"
+                                placeholder="your-email@example.com"
                                 required
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
@@ -68,7 +68,7 @@ export default function CTA() {
                                 className="btn btn-primary"
                                 disabled={status === "loading"}
                             >
-                                {status === "loading" ? "Invio in corso..." : "Entra in Waitlist →"}
+                                {status === "loading" ? "Sending..." : "Join the Waitlist →"}
                             </button>
                         </form>
                     )}
@@ -79,7 +79,7 @@ export default function CTA() {
                         </p>
                     )}
 
-                    <p className="cta-legal">Nessuno spam. Solo news sul lancio. Privacy garantita.</p>
+                    <p className="cta-legal">No spam. Only launch news. Privacy guaranteed.</p>
                 </div>
             </div>
         </section>

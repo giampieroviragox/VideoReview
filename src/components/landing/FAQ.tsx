@@ -4,11 +4,11 @@ import { useState } from "react";
 
 export default function FAQ() {
     const questions = [
-        { q: "Come funziona il sistema di reward?", a: "Puoi scegliere tra reward automatici (coupon, trial premium, sconti) o manuali. Una volta approvato il video, VR sblocca il premio e lo invia via email o aggiorna il profilo utente via webhook." },
-        { q: "I miei clienti devono scaricare un'app?", a: "No. La registrazione avviene direttamente nel browser del cliente, sia su mobile che su desktop. Zero frizioni, massima partecipazione." },
-        { q: "Posso moderare i video prima che vadano live?", a: "Assolutamente sì. Tutti i video appaiono prima nella tua dashboard. Puoi approvarli, scartarli o richiedere una modifica al cliente." },
-        { q: "Come posso integrare i video sul mio sito?", a: "VR genera uno snippet di codice che puoi incollare ovunque. Supportiamo carousel, griglie di testimonial e video wall che si caricano velocemente senza pesare sul SEO." },
-        { q: "Quali integrazioni sono supportate?", a: "Supportiamo nativamente HubSpot, Zapier e Stripe. Grazie ai Webhook puoi collegare VR a qualsiasi altro software di email marketing o CRM." }
+        { q: "How does the reward system work?", a: "You can choose between automatic rewards (coupons, premium trials, discounts) or manual ones. Once the video is approved, VR unlocks the prize and sends it via email or updates the user profile via webhook." },
+        { q: "Do my customers need to download an app?", a: "No. Recording happens directly in the customer's browser, on both mobile and desktop. Zero friction, maximum participation." },
+        { q: "Can I moderate videos before they go live?", a: "Absolutely. All videos appear in your dashboard first. You can approve them, reject them, or request an edit from the customer." },
+        { q: "How can I integrate videos on my site?", a: "VR generates a code snippet that you can paste anywhere. We support carousels, testimonial grids, and video walls that load fast without impacting SEO." },
+        { q: "Which integrations are supported?", a: "We natively support HubSpot, Zapier, and Stripe. Thanks to Webhooks, you can connect VR to any other email marketing software or CRM." }
     ];
 
     const [openIndex, setOpenIndex] = useState<number | null>(null);
@@ -18,8 +18,8 @@ export default function FAQ() {
             <div className="wrap" style={{ maxWidth: '800px' }}>
                 <div className="section-header reveal visible">
                     <div className="tag section-tag"><span className="tag-dot animate-pulse"></span>FAQ</div>
-                    <h2 className="heading section-title">Domande frequenti.</h2>
-                    <p className="section-sub">Tutto quello che devi sapere per iniziare con VR.</p>
+                    <h2 className="heading section-title">Frequently Asked Questions.</h2>
+                    <p className="section-sub">Everything you need to know to get started with VR.</p>
                 </div>
                 <div className="faq-list">
                     {questions.map((f, i) => (

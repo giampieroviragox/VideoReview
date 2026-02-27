@@ -2,12 +2,12 @@
 
 export default function Features() {
     const featuresList = [
-        { icon: "🎨", title: "Custom Branding", desc: "Personalizza ogni pixel del widget e della pagina di raccolta. Colori, font e logo per una brand experience coerente." },
-        { icon: "📊", title: "Conversion Tracking", desc: "Misura quante vendite vengono generate direttamente dai video. Analytics avanzati per ogni singola review." },
-        { icon: "🛡️", title: "Moderazione Smart", desc: "Approva i video prima che vadano live. Filtri automatici per qualità audio/video e contenuti sensibili." },
-        { icon: "📱", title: "Mobile Optimized", desc: "UI di registrazione nativa sul browser. Fluida, veloce e senza frizioni su qualsiasi smartphone." },
-        { icon: "🔄", title: "Automazioni API", desc: "Collega VR al tuo CRM o sistema di billing. Invia reward e sblocca feature automaticamente via webhook." },
-        { icon: "✨", title: "Embed Widgets", desc: "Carousel, griglie o wall of love. Integrazione universale con una singola riga di codice in React, Webflow, Shopify." }
+        { icon: "🎨", title: "Custom Branding", desc: "Customize every pixel of the widget and the collection page. Colors, fonts, and logo for a consistent brand experience." },
+        { icon: "📊", title: "Conversion Tracking", desc: "Measure how many sales are generated directly from videos. Advanced analytics for every single review." },
+        { icon: "🛡️", title: "Smart Moderation", desc: "Approve videos before they go live. Automatic filters for audio/video quality and sensitive content." },
+        { icon: "📱", title: "Mobile Optimized", desc: "Native browser recording UI. Smooth, fast, and frictionless on any smartphone." },
+        { icon: "🔄", title: "API Automations", desc: "Connect VR to your CRM or billing system. Send rewards and unlock features automatically via webhook." },
+        { icon: "✨", title: "Embed Widgets", desc: "Carousels, grids, or wall of love. Universal integration with a single line of code in React, Webflow, Shopify." }
     ];
 
     return (
@@ -15,8 +15,8 @@ export default function Features() {
             <div className="wrap">
                 <div className="section-header reveal visible">
                     <div className="tag section-tag"><span className="tag-dot animate-pulse"></span>Features</div>
-                    <h2 className="heading section-title">Tutto quello che serve per scalare la tua social proof.</h2>
-                    <p className="section-sub">Dall'invito automatico all'analisi del ROI, VR è la piattaforma all-in-one per il video marketing.</p>
+                    <h2 className="heading section-title">Everything you need to scale your social proof.</h2>
+                    <p className="section-sub">From automatic invitations to ROI analysis, VR is the all-in-one platform for video marketing.</p>
                 </div>
                 <div className="features-grid">
                     {featuresList.map((f, i) => (

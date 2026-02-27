@@ -11,8 +11,32 @@ export default function Navbar() {
         const handleScroll = () => {
             setScrolled(window.scrollY > 40);
         };
+
+        const handleAnchorClick = (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
+            const link = target.closest('a');
+
+            if (link && link.hash && link.origin === window.location.origin && link.pathname === window.location.pathname) {
+                const id = link.hash.slice(1);
+                const element = document.getElementById(id);
+
+                if (element) {
+                    e.preventDefault();
+                    element.scrollIntoView({ behavior: 'smooth' });
+                    // Update URL without jump
+                    window.history.pushState(null, '', link.hash);
+                    setMenuOpen(false);
+                }
+            }
+        };
+
         window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
+        document.addEventListener('click', handleAnchorClick);
+
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            document.removeEventListener('click', handleAnchorClick);
+        };
     }, []);
 
     return (
@@ -26,16 +50,16 @@ export default function Navbar() {
 
                     {/* Desktop Links */}
                     <ul className="nav-links desktop-only" style={{ margin: 0, padding: 0 }}>
-                        <li><Link href="#come-funziona">Come funziona</Link></li>
-                        <li><Link href="#features">Features</Link></li>
-                        <li><Link href="#pricing">Pricing</Link></li>
-                        <li><Link href="#casi-uso">Use Cases</Link></li>
+                        <li><a href="#how-it-works">How it works</a></li>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#pricing">Pricing</a></li>
+                        <li><a href="#use-cases">Use Cases</a></li>
                     </ul>
 
                     <div className="nav-cta desktop-only">
-                        <Link href="#cta" className="btn btn-primary" style={{ padding: '10px 20px', fontSize: '11px' }}>
-                            Entra in Waitlist &rarr;
-                        </Link>
+                        <a href="#cta" className="btn btn-primary" style={{ padding: '10px 20px', fontSize: '11px' }}>
+                            Join the Waitlist &rarr;
+                        </a>
                     </div>
 
                     {/* Mobile Toggle */}
@@ -56,15 +80,15 @@ export default function Navbar() {
             {/* Mobile Menu Overlay */}
             <div className={`mobile-menu ${menuOpen ? 'active' : ''}`}>
                 <ul className="mobile-links">
-                    <li><Link href="#come-funziona" onClick={() => setMenuOpen(false)}>Come funziona</Link></li>
-                    <li><Link href="#features" onClick={() => setMenuOpen(false)}>Features</Link></li>
-                    <li><Link href="#pricing" onClick={() => setMenuOpen(false)}>Pricing</Link></li>
-                    <li><Link href="#casi-uso" onClick={() => setMenuOpen(false)}>Use Cases</Link></li>
+                    <li><a href="#how-it-works" onClick={() => setMenuOpen(false)}>How it works</a></li>
+                    <li><a href="#features" onClick={() => setMenuOpen(false)}>Features</a></li>
+                    <li><a href="#pricing" onClick={() => setMenuOpen(false)}>Pricing</a></li>
+                    <li><a href="#use-cases" onClick={() => setMenuOpen(false)}>Use Cases</a></li>
                 </ul>
                 <div className="mobile-cta">
-                    <Link href="#cta" className="btn btn-primary" style={{ width: '100%' }} onClick={() => setMenuOpen(false)}>
-                        Entra in Waitlist
-                    </Link>
+                    <a href="#cta" className="btn btn-primary" style={{ width: '100%' }} onClick={() => setMenuOpen(false)}>
+                        Join the Waitlist
+                    </a>
                 </div>
             </div>
         </nav>

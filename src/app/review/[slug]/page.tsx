@@ -16,13 +16,13 @@ export async function generateMetadata({
     });
 
     if (!page) {
-        return { title: "Pagina non trovata" };
+        return { title: "Page not found" };
     }
 
     return {
         title: `${page.title} — ${page.companyName}`,
         description:
-            page.description || `Lascia una video recensione per ${page.companyName}`,
+            page.description || `Leave a video review for ${page.companyName}`,
     };
 }
 

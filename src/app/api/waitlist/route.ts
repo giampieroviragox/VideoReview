@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
 
         if (!email || !email.includes("@")) {
             return NextResponse.json(
-                { error: "Inserisci un indirizzo email valido." },
+                { error: "Please enter a valid email address." },
                 { status: 400 }
             );
         }
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
             // Handle unique constraint (P2002)
             if (e.code === 'P2002') {
                 return NextResponse.json(
-                    { message: "Sei già iscritto alla waitlist!" },
+                    { message: "You are already subscribed to the waitlist!" },
                     { status: 200 }
                 );
             }
@@ -29,13 +29,13 @@ export async function POST(request: NextRequest) {
         }
 
         return NextResponse.json(
-            { message: "Grazie! Ti abbiamo aggiunto alla waitlist." },
+            { message: "Thank you! We've added you to our waitlist." },
             { status: 201 }
         );
     } catch (error) {
         console.error("Waitlist error:", error);
         return NextResponse.json(
-            { error: "Si è verificato un errore. Riprova più tardi." },
+            { error: "Something went wrong. Please try again later." },
             { status: 500 }
         );
     }

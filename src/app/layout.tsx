@@ -8,12 +8,10 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Video Reviews — Raccogli video recensioni dai tuoi clienti",
+  title: "Video Reviews — Collect video reviews from your clients",
   description:
-    "Piattaforma per raccogliere video recensioni autentiche dai tuoi clienti.",
+    "Platform to collect authentic video reviews from your customers.",
 };
-
-import { ClerkProvider } from "@clerk/nextjs";
 
 export default function RootLayout({
   children,
@@ -21,10 +19,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
-      <html lang="it">
-        <body>{children}</body>
-      </html>
-    </ClerkProvider>
+    <html lang="en">
+      <body>{children}</body>
+    </html>
   );
 }
