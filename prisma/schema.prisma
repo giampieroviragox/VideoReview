@@ -1,0 +1,33 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model CollectionPage {
+  id          String       @id @default(cuid())
+  slug        String       @unique
+  companyName String
+  title       String
+  description String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  submissions Submission[]
+}
+
+model Submission {
+  id               String         @id @default(cuid())
+  collectionPage   CollectionPage @relation(fields: [collectionPageId], references: [id])
+  collectionPageId String
+  reviewerName     String
+  reviewerEmail    String
+  videoKey         String
+  durationSeconds  Int?
+  status           String         @default("pending")
+  createdAt        DateTime       @default(now())
+
+  @@index([collectionPageId])
+  @@index([status])
+}
