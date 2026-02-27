@@ -1,11 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
 
 export default function Navbar() {
-    const { isSignedIn } = useUser();
     const [scrolled, setScrolled] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
 
@@ -35,21 +33,9 @@ export default function Navbar() {
                     </ul>
 
                     <div className="nav-cta desktop-only">
-                        {!isSignedIn ? (
-                            <>
-                                <SignInButton mode="modal">
-                                    <button className="btn btn-ghost" style={{ padding: '10px 20px', fontSize: '11px' }}>Login</button>
-                                </SignInButton>
-                                <SignUpButton mode="modal">
-                                    <button className="btn btn-primary" style={{ padding: '10px 20px', fontSize: '11px' }}>Inizia gratis &rarr;</button>
-                                </SignUpButton>
-                            </>
-                        ) : (
-                            <>
-                                <Link href="/dashboard" className="btn btn-ghost" style={{ padding: '10px 20px', fontSize: '11px' }}>Dashboard</Link>
-                                <UserButton afterSignOutUrl="/" />
-                            </>
-                        )}
+                        <Link href="#cta" className="btn btn-primary" style={{ padding: '10px 20px', fontSize: '11px' }}>
+                            Entra in Waitlist &rarr;
+                        </Link>
                     </div>
 
                     {/* Mobile Toggle */}
@@ -76,18 +62,9 @@ export default function Navbar() {
                     <li><Link href="#casi-uso" onClick={() => setMenuOpen(false)}>Use Cases</Link></li>
                 </ul>
                 <div className="mobile-cta">
-                    {!isSignedIn ? (
-                        <>
-                            <SignInButton mode="modal">
-                                <button className="btn btn-ghost" style={{ width: '100% ' }}>Login</button>
-                            </SignInButton>
-                            <SignUpButton mode="modal">
-                                <button className="btn btn-primary" style={{ width: '100% ' }}>Inizia gratis</button>
-                            </SignUpButton>
-                        </>
-                    ) : (
-                        <Link href="/dashboard" className="btn btn-primary" style={{ width: '100%' }}>Dashboard</Link>
-                    )}
+                    <Link href="#cta" className="btn btn-primary" style={{ width: '100%' }} onClick={() => setMenuOpen(false)}>
+                        Entra in Waitlist
+                    </Link>
                 </div>
             </div>
         </nav>

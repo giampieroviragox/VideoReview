@@ -28,7 +28,7 @@ export default function Hero() {
                         Niente script, niente fiction &mdash; solo verità che converte.
                     </p>
                     <div className="hero-actions reveal visible">
-                        <Link href="#cta" className="btn btn-primary btn-lg">Comincia gratis <span style={{ opacity: 0.7 }}>&rarr;</span></Link>
+                        <Link href="#cta" className="btn btn-primary btn-lg">Entra in Waitlist <span style={{ opacity: 0.7 }}>&rarr;</span></Link>
                         <Link href="#come-funziona" className="btn btn-ghost btn-lg">Vedi la demo</Link>
                     </div>
                     <div className="hero-note reveal visible">
