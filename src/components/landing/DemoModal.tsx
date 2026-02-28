@@ -387,7 +387,8 @@ export default function DemoModal({ onClose }: DemoModalProps) {
     <div className="demo-modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="demo-modal" ref={modalRef}>
         <button className="demo-modal-close" onClick={onClose} aria-label="Close demo modal">
-          ✕
+          <span className="demo-modal-close-back">←</span>
+          <span className="demo-modal-close-x">✕</span>
         </button>
 
         {isSubmitted && (
