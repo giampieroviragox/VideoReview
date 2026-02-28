@@ -3,6 +3,8 @@ import { buildCampaignPublicPath } from "@/lib/campaigns";
 import { DEFAULT_WORKSPACE } from "@/lib/workspace";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 
+export const dynamic = "force-dynamic";
+
 type RuntimeCampaign = {
   id: string;
   name: string;
@@ -27,8 +29,12 @@ export default async function DashboardPage() {
     | CampaignDashboardRuntimeDelegate
     | undefined;
 
-  const campaigns: RuntimeCampaign[] = campaignDelegate
-    ? await campaignDelegate.findMany({
+  let campaignQueryFailed = false;
+  let campaigns: RuntimeCampaign[] = [];
+
+  if (campaignDelegate) {
+    try {
+      campaigns = await campaignDelegate.findMany({
         orderBy: { createdAt: "desc" },
         select: {
           id: true,
@@ -47,8 +53,12 @@ export default async function DashboardPage() {
             },
           },
         },
-      })
-    : [];
+      });
+    } catch (error) {
+      campaignQueryFailed = true;
+      console.error("Dashboard campaign query failed:", error);
+    }
+  }
 
   const campaignRows = campaigns.map((campaign) => ({
     id: campaign.id,
@@ -77,7 +87,7 @@ export default async function DashboardPage() {
       <div className="wrap" style={{ paddingTop: 28, paddingBottom: 48 }}>
         <DashboardShell
           workspaceName={DEFAULT_WORKSPACE.brandName}
-          campaignRuntimeReady={Boolean(campaignDelegate)}
+          campaignRuntimeReady={Boolean(campaignDelegate) && !campaignQueryFailed}
           campaigns={campaignRows}
         />
       </div>
