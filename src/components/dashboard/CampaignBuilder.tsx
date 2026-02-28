@@ -22,7 +22,7 @@ function CopyButton({ text, label }: { text: string; label: string }) {
   };
 
   return (
-    <button type="button" className="btn btn-ghost" onClick={handleCopy}>
+    <button type="button" className="builder-secondary-btn" onClick={handleCopy}>
       {copied ? "Copied" : label}
     </button>
   );
@@ -32,10 +32,10 @@ export default function CampaignBuilder() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [hasReward, setHasReward] = useState(true);
+  const [hasReward, setHasReward] = useState(false);
   const [rewardName, setRewardName] = useState("");
   const [rewardDescription, setRewardDescription] = useState("");
-  const [hasQuestion, setHasQuestion] = useState(true);
+  const [hasQuestion, setHasQuestion] = useState(false);
   const [questionText, setQuestionText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -52,10 +52,10 @@ export default function CampaignBuilder() {
   const resetForm = () => {
     setName("");
     setDescription("");
-    setHasReward(true);
+    setHasReward(false);
     setRewardName("");
     setRewardDescription("");
-    setHasQuestion(true);
+    setHasQuestion(false);
     setQuestionText("");
   };
 
@@ -100,92 +100,57 @@ export default function CampaignBuilder() {
   };
 
   return (
-    <div
-      style={{
-        border: "1px solid var(--ink-3)",
-        borderRadius: 24,
-        padding: "22px clamp(18px, 3vw, 26px)",
-        background: "rgba(17,17,24,.9)",
-      }}
-    >
-      <div style={{ marginBottom: 18 }}>
-        <p className="label" style={{ color: "var(--brand-2)", marginBottom: 8 }}>
-          Campaign builder
-        </p>
-        <h2 className="heading" style={{ fontSize: "clamp(22px, 3vw, 30px)", marginBottom: 6 }}>
-          Create a campaign
-        </h2>
-        <p style={{ color: "var(--fog)", fontSize: "var(--text-sm)", maxWidth: 620 }}>
+    <div className="builder-shell">
+      <div className="builder-head">
+        <p className="builder-eyebrow">Campaign builder</p>
+        <h2 className="builder-title">Create a campaign</h2>
+        <p className="builder-copy">
           Set the campaign name, choose whether to show a reward, and optionally add one question.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} style={{ display: "grid", gap: 18 }}>
-        <label style={{ display: "grid", gap: 8 }}>
-          <span className="label" style={{ color: "var(--fog)" }}>Campaign name *</span>
+      <form onSubmit={handleSubmit} className="builder-form">
+        <label className="builder-field">
+          <span className="builder-label">Campaign name *</span>
           <input
             value={name}
             onChange={(event) => setName(event.target.value)}
             required
             placeholder="Post-purchase product review"
-            style={{
-              width: "100%",
-              padding: "14px 16px",
-              borderRadius: 14,
-              border: "1px solid var(--ink-4)",
-              background: "rgba(255,255,255,.03)",
-              color: "var(--white)",
-            }}
+            className="builder-input"
           />
         </label>
 
-        <label style={{ display: "grid", gap: 8 }}>
-          <span className="label" style={{ color: "var(--fog)" }}>Optional description</span>
+        <label className="builder-field">
+          <span className="builder-label">Optional description</span>
           <textarea
             value={description}
             onChange={(event) => setDescription(event.target.value.slice(0, 200))}
             placeholder="Add a short note about the campaign."
             rows={3}
-            style={{
-              width: "100%",
-              padding: "14px 16px",
-              borderRadius: 14,
-              border: "1px solid var(--ink-4)",
-              background: "rgba(255,255,255,.03)",
-              color: "var(--white)",
-              resize: "vertical",
-            }}
+            className="builder-input builder-textarea"
           />
         </label>
 
-        <div
-          style={{
-            borderRadius: 18,
-            border: "1px solid var(--ink-3)",
-            padding: 16,
-            background: "rgba(255,255,255,.02)",
-            display: "grid",
-            gap: 14,
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+        <div className="builder-section-card">
+          <div className="builder-section-head">
             <div>
-              <p className="label" style={{ color: "var(--fog)", marginBottom: 6 }}>Reward</p>
-              <p style={{ color: "var(--fog)", fontSize: "var(--text-sm)" }}>
+              <p className="builder-label builder-section-label">Reward</p>
+              <p className="builder-section-copy">
                 Decide whether this campaign includes a reward.
               </p>
             </div>
-            <div style={{ display: "flex", gap: 8 }}>
+            <div className="builder-toggle-group">
               <button
                 type="button"
-                className={hasReward ? "btn btn-primary" : "btn btn-ghost"}
+                className={hasReward ? "builder-toggle is-active" : "builder-toggle"}
                 onClick={() => setHasReward(true)}
               >
                 Yes
               </button>
               <button
                 type="button"
-                className={!hasReward ? "btn btn-primary" : "btn btn-ghost"}
+                className={!hasReward ? "builder-toggle is-active" : "builder-toggle"}
                 onClick={() => setHasReward(false)}
               >
                 No
@@ -194,76 +159,52 @@ export default function CampaignBuilder() {
           </div>
 
           {hasReward && (
-            <div style={{ display: "grid", gap: 14 }}>
-              <label style={{ display: "grid", gap: 8 }}>
-                <span className="label" style={{ color: "var(--fog)" }}>Reward name *</span>
+            <div className="builder-subgrid">
+              <label className="builder-field">
+                <span className="builder-label">Reward name *</span>
                 <input
                   value={rewardName}
                   onChange={(event) => setRewardName(event.target.value)}
                   required={hasReward}
                   placeholder="30-day premium access"
-                  style={{
-                    width: "100%",
-                    padding: "14px 16px",
-                    borderRadius: 14,
-                    border: "1px solid var(--ink-4)",
-                    background: "rgba(255,255,255,.03)",
-                    color: "var(--white)",
-                  }}
+                  className="builder-input"
                 />
               </label>
 
-              <label style={{ display: "grid", gap: 8 }}>
-                <span className="label" style={{ color: "var(--fog)" }}>Reward description *</span>
+              <label className="builder-field">
+                <span className="builder-label">Reward description *</span>
                 <textarea
                   value={rewardDescription}
                   onChange={(event) => setRewardDescription(event.target.value)}
                   required={hasReward}
                   placeholder="Describe what the customer receives after approval."
                   rows={3}
-                  style={{
-                    width: "100%",
-                    padding: "14px 16px",
-                    borderRadius: 14,
-                    border: "1px solid var(--ink-4)",
-                    background: "rgba(255,255,255,.03)",
-                    color: "var(--white)",
-                    resize: "vertical",
-                  }}
+                  className="builder-input builder-textarea"
                 />
               </label>
             </div>
           )}
         </div>
 
-        <div
-          style={{
-            borderRadius: 18,
-            border: "1px solid var(--ink-3)",
-            padding: 16,
-            background: "rgba(255,255,255,.02)",
-            display: "grid",
-            gap: 14,
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+        <div className="builder-section-card">
+          <div className="builder-section-head">
             <div>
-              <p className="label" style={{ color: "var(--fog)", marginBottom: 6 }}>Question</p>
-              <p style={{ color: "var(--fog)", fontSize: "var(--text-sm)" }}>
+              <p className="builder-label builder-section-label">Question</p>
+              <p className="builder-section-copy">
                 Add a single prompt if you want to guide the customer.
               </p>
             </div>
-            <div style={{ display: "flex", gap: 8 }}>
+            <div className="builder-toggle-group">
               <button
                 type="button"
-                className={hasQuestion ? "btn btn-primary" : "btn btn-ghost"}
+                className={hasQuestion ? "builder-toggle is-active" : "builder-toggle"}
                 onClick={() => setHasQuestion(true)}
               >
                 Yes
               </button>
               <button
                 type="button"
-                className={!hasQuestion ? "btn btn-primary" : "btn btn-ghost"}
+                className={!hasQuestion ? "builder-toggle is-active" : "builder-toggle"}
                 onClick={() => setHasQuestion(false)}
               >
                 No
@@ -272,73 +213,254 @@ export default function CampaignBuilder() {
           </div>
 
           {hasQuestion && (
-            <label style={{ display: "grid", gap: 8 }}>
-              <span className="label" style={{ color: "var(--fog)" }}>Question</span>
+            <label className="builder-field">
+              <span className="builder-label">Question</span>
               <textarea
                 value={questionText}
                 onChange={(event) => setQuestionText(event.target.value)}
                 placeholder="What did you like most about the product?"
                 rows={3}
-                style={{
-                  width: "100%",
-                  padding: "14px 16px",
-                  borderRadius: 14,
-                  border: "1px solid var(--ink-4)",
-                  background: "rgba(255,255,255,.03)",
-                  color: "var(--white)",
-                  resize: "vertical",
-                }}
+                className="builder-input builder-textarea"
               />
             </label>
           )}
         </div>
 
-        {error && (
-          <div style={{ borderRadius: 14, padding: 14, background: "rgba(255,95,61,.08)", border: "1px solid rgba(255,95,61,.18)", color: "var(--brand-2)" }}>
-            {error}
-          </div>
-        )}
+        {error && <div className="builder-error-card">{error}</div>}
 
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-          <p style={{ color: "var(--fog)", fontSize: "var(--text-sm)", maxWidth: 620 }}>
+        <div className="builder-footer-row">
+          <p className="builder-footer-copy">
             After creation, you will get the public campaign link and a suggested invite message you can copy.
           </p>
-          <button type="submit" className="btn btn-primary" disabled={loading}>
+          <button type="submit" className="builder-primary-btn" disabled={loading}>
             {loading ? "Creating..." : "Create campaign"}
           </button>
         </div>
       </form>
 
       {createdCampaign && (
-        <div
-          style={{
-            marginTop: 18,
-            borderRadius: 20,
-            padding: 18,
-            border: "1px solid rgba(61,255,160,.14)",
-            background: "rgba(61,255,160,.05)",
-          }}
-        >
-          <p className="label" style={{ color: "var(--success)", marginBottom: 10 }}>Campaign created</p>
-          <div style={{ display: "grid", gap: 12 }}>
-            <div
-              style={{
-                borderRadius: 14,
-                border: "1px solid var(--ink-3)",
-                padding: 12,
-                background: "rgba(10,10,15,.55)",
-                wordBreak: "break-all",
-              }}
-            >
-              {absolutePublicUrl || createdCampaign.publicPath}
-            </div>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <div className="builder-success-card">
+          <p className="builder-success-label">Campaign created</p>
+          <div className="builder-success-grid">
+            <div className="builder-link-box">{absolutePublicUrl || createdCampaign.publicPath}</div>
+            <div className="builder-actions-row">
               <CopyButton text={absolutePublicUrl || createdCampaign.publicPath} label="Copy link" />
               <CopyButton text={createdCampaign.inviteMessage} label="Copy invite message" />
             </div>
           </div>
         </div>
       )}
+
+      <style>{builderStyles}</style>
     </div>
   );
 }
+
+const builderStyles = `
+  .builder-shell {
+    border: 1px solid rgba(24, 24, 32, 0.08);
+    border-radius: 24px;
+    padding: 22px clamp(18px, 3vw, 26px);
+    background: rgba(255, 255, 255, 0.88);
+    box-shadow:
+      0 18px 42px rgba(20, 18, 24, 0.06),
+      0 1px 0 rgba(255, 255, 255, 0.84) inset;
+  }
+
+  .builder-head {
+    margin-bottom: 18px;
+  }
+
+  .builder-eyebrow,
+  .builder-label {
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  .builder-eyebrow {
+    color: var(--brand-2);
+    margin-bottom: 8px;
+  }
+
+  .builder-title {
+    font-size: clamp(22px, 3vw, 30px);
+    margin-bottom: 6px;
+    color: #121218;
+  }
+
+  .builder-copy,
+  .builder-section-copy,
+  .builder-footer-copy,
+  .builder-link-box {
+    color: rgba(24, 24, 32, 0.5);
+    font-size: 14px;
+  }
+
+  .builder-copy {
+    max-width: 620px;
+  }
+
+  .builder-form,
+  .builder-subgrid {
+    display: grid;
+    gap: 18px;
+  }
+
+  .builder-field {
+    display: grid;
+    gap: 8px;
+  }
+
+  .builder-label {
+    color: rgba(24, 24, 32, 0.4);
+  }
+
+  .builder-input {
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: 1px solid rgba(24, 24, 32, 0.1);
+    background: rgba(255, 255, 255, 0.92);
+    color: #14141b;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset;
+  }
+
+  .builder-input::placeholder {
+    color: rgba(24, 24, 32, 0.34);
+  }
+
+  .builder-textarea {
+    resize: vertical;
+  }
+
+  .builder-section-card,
+  .builder-success-card,
+  .builder-error-card {
+    border-radius: 18px;
+    border: 1px solid rgba(24, 24, 32, 0.08);
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.68);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.76) inset;
+  }
+
+  .builder-section-head,
+  .builder-footer-row,
+  .builder-actions-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .builder-section-label {
+    margin-bottom: 6px;
+  }
+
+  .builder-toggle-group {
+    display: inline-flex;
+    gap: 8px;
+  }
+
+  .builder-toggle,
+  .builder-secondary-btn,
+  .builder-primary-btn {
+    border-radius: 999px;
+    font-family: "Figtree", sans-serif;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    text-decoration: none;
+  }
+
+  .builder-toggle,
+  .builder-secondary-btn {
+    padding: 10px 16px;
+    border: 1px solid rgba(24, 24, 32, 0.1);
+    background: rgba(255, 255, 255, 0.9);
+    color: #14141b;
+  }
+
+  .builder-toggle.is-active,
+  .builder-primary-btn {
+    border: none;
+    background: var(--brand);
+    color: #fff;
+    box-shadow: 0 10px 24px rgba(255, 92, 53, 0.18);
+  }
+
+  .builder-primary-btn {
+    padding: 14px 22px;
+  }
+
+  .builder-primary-btn:disabled {
+    background: rgba(255, 92, 53, 0.5);
+    box-shadow: none;
+    cursor: wait;
+  }
+
+  .builder-footer-copy {
+    max-width: 620px;
+  }
+
+  .builder-error-card {
+    color: #c94d2e;
+    border-color: rgba(255, 92, 53, 0.14);
+  }
+
+  .builder-success-card {
+    margin-top: 18px;
+    border-color: rgba(47, 153, 100, 0.14);
+  }
+
+  .builder-success-label {
+    color: #2f9964;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+
+  .builder-success-grid {
+    display: grid;
+    gap: 12px;
+  }
+
+  .builder-link-box {
+    border-radius: 14px;
+    border: 1px solid rgba(24, 24, 32, 0.08);
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.9);
+    word-break: break-all;
+  }
+
+  @media (max-width: 760px) {
+    .builder-shell {
+      border-radius: 20px;
+      padding: 18px 16px;
+    }
+
+    .builder-section-card,
+    .builder-success-card,
+    .builder-error-card {
+      border-radius: 16px;
+    }
+
+    .builder-primary-btn,
+    .builder-secondary-btn,
+    .builder-toggle {
+      width: 100%;
+      justify-content: center;
+      display: inline-flex;
+    }
+
+    .builder-toggle-group {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+`;

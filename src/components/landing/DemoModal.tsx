@@ -426,19 +426,21 @@ export default function DemoModal({ onClose }: DemoModalProps) {
           <div className={`demo-step-dot ${recorderState === "recorded" ? "active" : "next"}`}></div>
         </div>
 
-        <div className="demo-reward-hint" ref={rewardRef}>
-          <div className="demo-reward-icon">🎁</div>
-          <div>
-            <div className="demo-reward-title">Reply and get 30 days of Premium for free</div>
-            <div className="demo-reward-sub">The reward is sent right after the video is published</div>
+        <div className="demo-meta-grid">
+          <div className="demo-modal-question-box" ref={questionRef}>
+            <div className="demo-modal-question-label">Video prompt</div>
+            <div className="demo-modal-question-text">
+              What is the <span className="demo-accent-1">one thing</span> you{" "}
+              <span className="demo-accent-2">liked most</span> about the product?
+            </div>
           </div>
-        </div>
 
-        <div className="demo-modal-question-box" ref={questionRef}>
-          <div className="demo-modal-question-label">Question 1 of 1</div>
-          <div className="demo-modal-question-text">
-            What is the <span className="demo-accent-1">one thing</span> you{" "}
-            <span className="demo-accent-2">liked most</span> about the product?
+          <div className="demo-reward-hint" ref={rewardRef}>
+            <div className="demo-reward-icon">🎁</div>
+            <div>
+              <div className="demo-reward-title">30 free Premium days</div>
+              <div className="demo-reward-sub">Sent after approval</div>
+            </div>
           </div>
         </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import Image from "next/image";
 import VideoRecorder from "@/components/VideoRecorder";
 
@@ -33,21 +33,16 @@ function StarRating({
   onChange: (value: number) => void;
 }) {
   return (
-    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+    <div className="public-review-stars" role="radiogroup" aria-label="Review rating">
       {[1, 2, 3, 4, 5].map((rating) => (
         <button
           key={rating}
           type="button"
+          className="public-review-star"
+          data-active={rating <= value ? "true" : "false"}
           onClick={() => onChange(rating)}
-          style={{
-            border: "none",
-            background: "transparent",
-            cursor: "pointer",
-            fontSize: 30,
-            lineHeight: 1,
-            color: rating <= value ? "var(--warn)" : "rgba(255,255,255,.18)",
-          }}
           aria-label={`Rate ${rating} star${rating > 1 ? "s" : ""}`}
+          aria-pressed={rating === value}
         >
           ★
         </button>
@@ -57,7 +52,8 @@ function StarRating({
 }
 
 export default function CampaignSubmissionForm({ campaign }: CampaignSubmissionFormProps) {
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [rating, setRating] = useState(0);
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
@@ -69,9 +65,31 @@ export default function CampaignSubmissionForm({ campaign }: CampaignSubmissionF
 
   const brandQuestion = campaign.questions[0] || null;
 
+  const fullName = useMemo(
+    () => `${firstName.trim()} ${lastName.trim()}`.trim(),
+    [firstName, lastName]
+  );
+
+  const hasRecordedVideo = Boolean(rating > 0 && videoBlob);
+
   const validate = () => {
-    if (!name.trim()) {
-      setError("Please enter your name.");
+    if (!rating) {
+      setError("Please choose a rating first.");
+      return false;
+    }
+
+    if (!videoBlob) {
+      setError("Please record a video before submitting.");
+      return false;
+    }
+
+    if (!firstName.trim()) {
+      setError("Please enter your first name.");
+      return false;
+    }
+
+    if (!lastName.trim()) {
+      setError("Please enter your last name.");
       return false;
     }
 
@@ -83,16 +101,6 @@ export default function CampaignSubmissionForm({ campaign }: CampaignSubmissionF
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setError("Please enter a valid email address.");
-      return false;
-    }
-
-    if (!rating) {
-      setError("Please leave a rating.");
-      return false;
-    }
-
-    if (!videoBlob) {
-      setError("Please record a video before submitting.");
       return false;
     }
 
@@ -147,7 +155,7 @@ export default function CampaignSubmissionForm({ campaign }: CampaignSubmissionF
     return uploadData.videoKey as string;
   };
 
-  const handleSubmit = async (event: React.FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
 
     if (!validate() || !videoBlob) {
@@ -165,7 +173,7 @@ export default function CampaignSubmissionForm({ campaign }: CampaignSubmissionF
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          reviewerName: name.trim(),
+          reviewerName: fullName,
           reviewerEmail: email.trim().toLowerCase(),
           reviewerRating: rating,
           videoKey,
@@ -182,7 +190,9 @@ export default function CampaignSubmissionForm({ campaign }: CampaignSubmissionF
       setIsSuccess(true);
     } catch (submitError) {
       console.error(submitError);
-      setError(submitError instanceof Error ? submitError.message : "Failed to submit your review.");
+      setError(
+        submitError instanceof Error ? submitError.message : "Failed to submit your review."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -190,501 +200,937 @@ export default function CampaignSubmissionForm({ campaign }: CampaignSubmissionF
 
   if (isSuccess) {
     return (
-      <div
-        style={{
-          width: "min(900px, 100%)",
-          margin: "0 auto",
-          borderRadius: 28,
-          border: "1px solid rgba(61,255,160,.16)",
-          background: "rgba(61,255,160,.05)",
-          padding: "28px clamp(18px, 4vw, 36px)",
-        }}
-      >
-        <p className="label" style={{ color: "var(--success)", marginBottom: 10 }}>
-          Submission received
-        </p>
-        <h1 className="heading" style={{ fontSize: "clamp(32px, 6vw, 56px)", marginBottom: 12 }}>
-          Thank you!
-        </h1>
-        <p style={{ color: "var(--smoke)", fontSize: "var(--text-lg)" }}>
-          Thank you! Your reward will be sent after approval by the company.
-        </p>
+      <div className="public-review-page">
+        <div className="public-review-shell public-review-shell-success">
+          <section className="public-review-brand-panel public-review-brand-panel-success">
+            <div className="public-review-brand-row">
+              <div className="public-review-brand-fallback">
+                {campaign.brandName.slice(0, 2).toUpperCase()}
+              </div>
+              <div>
+                <p className="public-review-brand-name">{campaign.brandName}</p>
+                <p className="public-review-brand-sub">review received</p>
+              </div>
+            </div>
+          </section>
+
+          <section className="public-review-card public-review-success-card">
+            <p className="public-review-kicker">Thank you</p>
+            <h1 className="public-review-success-title">Your video review is on its way.</h1>
+            <p className="public-review-muted">
+              The company will review it first, then send your reward manually.
+            </p>
+          </section>
+        </div>
+        <style>{publicReviewStyles}</style>
       </div>
     );
   }
 
   return (
-    <div className="campaign-review-form" style={{ width: "min(960px, 100%)", margin: "0 auto" }}>
-      <header
-        style={{
-          border: "1px solid var(--ink-3)",
-          borderRadius: 32,
-          padding: "24px clamp(18px, 4vw, 34px)",
-          background:
-            "linear-gradient(180deg, rgba(17,17,24,.96), rgba(10,10,15,.98))",
-          marginBottom: 20,
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            opacity: 0.06,
-            pointerEvents: "none",
-            backgroundImage:
-              "linear-gradient(var(--ink-3) 1px, transparent 1px), linear-gradient(90deg, var(--ink-3) 1px, transparent 1px)",
-            backgroundSize: "46px 46px",
-          }}
-        />
-        <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-          {campaign.brandLogoUrl ? (
-            <Image
-              src={campaign.brandLogoUrl}
-              alt={`${campaign.brandName} logo`}
-              width={56}
-              height={56}
-              style={{ objectFit: "cover", borderRadius: 16 }}
-            />
-          ) : (
-            <div
-              style={{
-                width: 56,
-                height: 56,
-                borderRadius: 16,
-                display: "grid",
-                placeItems: "center",
-                background: "rgba(255,95,61,.1)",
-                border: "1px solid rgba(255,95,61,.18)",
-                fontFamily: "Syne, sans-serif",
-                fontWeight: 800,
-                color: "var(--brand-2)",
-              }}
-            >
-              {campaign.brandName.slice(0, 2).toUpperCase()}
-            </div>
-          )}
-          <div>
-            <h1 className="heading" style={{ fontSize: "clamp(28px, 5vw, 48px)", marginBottom: 6 }}>
-              {campaign.brandName}
-            </h1>
-            <p className="mono" style={{ color: "var(--fog)", fontSize: "clamp(14px, 2.5vw, 18px)" }}>
-              invited you to talk about them
-            </p>
+    <div className="public-review-page">
+      <header className="public-review-topbar">
+        <div className="public-review-topbar-inner">
+          <div className="public-review-topbar-branding">
+            <span className="public-review-topbar-mark">▶</span>
+            <span className="public-review-topbar-label">Video Reviews</span>
           </div>
-        </div>
-
-        <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
-          <span
-            style={{
-              width: 42,
-              height: 8,
-              borderRadius: 999,
-              background: "var(--brand)",
-            }}
-          />
-          <span
-            style={{
-              width: 24,
-              height: 8,
-              borderRadius: 999,
-              background: "rgba(255,255,255,.12)",
-            }}
-          />
-          <span
-            style={{
-              width: 24,
-              height: 8,
-              borderRadius: 999,
-              background: "rgba(255,255,255,.12)",
-            }}
-          />
         </div>
       </header>
 
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          border: "1px solid var(--ink-3)",
-          borderRadius: 32,
-          padding: "24px clamp(18px, 4vw, 34px)",
-          background:
-            "linear-gradient(180deg, rgba(17,17,24,.96), rgba(10,10,15,.98))",
-          display: "grid",
-          gap: 20,
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            opacity: 0.06,
-            pointerEvents: "none",
-            backgroundImage:
-              "linear-gradient(var(--ink-3) 1px, transparent 1px), linear-gradient(90deg, var(--ink-3) 1px, transparent 1px)",
-            backgroundSize: "46px 46px",
-          }}
-        />
-        {campaign.rewardText && (
-          <div
-            style={{
-              position: "relative",
-              zIndex: 1,
-              borderRadius: 22,
-              border: "1px solid rgba(255,95,61,.2)",
-              background: "rgba(255,95,61,.08)",
-              padding: "18px clamp(16px, 3vw, 24px)",
-            }}
-          >
-            <p className="label" style={{ color: "var(--brand-2)", marginBottom: 8 }}>
-              Reward
-            </p>
-            <p className="heading" style={{ fontSize: "clamp(22px, 4vw, 34px)", marginBottom: 6 }}>
-              {campaign.rewardText}
-            </p>
-            {campaign.rewardValue && <p style={{ color: "var(--smoke)" }}>{campaign.rewardValue}</p>}
+      <main className="public-review-shell">
+        <section className="public-review-brand-panel">
+          <div className="public-review-brand-row">
+            {campaign.brandLogoUrl ? (
+              <Image
+                src={campaign.brandLogoUrl}
+                alt={`${campaign.brandName} logo`}
+                width={52}
+                height={52}
+                style={{ objectFit: "cover", borderRadius: 16 }}
+              />
+            ) : (
+              <div className="public-review-brand-fallback">
+                {campaign.brandName.slice(0, 2).toUpperCase()}
+              </div>
+            )}
+
+            <div className="public-review-brand-content">
+              <p className="public-review-brand-name">{campaign.brandName}</p>
+              <p className="public-review-brand-sub">invited you to share your experience</p>
+            </div>
           </div>
-        )}
+        </section>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 16 }}>
-          <label style={{ display: "grid", gap: 8 }}>
-            <span className="label" style={{ color: "var(--fog)" }}>Name</span>
-            <input
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              required
-              placeholder="John Doe"
-              style={{
-                width: "100%",
-                padding: "14px 16px",
-                borderRadius: 14,
-                border: "1px solid var(--ink-4)",
-                background: "rgba(255,255,255,.03)",
-                color: "var(--white)",
-              }}
-            />
-          </label>
-          <label style={{ display: "grid", gap: 8 }}>
-            <span className="label" style={{ color: "var(--fog)" }}>Email</span>
-            <input
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-              placeholder="john@example.com"
-              style={{
-                width: "100%",
-                padding: "14px 16px",
-                borderRadius: 14,
-                border: "1px solid var(--ink-4)",
-                background: "rgba(255,255,255,.03)",
-                color: "var(--white)",
-              }}
-            />
-          </label>
-        </div>
-
-        <div
-          style={{
-            position: "relative",
-            zIndex: 1,
-            borderRadius: 18,
-            border: "1px solid rgba(255,255,255,.06)",
-            background: "rgba(255,255,255,.02)",
-            padding: 16,
-            color: "var(--smoke)",
-          }}
-        >
-          We ask for your name and email only so the company can send your reward. They will not be used for anything else.
-        </div>
-
-        <div>
-          <p className="label" style={{ color: "var(--fog)", marginBottom: 8 }}>
-            Rating
-          </p>
-          <StarRating value={rating} onChange={setRating} />
-        </div>
-
-        <div
-          style={{
-            position: "relative",
-            zIndex: 1,
-            borderRadius: 22,
-            border: "1px solid var(--ink-3)",
-            background: "rgba(255,255,255,.015)",
-            padding: 18,
-            display: "grid",
-            gap: 16,
-          }}
-        >
-          {brandQuestion && (
-            <div
-              style={{
-                borderRadius: 20,
-                border: "1px solid rgba(255,255,255,.08)",
-                background: "rgba(255,255,255,.02)",
-                padding: "18px clamp(16px, 3vw, 24px)",
-              }}
-            >
-              <p className="label" style={{ color: "var(--fog)", marginBottom: 8 }}>
-                Question 1 of 1
+        <form onSubmit={handleSubmit} className="public-review-form">
+          <section className="public-review-card public-review-rating-stage">
+            <div className="public-review-stage-head">
+              <p className="public-review-kicker">Step 1 of 3</p>
+              <h1 className="public-review-stage-title">Start with a quick rating</h1>
+              <p className="public-review-muted">
+                Rate the experience first, then record a short video.
               </p>
-              <p className="heading" style={{ fontSize: "clamp(28px, 4.5vw, 44px)", lineHeight: 1.15 }}>
-                {brandQuestion.text}
-              </p>
+            </div>
+            <StarRating value={rating} onChange={setRating} />
+          </section>
+
+          {rating > 0 && (
+            <section className="public-review-recording-flow">
+              <section className="public-review-card public-review-recorder-card">
+                <div className="public-review-stage-head public-review-stage-head-tight">
+                  <p className="public-review-kicker">Step 2 of 3</p>
+                  <h2 className="public-review-section-title">Record your video</h2>
+                  <p className="public-review-muted">
+                    Keep it simple. A short and honest answer is enough.
+                  </p>
+                </div>
+
+                {(brandQuestion || campaign.rewardText) && (
+                  <div className="public-review-recorder-context">
+                    {brandQuestion && (
+                      <div className="public-review-inline-quote-wrap">
+                        <p className="public-review-inline-quote-label">Optional prompt</p>
+                        <p className="public-review-inline-quote">“{brandQuestion.text}”</p>
+                      </div>
+                    )}
+
+                    {campaign.rewardText && (
+                      <div className="public-review-inline-reward">
+                        <p className="public-review-inline-reward-label">Reward</p>
+                        <p className="public-review-inline-reward-title">{campaign.rewardText}</p>
+                        {campaign.rewardValue && (
+                          <p className="public-review-inline-reward-copy">{campaign.rewardValue}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="public-review-recorder-shell">
+                  <VideoRecorder
+                    onRecordingComplete={handleRecordingComplete}
+                    maxDurationSeconds={null}
+                    labels={{
+                      idlePrompt: "Tap to enable your camera",
+                      enableCamera: "Enable camera",
+                      startRecording: "Start recording",
+                      stopRecording: "Stop recording",
+                      rerecord: "Record again",
+                      cameraAccessError:
+                        "We could not access your camera. Please check browser permissions.",
+                    }}
+                  />
+                </div>
+              </section>
+            </section>
+          )}
+
+          {hasRecordedVideo && (
+            <section className="public-review-card public-review-identity-stage">
+              <div className="public-review-stage-head public-review-stage-head-tight">
+                <p className="public-review-kicker">Step 3 of 3</p>
+                <h2 className="public-review-section-title">One last step</h2>
+                <p className="public-review-muted">
+                  Add your details so the company can identify your review and send your reward.
+                </p>
+              </div>
+
+              <div className="public-review-identity-grid">
+                <label className="public-review-field">
+                  <span className="public-review-field-label">First name</span>
+                  <input
+                    value={firstName}
+                    onChange={(event) => setFirstName(event.target.value)}
+                    placeholder="John"
+                    className="public-review-input"
+                  />
+                </label>
+
+                <label className="public-review-field">
+                  <span className="public-review-field-label">Last name</span>
+                  <input
+                    value={lastName}
+                    onChange={(event) => setLastName(event.target.value)}
+                    placeholder="Doe"
+                    className="public-review-input"
+                  />
+                </label>
+
+                <label className="public-review-field public-review-field-wide">
+                  <span className="public-review-field-label">Email</span>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    placeholder="john@example.com"
+                    className="public-review-input"
+                  />
+                </label>
+              </div>
+
+              <div className="public-review-note">
+                We ask for your name and email only so the company can send your reward. They
+                will not be used for anything else.
+              </div>
+            </section>
+          )}
+
+          {error && <div className="public-review-feedback public-review-feedback-error">{error}</div>}
+
+          {isSubmitting && (
+            <div className="public-review-feedback public-review-feedback-upload">
+              <p className="public-review-upload-copy">Uploading your video review...</p>
+              <div className="public-review-upload-track">
+                <div
+                  className="public-review-upload-fill"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
             </div>
           )}
 
-          <div className="campaign-recorder-shell">
-            <VideoRecorder
-              onRecordingComplete={handleRecordingComplete}
-              maxDurationSeconds={null}
-              labels={{
-                idlePrompt: "Tap to enable your camera",
-                enableCamera: "Enable camera",
-                startRecording: "Start recording",
-                stopRecording: "Stop recording",
-                rerecord: "Record again",
-                cameraAccessError: "We could not access your camera. Please check browser permissions.",
-              }}
-            />
-          </div>
-        </div>
+          {hasRecordedVideo && (
+            <button type="submit" disabled={isSubmitting} className="public-review-submit-btn">
+              {isSubmitting ? "Submitting..." : "Send video review →"}
+            </button>
+          )}
+        </form>
+      </main>
 
-        {error && (
-          <div style={{ position: "relative", zIndex: 1, borderRadius: 14, padding: 14, background: "rgba(255,95,61,.08)", border: "1px solid rgba(255,95,61,.18)", color: "var(--brand-2)" }}>
-            {error}
-          </div>
-        )}
-
-        {isSubmitting && (
-          <div
-            style={{
-              position: "relative",
-              zIndex: 1,
-              borderRadius: 16,
-              border: "1px solid var(--ink-3)",
-              padding: 16,
-              background: "rgba(255,255,255,.02)",
-            }}
-          >
-            <p style={{ marginBottom: 10 }}>Uploading video and saving your review...</p>
-            <div style={{ width: "100%", height: 10, borderRadius: 999, background: "var(--ink-3)", overflow: "hidden" }}>
-              <div
-                style={{
-                  width: `${uploadProgress}%`,
-                  height: "100%",
-                  background: "linear-gradient(90deg, var(--brand), var(--brand-2))",
-                }}
-              />
-            </div>
-          </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          style={{
-            position: "relative",
-            zIndex: 1,
-            width: "100%",
-            padding: "18px 24px",
-            borderRadius: 999,
-            border: "none",
-            background: isSubmitting ? "rgba(255,95,61,.5)" : "rgba(255,95,61,.28)",
-            color: isSubmitting ? "rgba(240,240,245,.65)" : "rgba(240,240,245,.92)",
-            fontFamily: "Syne, sans-serif",
-            fontSize: "clamp(20px, 3vw, 28px)",
-            fontWeight: 800,
-            letterSpacing: "-0.01em",
-            cursor: isSubmitting ? "wait" : "pointer",
-          }}
-        >
-          {isSubmitting ? "Submitting..." : "Reply and get your reward →"}
-        </button>
-
-        <p
-          className="mono"
-          style={{
-            position: "relative",
-            zIndex: 1,
-            textAlign: "center",
-            color: "rgba(240,240,245,.24)",
-            fontSize: "11px",
-          }}
-        >
-          Powered by VR · Your video will be reviewed before publication
-        </p>
-      </form>
-
-      <style>{`
-        .campaign-review-form .video-recorder {
-          display: grid;
-          gap: 0;
-          width: 100%;
-          max-width: 460px;
-          margin: 0 auto;
-          border-radius: 26px;
-          border: 1px dashed rgba(255, 255, 255, 0.14);
-          background: linear-gradient(180deg, rgba(2, 3, 12, 0.98), rgba(11, 12, 22, 0.98));
-          overflow: hidden;
-        }
-
-        .campaign-review-form .video-container {
-          position: relative;
-          width: 100%;
-          max-width: none;
-          aspect-ratio: 9 / 16;
-          margin: 0 auto;
-          border-radius: 0;
-          border: none;
-          background: transparent;
-          overflow: hidden;
-        }
-
-        .campaign-review-form .video-element {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          display: block;
-          background: #03040b;
-        }
-
-        .campaign-review-form .video-placeholder {
-          position: absolute;
-          inset: 0;
-          display: grid;
-          place-content: center;
-          gap: 16px;
-          text-align: center;
-          padding: 24px;
-          color: rgba(240, 240, 245, 0.42);
-          cursor: pointer;
-        }
-
-        .campaign-review-form .placeholder-icon {
-          width: 78px;
-          height: 78px;
-          margin: 0 auto;
-          border-radius: 999px;
-          display: grid;
-          place-items: center;
-          font-size: 32px;
-          background: rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.14);
-          box-shadow:
-            inset 0 0 0 1px rgba(255, 255, 255, 0.04),
-            0 0 0 6px rgba(255, 255, 255, 0.02);
-        }
-
-        .campaign-review-form .recording-overlay {
-          position: absolute;
-          inset: 0;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          padding: 16px;
-          background: linear-gradient(180deg, rgba(0,0,0,.32), rgba(0,0,0,0) 26%, rgba(0,0,0,.42));
-          pointer-events: none;
-        }
-
-        .campaign-review-form .recording-indicator,
-        .campaign-review-form .timer {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          width: fit-content;
-          padding: 6px 10px;
-          border-radius: 999px;
-          background: rgba(10, 10, 15, 0.68);
-          color: rgba(240, 240, 245, 0.88);
-          font-size: 12px;
-          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-        }
-
-        .campaign-review-form .rec-dot,
-        .campaign-review-form .rec-dot-btn {
-          width: 8px;
-          height: 8px;
-          border-radius: 999px;
-          background: var(--brand);
-          display: inline-block;
-        }
-
-        .campaign-review-form .progress-bar-container {
-          width: 100%;
-          height: 6px;
-          border-radius: 999px;
-          background: rgba(255,255,255,.12);
-          overflow: hidden;
-        }
-
-        .campaign-review-form .progress-bar-fill.recording-progress {
-          height: 100%;
-          background: linear-gradient(90deg, var(--brand), var(--brand-2));
-        }
-
-        .campaign-review-form .recorder-error {
-          border-radius: 14px;
-          padding: 14px;
-          border: 1px solid rgba(255,95,61,.18);
-          background: rgba(255,95,61,.08);
-          color: var(--brand-2);
-        }
-
-        .campaign-review-form .recorder-controls {
-          display: flex;
-          justify-content: center;
-          gap: 10px;
-          flex-wrap: wrap;
-          padding: 18px;
-          background: rgba(255, 255, 255, 0.03);
-          border-top: 1px solid rgba(255, 255, 255, 0.06);
-        }
-
-        .campaign-review-form .btn-record,
-        .campaign-review-form .btn-stop,
-        .campaign-review-form .btn-secondary {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          padding: 14px 24px;
-          border-radius: 999px;
-          border: 1px solid rgba(255,255,255,.12);
-          background: rgba(255,255,255,.04);
-          color: var(--white);
-          font-family: "Syne", sans-serif;
-          font-size: 14px;
-          font-weight: 700;
-          cursor: pointer;
-        }
-
-        .campaign-review-form .btn-record {
-          background: rgba(255,95,61,.14);
-          border-color: rgba(255,95,61,.24);
-          color: var(--brand-2);
-        }
-
-        .campaign-review-form .btn-stop {
-          background: rgba(255,95,61,.88);
-          border-color: rgba(255,95,61,.9);
-          color: var(--pure);
-        }
-
-        @media (max-width: 760px) {
-          .campaign-review-form form > div:nth-child(2) {
-            grid-template-columns: 1fr !important;
-          }
-
-          .campaign-review-form .video-container {
-            max-width: 100%;
-          }
-        }
-      `}</style>
+      <style>{publicReviewStyles}</style>
     </div>
   );
 }
+
+const publicReviewStyles = `
+  .public-review-page {
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at top left, rgba(255, 95, 61, 0.08), transparent 22%),
+      radial-gradient(circle at top right, rgba(255, 95, 61, 0.05), transparent 20%),
+      #f3efeb;
+    color: #17171d;
+  }
+
+  .public-review-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: rgba(243, 239, 235, 0.92);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(23, 23, 29, 0.06);
+  }
+
+  .public-review-topbar-inner,
+  .public-review-shell {
+    width: min(960px, calc(100% - 40px));
+    margin: 0 auto;
+  }
+
+  .public-review-topbar-inner {
+    height: 68px;
+    display: flex;
+    align-items: center;
+  }
+
+  .public-review-topbar-branding {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .public-review-topbar-mark {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 14px;
+    background: var(--brand);
+    color: #fff;
+    font-size: 16px;
+    box-shadow: 0 10px 18px rgba(255, 95, 61, 0.18);
+  }
+
+  .public-review-topbar-label {
+    font-family: "Figtree", sans-serif;
+    font-size: 19px;
+    font-weight: 800;
+    color: #17171d;
+  }
+
+  .public-review-shell {
+    padding: 28px 0 56px;
+  }
+
+  .public-review-shell-success {
+    padding-top: 56px;
+    padding-bottom: 80px;
+  }
+
+  .public-review-brand-panel,
+  .public-review-card,
+  .public-review-feedback {
+    border: 1px solid rgba(23, 23, 29, 0.08);
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.86);
+    box-shadow:
+      0 14px 32px rgba(18, 18, 24, 0.05),
+      0 1px 0 rgba(255, 255, 255, 0.84) inset;
+  }
+
+  .public-review-brand-panel,
+  .public-review-card,
+  .public-review-feedback,
+  .public-review-submit-btn {
+    margin-bottom: 18px;
+  }
+
+  .public-review-brand-panel {
+    padding: 22px 24px;
+  }
+
+  .public-review-brand-panel-success {
+    max-width: 680px;
+    margin-inline: auto;
+  }
+
+  .public-review-brand-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .public-review-brand-content {
+    min-width: 0;
+  }
+
+  .public-review-brand-fallback {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    background: linear-gradient(180deg, #eef1f8, #e2e8f4);
+    border: 1px solid rgba(92, 109, 168, 0.12);
+    font-family: "Figtree", sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    color: #3d54bc;
+  }
+
+  .public-review-brand-name {
+    font-family: "Figtree", sans-serif;
+    font-size: clamp(28px, 3.6vw, 42px);
+    line-height: 1;
+    font-weight: 800;
+    color: #17171d;
+    margin: 0 0 6px;
+  }
+
+  .public-review-brand-sub {
+    margin: 0;
+    color: rgba(23, 23, 29, 0.46);
+    font-size: 14px;
+    font-family:
+      "DM Mono",
+      ui-monospace,
+      SFMono-Regular,
+      Menlo,
+      Monaco,
+      Consolas,
+      monospace;
+  }
+
+  .public-review-form {
+    display: grid;
+    gap: 0;
+  }
+
+  .public-review-card {
+    padding: 22px 24px;
+  }
+
+  .public-review-stage-head {
+    text-align: center;
+    margin-bottom: 16px;
+  }
+
+  .public-review-stage-head-tight {
+    margin-bottom: 14px;
+  }
+
+  .public-review-kicker,
+  .public-review-field-label,
+  .public-review-meta-label {
+    margin: 0 0 8px;
+    font-size: 11px;
+    line-height: 1.2;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: rgba(23, 23, 29, 0.36);
+  }
+
+  .public-review-meta-label-coral {
+    color: var(--brand-2);
+  }
+
+  .public-review-stage-title,
+  .public-review-section-title,
+  .public-review-success-title {
+    margin: 0;
+    font-family: "Figtree", sans-serif;
+    font-weight: 800;
+    color: #17171d;
+  }
+
+  .public-review-stage-title {
+    font-size: clamp(28px, 4vw, 40px);
+    line-height: 1.04;
+    margin-bottom: 8px;
+  }
+
+  .public-review-section-title {
+    font-size: clamp(22px, 3vw, 30px);
+    line-height: 1.08;
+    margin-bottom: 6px;
+  }
+
+  .public-review-success-title {
+    font-size: clamp(32px, 4.5vw, 52px);
+    line-height: 1.02;
+    margin-bottom: 10px;
+  }
+
+  .public-review-muted,
+  .public-review-meta-copy,
+  .public-review-upload-copy {
+    margin: 0;
+    color: rgba(23, 23, 29, 0.56);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .public-review-stars {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .public-review-star {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    border: 1px solid rgba(23, 23, 29, 0.08);
+    background: rgba(255, 255, 255, 0.92);
+    color: rgba(23, 23, 29, 0.18);
+    font-size: 24px;
+    line-height: 1;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    transition:
+      transform 120ms ease,
+      border-color 120ms ease,
+      background 120ms ease,
+      color 120ms ease,
+      box-shadow 120ms ease;
+  }
+
+  .public-review-star:hover {
+    transform: translateY(-1px);
+    border-color: rgba(255, 95, 61, 0.2);
+  }
+
+  .public-review-star[data-active="true"] {
+    background: linear-gradient(180deg, var(--brand), var(--brand-2));
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 8px 18px rgba(255, 95, 61, 0.18);
+  }
+
+  .public-review-recording-flow {
+    display: grid;
+    gap: 16px;
+  }
+
+  .public-review-recorder-context {
+    width: min(460px, 100%);
+    margin: 0 auto 14px;
+    display: grid;
+    gap: 10px;
+  }
+
+  .public-review-inline-quote-wrap,
+  .public-review-inline-reward {
+    border: 1px solid rgba(23, 23, 29, 0.07);
+    border-radius: 18px;
+    background: rgba(247, 244, 241, 0.9);
+    padding: 12px 14px;
+    text-align: left;
+  }
+
+  .public-review-inline-quote-label,
+  .public-review-inline-reward-label {
+    margin: 0 0 6px;
+    font-size: 10px;
+    line-height: 1.2;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  .public-review-inline-quote-label {
+    color: rgba(23, 23, 29, 0.34);
+  }
+
+  .public-review-inline-reward-label {
+    color: var(--brand-2);
+  }
+
+  .public-review-inline-quote {
+    margin: 0;
+    padding-left: 12px;
+    border-left: 2px solid rgba(255, 95, 61, 0.24);
+    color: rgba(23, 23, 29, 0.72);
+    font-size: 15px;
+    line-height: 1.55;
+    font-style: italic;
+  }
+
+  .public-review-inline-reward-title {
+    margin: 0;
+    font-family: "Figtree", sans-serif;
+    font-size: clamp(15px, 1.9vw, 18px);
+    line-height: 1.3;
+    font-weight: 700;
+    color: #17171d;
+  }
+
+  .public-review-inline-reward-copy {
+    margin: 4px 0 0;
+    color: rgba(23, 23, 29, 0.56);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .public-review-recorder-card {
+    width: min(760px, 100%);
+    margin-inline: auto;
+    text-align: center;
+  }
+
+  .public-review-recorder-shell {
+    width: min(460px, 100%);
+    margin: 0 auto;
+  }
+
+  .public-review-recorder-shell .video-recorder {
+    display: grid;
+    gap: 14px;
+  }
+
+  .public-review-recorder-shell .video-container {
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    border-radius: 24px;
+    overflow: hidden;
+    background: #101117;
+    border: 1px dashed rgba(255, 255, 255, 0.12);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.02) inset,
+      0 18px 34px rgba(10, 10, 14, 0.2);
+  }
+
+  .public-review-recorder-shell .video-element {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .public-review-recorder-shell .video-placeholder {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    gap: 12px;
+    padding: 24px;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.7);
+    text-align: center;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  .public-review-recorder-shell .placeholder-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+      0 0 0 12px rgba(255, 95, 61, 0.07),
+      0 8px 24px rgba(0, 0, 0, 0.22);
+    font-size: 26px;
+  }
+
+  .public-review-recorder-shell .recording-overlay {
+    padding: 12px;
+  }
+
+  .public-review-recorder-shell .recording-indicator,
+  .public-review-recorder-shell .timer {
+    font-size: 12px;
+  }
+
+  .public-review-recorder-shell .recorder-error {
+    border-radius: 18px;
+    padding: 14px 16px;
+    border: 1px solid rgba(220, 82, 82, 0.16);
+    background: rgba(220, 82, 82, 0.08);
+    color: #9f3434;
+    font-size: 14px;
+  }
+
+  .public-review-recorder-shell .recorder-controls {
+    border-radius: 22px;
+    border: 1px solid rgba(23, 23, 29, 0.08);
+    background: rgba(255, 255, 255, 0.86);
+    padding: 14px;
+    display: grid;
+    gap: 12px;
+  }
+
+  .public-review-recorder-shell .recorder-controls .btn {
+    min-height: 52px;
+    border-radius: 999px;
+    font-family: "Figtree", sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    border: 1px solid transparent;
+    cursor: pointer;
+  }
+
+  .public-review-recorder-shell .recorder-controls .btn-primary,
+  .public-review-recorder-shell .recorder-controls .btn-record,
+  .public-review-recorder-shell .recorder-controls .btn-stop {
+    background: linear-gradient(180deg, var(--brand), var(--brand-2));
+    color: #fff;
+    box-shadow: 0 10px 22px rgba(255, 95, 61, 0.14);
+  }
+
+  .public-review-recorder-shell .recorder-controls .btn-secondary {
+    background: rgba(255, 255, 255, 0.92);
+    border-color: rgba(23, 23, 29, 0.1);
+    color: #17171d;
+  }
+
+  .public-review-recorder-shell .recorder-playback-shell {
+    gap: 10px !important;
+  }
+
+  .public-review-recorder-shell .recorder-playback-progress {
+    height: 6px !important;
+    background: rgba(23, 23, 29, 0.08) !important;
+  }
+
+  .public-review-recorder-shell .recorder-playback-actions {
+    gap: 12px !important;
+  }
+
+  .public-review-identity-stage {
+    width: min(760px, 100%);
+    margin-inline: auto;
+  }
+
+  .public-review-identity-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .public-review-field {
+    display: grid;
+    gap: 8px;
+  }
+
+  .public-review-field-wide {
+    grid-column: 1 / -1;
+  }
+
+  .public-review-input {
+    width: 100%;
+    height: 54px;
+    border-radius: 16px;
+    border: 1px solid rgba(23, 23, 29, 0.08);
+    background: rgba(255, 255, 255, 0.94);
+    padding: 0 16px;
+    font-size: 16px;
+    color: #17171d;
+    outline: none;
+    transition:
+      border-color 120ms ease,
+      box-shadow 120ms ease;
+  }
+
+  .public-review-input:focus {
+    border-color: rgba(255, 95, 61, 0.28);
+    box-shadow: 0 0 0 4px rgba(255, 95, 61, 0.08);
+  }
+
+  .public-review-input::placeholder {
+    color: rgba(23, 23, 29, 0.32);
+  }
+
+  .public-review-note {
+    margin-top: 14px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    border: 1px solid rgba(23, 23, 29, 0.06);
+    background: rgba(247, 244, 241, 0.95);
+    font-size: 14px;
+    line-height: 1.6;
+    color: rgba(23, 23, 29, 0.58);
+  }
+
+  .public-review-feedback {
+    padding: 16px 18px;
+  }
+
+  .public-review-feedback-error {
+    color: #9f3434;
+    border-color: rgba(220, 82, 82, 0.14);
+    background: rgba(220, 82, 82, 0.08);
+  }
+
+  .public-review-feedback-upload {
+    width: min(760px, 100%);
+    margin-inline: auto;
+  }
+
+  .public-review-upload-copy {
+    margin-bottom: 10px;
+  }
+
+  .public-review-upload-track {
+    width: 100%;
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(23, 23, 29, 0.08);
+    overflow: hidden;
+  }
+
+  .public-review-upload-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--brand), var(--brand-2));
+  }
+
+  .public-review-submit-btn {
+    width: min(760px, 100%);
+    margin-inline: auto;
+    min-height: 58px;
+    border: 0;
+    border-radius: 999px;
+    background: linear-gradient(180deg, var(--brand), var(--brand-2));
+    color: #fff;
+    font-family: "Figtree", sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 14px 28px rgba(255, 95, 61, 0.16);
+    transition:
+      transform 120ms ease,
+      box-shadow 120ms ease,
+      opacity 120ms ease;
+  }
+
+  .public-review-submit-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 18px 32px rgba(255, 95, 61, 0.2);
+  }
+
+  .public-review-submit-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+
+  .public-review-success-card {
+    max-width: 680px;
+    margin-inline: auto;
+    text-align: center;
+    padding: 32px;
+  }
+
+  @media (max-width: 900px) {
+    .public-review-topbar-inner,
+    .public-review-shell {
+      width: min(100%, calc(100% - 28px));
+    }
+
+    .public-review-shell {
+      padding: 22px 0 44px;
+    }
+
+    .public-review-recorder-context {
+      width: min(460px, 100%);
+    }
+  }
+
+  @media (max-width: 720px) {
+    .public-review-topbar-inner {
+      height: 62px;
+    }
+
+    .public-review-topbar-mark {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      font-size: 14px;
+    }
+
+    .public-review-topbar-label {
+      font-size: 18px;
+    }
+
+    .public-review-brand-panel,
+    .public-review-card,
+    .public-review-feedback {
+      border-radius: 20px;
+    }
+
+    .public-review-brand-panel,
+    .public-review-card {
+      padding: 18px;
+    }
+
+    .public-review-brand-name {
+      font-size: clamp(22px, 8vw, 32px);
+    }
+
+    .public-review-stage-title {
+      font-size: clamp(24px, 8vw, 34px);
+    }
+
+    .public-review-section-title {
+      font-size: clamp(20px, 6vw, 26px);
+    }
+
+    .public-review-muted,
+    .public-review-inline-quote,
+    .public-review-inline-reward-copy {
+      font-size: 14px;
+    }
+
+    .public-review-star {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      font-size: 21px;
+    }
+
+    .public-review-recorder-shell {
+      width: 100%;
+    }
+
+    .public-review-recorder-shell .video-container {
+      aspect-ratio: 4 / 5;
+      border-radius: 20px;
+    }
+
+    .public-review-identity-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .public-review-field-wide {
+      grid-column: auto;
+    }
+
+    .public-review-input {
+      height: 50px;
+      border-radius: 14px;
+      font-size: 15px;
+    }
+
+    .public-review-submit-btn {
+      min-height: 54px;
+      font-size: 16px;
+    }
+  }
+
+  @media (max-width: 520px) {
+    .public-review-topbar-inner,
+    .public-review-shell {
+      width: min(100%, calc(100% - 20px));
+    }
+
+    .public-review-brand-panel,
+    .public-review-card,
+    .public-review-feedback {
+      border-radius: 18px;
+    }
+
+    .public-review-brand-panel,
+    .public-review-card {
+      padding: 16px;
+    }
+
+    .public-review-brand-row {
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .public-review-brand-fallback {
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      font-size: 16px;
+    }
+
+    .public-review-stage-head {
+      text-align: left;
+    }
+
+    .public-review-stars {
+      justify-content: flex-start;
+    }
+
+    .public-review-inline-quote {
+      font-size: 13px;
+    }
+
+    .public-review-star {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      font-size: 20px;
+    }
+
+    .public-review-recorder-shell .video-placeholder {
+      font-size: 14px;
+      padding: 18px;
+    }
+
+    .public-review-recorder-shell .placeholder-icon {
+      width: 60px;
+      height: 60px;
+      box-shadow:
+        0 0 0 10px rgba(255, 95, 61, 0.06),
+        0 8px 20px rgba(0, 0, 0, 0.22);
+      font-size: 22px;
+    }
+
+    .public-review-recorder-shell .recorder-controls {
+      padding: 12px;
+    }
+
+    .public-review-note {
+      font-size: 13px;
+      padding: 12px 14px;
+    }
+  }
+`;

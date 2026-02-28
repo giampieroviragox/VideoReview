@@ -38,10 +38,9 @@ export default function CTA() {
         <section className="cta-section" id="cta">
             <div className="wrap">
                 <div className="cta-box reveal visible">
-                    <div className="tag" style={{ display: 'inline-flex', marginBottom: 'var(--s5)' }}>
-                        <span className="tag-dot"></span>Waitlist Open
-                    </div>
-                    <h2 className="display cta-title">Your next client is waiting for a reason to trust you.</h2>
+                    <h2 className="display cta-title">
+                        Ready to collect <em>real</em> proof?
+                    </h2>
                     <p className="cta-sub">
                         We are in private beta. Join to get <br />
                         <strong>priority access</strong> and 3 months of Pro for free.
@@ -65,7 +64,7 @@ export default function CTA() {
                             />
                             <button
                                 type="submit"
-                                className="btn btn-primary"
+                                className="landing-cta-submit"
                                 disabled={status === "loading"}
                             >
                                 {status === "loading" ? "Sending..." : "Join the Waitlist →"}

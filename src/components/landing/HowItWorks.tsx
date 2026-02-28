@@ -1,32 +1,55 @@
 "use client";
 
+const steps = [
+    {
+        number: "01",
+        icon: "🏢",
+        title: "Set up your brand",
+        description:
+            "Upload your logo, set your primary color. Your invite page is ready in under 5 minutes.",
+    },
+    {
+        number: "02",
+        icon: "📨",
+        title: "Invite your customers",
+        description:
+            "Send a link via email, WhatsApp or anywhere. Optionally attach a reward to boost response rate.",
+    },
+    {
+        number: "03",
+        icon: "✨",
+        title: "Collect & publish",
+        description:
+            "Review each video before it goes live. Embed anywhere with a single line of code.",
+    },
+];
+
 export default function HowItWorks() {
     return (
-        <section className="section" id="how-it-works">
-            <div className="wrap">
-                <div className="section-header reveal visible">
-                    <div className="tag section-tag"><span className="tag-dot animate-pulse"></span>How it works</div>
-                    <h2 className="heading section-title">Three steps. Zero friction.</h2>
-                    <p className="section-sub">Built for marketing and product teams that want results without technical overhead.</p>
+        <section className="landing-how-section" id="how-it-works">
+            <p className="landing-section-label">How it works</p>
+            <h2 className="landing-section-title">
+                Three steps.
+                <br />
+                That&apos;s really it.
+            </h2>
+            <p className="landing-section-sub">
+                No complex flows, no integrations required. Set up once, collect forever.
+            </p>
+
+                <div className="landing-steps-grid">
+                    {steps.map((step, index) => (
+                        <div key={step.number} className="landing-step-card">
+                            <div className="step-num">{step.number}</div>
+                            <div className="step-icon">{step.icon}</div>
+                            <h3 className="step-title">{step.title}</h3>
+                            <p className="step-sub">{step.description}</p>
+                            {index < steps.length - 1 && (
+                                <div className="step-connector">→</div>
+                            )}
+                        </div>
+                    ))}
                 </div>
-                <div className="steps-grid">
-                    <div className="step-card card card-glow reveal visible">
-                        <div className="step-num">01</div>
-                        <h3 className="step-title">Invite your customers</h3>
-                        <p className="step-desc">Create a video collection campaign in 2 clicks. Personalize the message, choose the customer segment, and define the optional reward to offer in exchange for the review.</p>
-                    </div>
-                    <div className="step-card card card-glow reveal visible reveal-delay-1">
-                        <div className="step-num">02</div>
-                        <h3 className="step-title">Customer records &amp; sends</h3>
-                        <p className="step-desc">Direct link, no account needed. The customer records the video from the browser in 60 seconds &mdash; no app to download. Guided UI with optional prompts to maximize quality.</p>
-                    </div>
-                    <div className="step-card card card-glow reveal visible reveal-delay-2">
-                        <div className="step-num">03</div>
-                        <h3 className="step-title">Publish, reuse, distribute</h3>
-                        <p className="step-desc">Approve with one click, then share every review across your social channels, use it in your ads, or embed it directly into your site and landing pages.</p>
-                    </div>
-                </div>
-            </div>
         </section>
     );
 }

@@ -93,29 +93,20 @@ export default async function CampaignPublicPage({ params }: PageProps) {
   }
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background:
-          "radial-gradient(circle at top left, rgba(255,95,61,.12), transparent 28%), radial-gradient(circle at top right, rgba(123,79,255,.08), transparent 24%), var(--ink)",
-        padding: "32px 0 48px",
-      }}
-    >
-      <div className="wrap">
-        <CampaignSubmissionForm
-          campaign={{
-            id: campaign.id,
-            brandName: campaign.brandName,
-            brandLogoUrl: campaign.brandLogoUrl,
-            name: campaign.name,
-            description: campaign.description,
-            rewardText: campaign.rewardText,
-            rewardValue: campaign.rewardValue,
-            questionDisplayMode: campaign.questionDisplayMode,
-            questions: campaign.questions,
-          }}
-        />
-      </div>
+    <main style={{ minHeight: "100vh", background: "#f3efeb" }}>
+      <CampaignSubmissionForm
+        campaign={{
+          id: campaign.id,
+          brandName: campaign.brandName,
+          brandLogoUrl: campaign.brandLogoUrl,
+          name: campaign.name,
+          description: campaign.description,
+          rewardText: campaign.rewardText,
+          rewardValue: campaign.rewardValue,
+          questionDisplayMode: campaign.questionDisplayMode,
+          questions: campaign.questions,
+        }}
+      />
     </main>
   );
 }

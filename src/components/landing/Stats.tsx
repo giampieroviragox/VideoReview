@@ -2,24 +2,37 @@
 
 export default function Stats() {
     return (
-        <section className="stats-section">
-            <div className="wrap">
-                <div className="stats-grid">
-                    <div className="stat-item reveal visible">
-                        <div className="stat-number">2<span>/3</span></div>
-                        <div className="stat-label">of consumers are more likely to buy<br />after watching a video testimonial (Wyzowl)</div>
+        <section className="landing-stats-section">
+            <div className="landing-stats-inner">
+                <h2 className="landing-stats-headline">
+                    Numbers that <span>matter.</span>
+                </h2>
+                <div className="landing-stats-grid">
+                    <div className="landing-stat-item">
+                        <div className="stat-num">2<span>/3</span></div>
+                        <div className="stat-label">
+                            of consumers are more likely to buy after watching a
+                            video testimonial (Wyzowl)
+                        </div>
                     </div>
-                    <div className="stat-item reveal visible reveal-delay-1">
-                        <div className="stat-number">+80<span>%</span></div>
-                        <div className="stat-label">higher conversion rates on landing pages<br />with video testimonials (Unbounce)</div>
+                    <div className="landing-stat-item">
+                        <div className="stat-num">+80<span>%</span></div>
+                        <div className="stat-label">
+                            higher conversion rates on landing pages with video
+                            testimonials (Unbounce)
+                        </div>
                     </div>
-                    <div className="stat-item reveal visible reveal-delay-2">
-                        <div className="stat-number">5<span>min</span></div>
-                        <div className="stat-label">complete setup and first<br />invitation sent</div>
+                    <div className="landing-stat-item">
+                        <div className="stat-num">5<span>min</span></div>
+                        <div className="stat-label">
+                            to complete setup and send your first invitation
+                        </div>
                     </div>
-                    <div className="stat-item reveal visible reveal-delay-3">
-                        <div className="stat-number">95<span>%</span></div>
-                        <div className="stat-label">message retention for video reviews<br />vs 10% for text (Influencer Marketing Hub)</div>
+                    <div className="landing-stat-item">
+                        <div className="stat-num">95<span>%</span></div>
+                        <div className="stat-label">
+                            of a video review is remembered, vs 10% for text
+                        </div>
                     </div>
                 </div>
             </div>

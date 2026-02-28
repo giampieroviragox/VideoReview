@@ -81,7 +81,7 @@ export default async function DashboardPage() {
       style={{
         minHeight: "100vh",
         background:
-          "radial-gradient(circle at top left, rgba(255,95,61,.1), transparent 28%), radial-gradient(circle at top right, rgba(123,79,255,.08), transparent 24%), var(--ink)",
+          "radial-gradient(circle at top left, rgba(255,95,61,.08), transparent 26%), #f3efeb",
       }}
     >
       <div className="wrap" style={{ paddingTop: 28, paddingBottom: 48 }}>

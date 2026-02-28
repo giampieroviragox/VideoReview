@@ -86,24 +86,26 @@ export default function Navbar() {
   }, []);
 
   return (
-    <nav className={`${scrolled ? "scrolled" : ""} ${menuOpen ? "menu-open" : ""}`}>
+    <nav className={`landing-nav ${scrolled ? "scrolled" : ""} ${menuOpen ? "menu-open" : ""}`}>
       <div className="wrap">
-        <div className="nav-inner">
-          <Link href="/" className="logo">
-            <div className="logo-mark">▶</div>
+        <div className="landing-nav-inner">
+          <Link href="/" className="landing-nav-logo">
+            <div className="landing-nav-logo-mark">▶</div>
             VR
           </Link>
 
-          <ul className="nav-links desktop-only" style={{ margin: 0, padding: 0 }}>
+          <ul className="landing-nav-links desktop-only">
             <li><a href="#how-it-works">How it works</a></li>
-            <li><a href="#features">Features</a></li>
             <li><a href="#pricing">Pricing</a></li>
-            <li><a href="#use-cases">Use Cases</a></li>
+            <li><a href="#examples">Examples</a></li>
           </ul>
 
-          <div className="nav-cta desktop-only">
-            <a href="#cta" className="btn btn-primary" style={{ padding: "10px 20px", fontSize: "11px" }}>
-              Join the Waitlist &rarr;
+          <div className="landing-nav-actions desktop-only">
+            <button type="button" className="landing-nav-login">
+              Log in
+            </button>
+            <a href="#cta" className="landing-nav-signup">
+              Sign up free &rarr;
             </a>
           </div>
 
@@ -123,16 +125,18 @@ export default function Navbar() {
         </div>
       </div>
 
-      <div id="mobile-menu" className={`mobile-menu ${menuOpen ? "active" : ""}`}>
+      <div id="mobile-menu" className={`mobile-menu landing-mobile-menu ${menuOpen ? "active" : ""}`}>
         <ul className="mobile-links">
           <li><a href="#how-it-works" onClick={() => setMenuOpen(false)}>How it works</a></li>
-          <li><a href="#features" onClick={() => setMenuOpen(false)}>Features</a></li>
           <li><a href="#pricing" onClick={() => setMenuOpen(false)}>Pricing</a></li>
-          <li><a href="#use-cases" onClick={() => setMenuOpen(false)}>Use Cases</a></li>
+          <li><a href="#examples" onClick={() => setMenuOpen(false)}>Examples</a></li>
         </ul>
         <div className="mobile-cta">
-          <a href="#cta" className="btn btn-primary" style={{ width: "100%" }} onClick={() => setMenuOpen(false)}>
-            Join the Waitlist
+          <button type="button" className="landing-nav-login landing-mobile-full">
+            Log in
+          </button>
+          <a href="#cta" className="landing-nav-signup landing-mobile-full" onClick={() => setMenuOpen(false)}>
+            Sign up free &rarr;
           </a>
         </div>
       </div>
