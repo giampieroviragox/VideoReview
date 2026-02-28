@@ -17,18 +17,57 @@ model CollectionPage {
   submissions Submission[]
 }
 
+model Campaign {
+  id                  String             @id @default(cuid())
+  brandName           String
+  brandSlug           String
+  brandLogoUrl        String?
+  name                String
+  description         String?
+  rewardText          String
+  rewardValue         String?
+  hasNoEndDate        Boolean            @default(true)
+  endsAt              DateTime?
+  questionDisplayMode String             @default("ALL_AT_ONCE")
+  inviteMessage       String
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  questions           CampaignQuestion[]
+  submissions         Submission[]
+
+  @@index([brandSlug])
+}
+
+model CampaignQuestion {
+  id        String   @id @default(cuid())
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  campaignId String
+  text      String
+  required  Boolean  @default(false)
+  sortOrder Int
+  createdAt DateTime @default(now())
+
+  @@index([campaignId, sortOrder])
+}
+
 model Submission {
-  id               String         @id @default(cuid())
-  collectionPage   CollectionPage @relation(fields: [collectionPageId], references: [id])
-  collectionPageId String
+  id               String          @id @default(cuid())
+  collectionPage   CollectionPage? @relation(fields: [collectionPageId], references: [id])
+  collectionPageId String?
+  campaign         Campaign?       @relation(fields: [campaignId], references: [id])
+  campaignId       String?
   reviewerName     String
   reviewerEmail    String
+  reviewerRating   Int?
+  answers          Json?
   videoKey         String
   durationSeconds  Int?
-  status           String         @default("pending")
-  createdAt        DateTime       @default(now())
+  status           String          @default("pending")
+  rewardPending    Boolean         @default(false)
+  createdAt        DateTime        @default(now())
 
   @@index([collectionPageId])
+  @@index([campaignId])
   @@index([status])
 }
 

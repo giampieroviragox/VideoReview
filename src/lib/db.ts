@@ -7,22 +7,38 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-let prisma: PrismaClient;
-
-if (globalForPrisma.prisma) {
-  prisma = globalForPrisma.prisma;
-} else {
+function createPrismaClient() {
   const connectionString = process.env.DATABASE_URL;
 
   if (connectionString) {
     const pool = new Pool({ connectionString });
     const adapter = new PrismaPg(pool);
-    prisma = new PrismaClient({ adapter });
-  } else {
-    // Fallback for build time if DATABASE_URL is missing
-    // or if we want to handle missing env var gracefully
-    prisma = new PrismaClient();
+    return new PrismaClient({ adapter });
   }
+
+  // Fallback for build time if DATABASE_URL is missing
+  // or if we want to handle missing env var gracefully
+  return new PrismaClient();
+}
+
+function hasCampaignDelegate(client: PrismaClient) {
+  return "campaign" in (client as PrismaClient & Record<string, unknown>);
+}
+
+function getCampaignDelegate() {
+  const client = prisma as PrismaClient & {
+    campaign?: unknown;
+  };
+
+  return client.campaign;
+}
+
+let prisma: PrismaClient;
+
+if (globalForPrisma.prisma && hasCampaignDelegate(globalForPrisma.prisma)) {
+  prisma = globalForPrisma.prisma;
+} else {
+  prisma = createPrismaClient();
 
   if (process.env.NODE_ENV !== "production") {
     globalForPrisma.prisma = prisma;
@@ -30,3 +46,4 @@ if (globalForPrisma.prisma) {
 }
 
 export { prisma };
+export { getCampaignDelegate };
