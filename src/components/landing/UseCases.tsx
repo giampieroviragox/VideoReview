@@ -1,57 +1,80 @@
 "use client";
 
+const useCases = [
+  {
+    icon: "⚡",
+    kicker: "SaaS · Freemium",
+    title: "Free → Premium\nwith review reward",
+    description:
+      "Invite free users to record a video review. In exchange, unlock 30 days of your Pro plan and turn happy users into conversion proof.",
+    pills: ["🎁 Reward: 30d Premium", "📈 Trial conversion uplift"],
+  },
+  {
+    icon: "🛒",
+    kicker: "E-commerce · Post-purchase",
+    title: "Automatic post-purchase\nvideo UGC",
+    description:
+      "Send a review request after delivery, collect real product footage, and publish it where buyers need extra trust before they purchase.",
+    pills: ["💳 Reward: 15% coupon", "🎬 Authentic UGC"],
+  },
+  {
+    icon: "🏢",
+    kicker: "Agency · B2B",
+    title: "Video case studies\nfor agency clients",
+    description:
+      "Turn client feedback into polished proof for proposals, sales decks, and landing pages. Structured prompts make every testimonial easier to reuse.",
+    pills: ["🏆 No reward — relationship", "📋 Guided prompts"],
+  },
+  {
+    icon: "🎓",
+    kicker: "EdTech · Community",
+    title: "Testimonials from\ntop students",
+    description:
+      "Invite your most engaged users to share their transformation story and reuse those videos across community growth, launches, and enrollment pages.",
+    pills: ["🎓 Reward: advanced course", "✨ Emotional social proof"],
+  },
+];
+
 export default function UseCases() {
-    return (
-        <section className="section" id="use-cases" style={{ paddingTop: 0 }}>
-            <div className="wrap">
-                <div className="section-header reveal visible">
-                    <div className="tag section-tag"><span className="tag-dot animate-pulse"></span>Use Cases</div>
-                    <h2 className="heading section-title">Works for every business model.</h2>
-                    <p className="section-sub">Fixed or dynamic rewards, manual or automatic invites &mdash; VR adapts to your workflow.</p>
-                </div>
-                <div className="use-cases-grid">
-                    <div className="use-case-card card card-glow reveal visible">
-                        <span className="use-case-icon">⚡</span>
-                        <div className="use-case-kicker">SaaS &middot; freemium</div>
-                        <h3 className="heading use-case-title">Free &rarr; Premium<br />with review reward</h3>
-                        <p className="use-case-desc">Invite free users to record a video review. In exchange, automatically unlock 30 days of the Pro plan. Win-win: you get social proof, they get a free upgrade.</p>
-                        <div className="use-case-pills">
-                            <span className="use-case-pill">🎁 Reward: 30d Premium</span>
-                            <span className="use-case-pill">📈 Trial conversion uplift</span>
-                        </div>
-                    </div>
-                    <div className="use-case-card card card-glow reveal visible reveal-delay-1">
-                        <span className="use-case-icon">🛒</span>
-                        <div className="use-case-kicker">E-commerce &middot; post-purchase</div>
-                        <h3 className="heading use-case-title">Automatic post-purchase<br />video UGC</h3>
-                        <p className="use-case-desc">Automatic email 7 days after the order. The customer shows the product in use, receives a 15% coupon. The video goes directly to the product page and crushes purchase doubts.</p>
-                        <div className="use-case-pills">
-                            <span className="use-case-pill">💳 Reward: 15% coupon</span>
-                            <span className="use-case-pill">🎬 Authentic UGC</span>
-                        </div>
-                    </div>
-                    <div className="use-case-card card card-glow reveal visible reveal-delay-2">
-                        <span className="use-case-icon">🏢</span>
-                        <div className="use-case-kicker">Agency &middot; B2B</div>
-                        <h3 className="heading use-case-title">Video case studies<br />for agency clients</h3>
-                        <p className="use-case-desc">Turn final client feedback into professional video case studies. Structure prompts, approve content, use the video in pitches and proposals. Close more deals with real proof.</p>
-                        <div className="use-case-pills">
-                            <span className="use-case-pill">🏆 No reward &mdash; relationship</span>
-                            <span className="use-case-pill">📋 Guided prompts</span>
-                        </div>
-                    </div>
-                    <div className="use-case-card card card-glow reveal visible reveal-delay-3">
-                        <span className="use-case-icon">🎓</span>
-                        <div className="use-case-kicker">EdTech &middot; community</div>
-                        <h3 className="heading use-case-title">Testimonials from<br />top students</h3>
-                        <p className="use-case-desc">Identify users with highest engagement, invite them to tell their transformation story. Reward: access to advanced course or mentoring session. Powerful content for enrollment landing page.</p>
-                        <div className="use-case-pills">
-                            <span className="use-case-pill">🎓 Reward: advanced course</span>
-                            <span className="use-case-pill">✨ Emotional social proof</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-    );
+  return (
+    <section className="landing-use-cases-section" id="use-cases">
+      <div className="landing-use-cases-inner">
+        <p className="landing-section-label">Use cases</p>
+        <h2 className="landing-section-title">
+          Works for every
+          <br />
+          business model.
+        </h2>
+        <p className="landing-section-sub">
+          Fixed or dynamic rewards, manual or automatic invites. VR adapts to your
+          workflow.
+        </p>
+
+        <div className="landing-use-cases-grid">
+          {useCases.map((item) => (
+            <article key={item.title} className="landing-use-case-card">
+              <div className="landing-use-case-icon">{item.icon}</div>
+              <p className="landing-use-case-kicker">{item.kicker}</p>
+              <h3 className="landing-use-case-title">
+                {item.title.split("\n").map((line) => (
+                  <span key={line}>
+                    {line}
+                    <br />
+                  </span>
+                ))}
+              </h3>
+              <p className="landing-use-case-desc">{item.description}</p>
+              <div className="landing-use-case-pills">
+                {item.pills.map((pill) => (
+                  <span key={pill} className="landing-use-case-pill">
+                    {pill}
+                  </span>
+                ))}
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
 }

@@ -29,7 +29,7 @@ export default function Hero() {
 
                 <div className="landing-hero-cta">
                     <a href="#cta" className="landing-hero-primary">
-                        Start for free <span aria-hidden="true">&rarr;</span>
+                        Join the waitlist <span aria-hidden="true">&rarr;</span>
                     </a>
                     <button
                         type="button"

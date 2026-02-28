@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import DemoModal from "@/components/landing/DemoModal";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [demoOpen, setDemoOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -96,8 +98,9 @@ export default function Navbar() {
 
           <ul className="landing-nav-links desktop-only">
             <li><a href="#how-it-works">How it works</a></li>
+            <li><a href="#use-cases">Use cases</a></li>
+            <li><a href="#features">Features</a></li>
             <li><a href="#pricing">Pricing</a></li>
-            <li><a href="#examples">Examples</a></li>
           </ul>
 
           <div className="landing-nav-actions desktop-only">
@@ -128,18 +131,18 @@ export default function Navbar() {
       <div id="mobile-menu" className={`mobile-menu landing-mobile-menu ${menuOpen ? "active" : ""}`}>
         <ul className="mobile-links">
           <li><a href="#how-it-works" onClick={() => setMenuOpen(false)}>How it works</a></li>
+          <li><a href="#use-cases" onClick={() => setMenuOpen(false)}>Use cases</a></li>
+          <li><a href="#features" onClick={() => setMenuOpen(false)}>Features</a></li>
           <li><a href="#pricing" onClick={() => setMenuOpen(false)}>Pricing</a></li>
-          <li><a href="#examples" onClick={() => setMenuOpen(false)}>Examples</a></li>
         </ul>
         <div className="mobile-cta">
-          <button type="button" className="landing-nav-login landing-mobile-full">
-            Log in
-          </button>
           <a href="#cta" className="landing-nav-signup landing-mobile-full" onClick={() => setMenuOpen(false)}>
-            Sign up free &rarr;
+            Join the waitlist &rarr;
           </a>
         </div>
       </div>
+
+      {demoOpen && <DemoModal onClose={() => setDemoOpen(false)} />}
     </nav>
   );
 }

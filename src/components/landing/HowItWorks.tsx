@@ -3,24 +3,24 @@
 const steps = [
     {
         number: "01",
-        icon: "🏢",
-        title: "Set up your brand",
+        icon: "✉️",
+        title: "Invite your customers",
         description:
-            "Upload your logo, set your primary color. Your invite page is ready in under 5 minutes.",
+            "Create a video collection campaign in 2 clicks. Personalize the message, choose the customer segment, and define the optional reward to offer in exchange for the review.",
     },
     {
         number: "02",
-        icon: "📨",
-        title: "Invite your customers",
+        icon: "🎥",
+        title: "Customer records & sends",
         description:
-            "Send a link via email, WhatsApp or anywhere. Optionally attach a reward to boost response rate.",
+            "Direct link, no account needed. The customer records the video from the browser in 60 seconds — no app to download. Guided UI with optional prompts to maximize quality.",
     },
     {
         number: "03",
-        icon: "✨",
-        title: "Collect & publish",
+        icon: "🚀",
+        title: "Publish, reuse, distribute",
         description:
-            "Review each video before it goes live. Embed anywhere with a single line of code.",
+            "Approve with one click, then share every review across your social channels, use it in your ads, or embed it directly into your site and landing pages.",
     },
 ];
 
@@ -31,10 +31,10 @@ export default function HowItWorks() {
             <h2 className="landing-section-title">
                 Three steps.
                 <br />
-                That&apos;s really it.
+                Zero friction.
             </h2>
             <p className="landing-section-sub">
-                No complex flows, no integrations required. Set up once, collect forever.
+                Built for marketing and product teams that want results without technical overhead.
             </p>
 
                 <div className="landing-steps-grid">

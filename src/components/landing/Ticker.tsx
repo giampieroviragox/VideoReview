@@ -1,12 +1,11 @@
 "use client";
 
 const testimonials = [
-    { avatar: "😊", name: "Marco R.", quote: "Prodotto fantastico, lo uso ogni giorno" },
-    { avatar: "🧑‍💼", name: "Sara M.", quote: "Ha trasformato il nostro onboarding" },
-    { avatar: "👩‍🎨", name: "Luca B.", quote: "Clienti che non avrei mai pensato di raggiungere" },
-    { avatar: "🧑‍🔬", name: "Alice V.", quote: "Setup in 5 minuti, risultati in una settimana" },
-    { avatar: "👨‍💻", name: "Gianni F.", quote: "Le video recensioni convertono 3 volte di più" },
-    { avatar: "👩‍🏫", name: "Chiara P.", quote: "Il reward ha fatto la differenza" },
+    { avatar: "🧠", name: "u/Curious_Walrus_4821", quote: "We started collecting stronger proof almost immediately." },
+    { avatar: "🦦", name: "u/MildlyConfusedOtter76", quote: "The flow is simple, and customers actually complete it." },
+    { avatar: "🎃", name: "u/Formal_Pumpkin_913", quote: "It made our reviews feel more human and more credible." },
+    { avatar: "🔧", name: "u/Dry-Mechanic-2045", quote: "Setup was clean, and the video responses felt instantly more trustworthy." },
+    { avatar: "🦞", name: "u/SpicyLobster_338", quote: "The reward option helped without making the experience feel forced." },
 ];
 
 export default function Ticker() {
