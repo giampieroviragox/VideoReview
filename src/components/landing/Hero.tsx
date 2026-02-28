@@ -9,6 +9,9 @@ export default function Hero() {
     const [founderPlaying, setFounderPlaying] = useState(false);
     const [founderMuted, setFounderMuted] = useState(false);
     const [founderProgress, setFounderProgress] = useState(0);
+    const [founderModalPlaying, setFounderModalPlaying] = useState(false);
+    const [founderModalMuted, setFounderModalMuted] = useState(false);
+    const [founderModalProgress, setFounderModalProgress] = useState(0);
     const founderVideoRef = useRef<HTMLVideoElement>(null);
     const founderModalVideoRef = useRef<HTMLVideoElement>(null);
 
@@ -64,6 +67,41 @@ export default function Hero() {
         };
     }, [founderModalOpen]);
 
+    useEffect(() => {
+        const video = founderModalVideoRef.current;
+        if (!video) return;
+
+        const syncState = () => {
+            const duration = video.duration || 0;
+            setFounderModalPlaying(!video.paused && !video.ended);
+            setFounderModalMuted(video.muted);
+            setFounderModalProgress(duration > 0 ? (video.currentTime / duration) * 100 : 0);
+        };
+
+        const handleEnded = () => {
+            setFounderModalPlaying(false);
+            setFounderModalProgress(100);
+        };
+
+        video.addEventListener("timeupdate", syncState);
+        video.addEventListener("play", syncState);
+        video.addEventListener("pause", syncState);
+        video.addEventListener("volumechange", syncState);
+        video.addEventListener("loadedmetadata", syncState);
+        video.addEventListener("ended", handleEnded);
+
+        syncState();
+
+        return () => {
+            video.removeEventListener("timeupdate", syncState);
+            video.removeEventListener("play", syncState);
+            video.removeEventListener("pause", syncState);
+            video.removeEventListener("volumechange", syncState);
+            video.removeEventListener("loadedmetadata", syncState);
+            video.removeEventListener("ended", handleEnded);
+        };
+    }, [founderModalOpen]);
+
     const toggleFounderPlayback = async () => {
         const video = founderVideoRef.current;
         if (!video) return;
@@ -90,6 +128,34 @@ export default function Hero() {
 
         video.muted = !video.muted;
         setFounderMuted(video.muted);
+    };
+
+    const toggleFounderModalPlayback = async () => {
+        const video = founderModalVideoRef.current;
+        if (!video) return;
+
+        if (video.paused || video.ended) {
+            if (video.ended) {
+                video.currentTime = 0;
+            }
+
+            try {
+                await video.play();
+            } catch {
+                // Ignore playback rejections from the browser.
+            }
+            return;
+        }
+
+        video.pause();
+    };
+
+    const toggleFounderModalAudio = () => {
+        const video = founderModalVideoRef.current;
+        if (!video) return;
+
+        video.muted = !video.muted;
+        setFounderModalMuted(video.muted);
     };
 
     return (
@@ -151,6 +217,7 @@ export default function Hero() {
                                     src="/welcome-from-founder.mp4"
                                     playsInline
                                     preload="metadata"
+                                    onClick={toggleFounderPlayback}
                                     style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', background: '#000' }}
                                 />
                                 <div
@@ -237,11 +304,65 @@ export default function Hero() {
                         <video
                             ref={founderModalVideoRef}
                             src="/welcome-from-founder.mp4"
-                            controls
                             playsInline
                             preload="metadata"
+                            onClick={toggleFounderModalPlayback}
                             className="hero-founder-modal-video"
                         />
+                        <div
+                            style={{
+                                position: 'absolute',
+                                left: '0',
+                                right: '0',
+                                bottom: '0',
+                                padding: '10px 12px 12px',
+                                background: 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,.15) 18%, rgba(0,0,0,.72) 100%)',
+                            }}
+                        >
+                            <div style={{ height: '4px', background: 'rgba(255,255,255,.18)', borderRadius: '999px', overflow: 'hidden', marginBottom: '10px' }}>
+                                <div style={{ width: `${founderModalProgress}%`, height: '100%', background: 'var(--brand)', borderRadius: '999px' }}></div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <button
+                                    type="button"
+                                    onClick={toggleFounderModalPlayback}
+                                    aria-label={founderModalPlaying ? 'Pause founder video' : 'Play founder video'}
+                                    style={{
+                                        width: '38px',
+                                        height: '38px',
+                                        borderRadius: '50%',
+                                        border: '1px solid rgba(255,95,61,.45)',
+                                        background: 'rgba(255,95,61,.18)',
+                                        color: '#fff',
+                                        display: 'grid',
+                                        placeItems: 'center',
+                                        fontSize: '16px',
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    {founderModalPlaying ? '⏸️' : '▶️'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={toggleFounderModalAudio}
+                                    aria-label={founderModalMuted ? 'Unmute founder video' : 'Mute founder video'}
+                                    style={{
+                                        width: '38px',
+                                        height: '38px',
+                                        borderRadius: '50%',
+                                        border: '1px solid rgba(255,95,61,.45)',
+                                        background: 'rgba(255,95,61,.18)',
+                                        color: '#fff',
+                                        display: 'grid',
+                                        placeItems: 'center',
+                                        fontSize: '16px',
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    {founderModalMuted ? '🔇' : '🔊'}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

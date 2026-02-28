@@ -696,6 +696,7 @@ nav.scrolled {
 }
 
 .hero-founder-modal-video-wrap {
+  position: relative;
   border-radius: var(--r3);
   overflow: hidden;
   background: #000;
