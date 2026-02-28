@@ -3547,7 +3547,7 @@ nav.scrolled {
   padding: clamp(44px, 6vw, 84px) 0;
   text-align: center;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .cta-box::before {
@@ -3561,11 +3561,15 @@ nav.scrolled {
   margin-bottom: 20px;
   position: relative;
   color: var(--pure);
+  overflow: visible;
 }
 
 .cta-title em {
   font-style: italic;
   opacity: .72;
+  display: inline-block;
+  padding-right: 0.14em;
+  margin-right: -0.08em;
 }
 
 .cta-sub {
