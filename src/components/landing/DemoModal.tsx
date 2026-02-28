@@ -7,7 +7,7 @@ interface DemoModalProps {
 }
 
 type RecorderState = "idle" | "previewing" | "recording" | "recorded";
-type TutorialStep = 0 | 1 | 2;
+type TutorialStep = 0 | 1 | 2 | 3;
 
 interface TutorialGeometry {
   spotlight: { left: number; top: number; width: number; height: number };
@@ -28,6 +28,7 @@ export default function DemoModal({ onClose }: DemoModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const rewardRef = useRef<HTMLDivElement>(null);
   const questionRef = useRef<HTMLDivElement>(null);
+  const cameraButtonRef = useRef<HTMLButtonElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const mirroredStreamRef = useRef<MediaStream | null>(null);
@@ -110,7 +111,12 @@ export default function DemoModal({ onClose }: DemoModalProps) {
 
     const renderTutorialStep = () => {
       if (!modalRef.current) return;
-      const target = tutorialStep === 1 ? rewardRef.current : questionRef.current;
+      const target =
+        tutorialStep === 1
+          ? rewardRef.current
+          : tutorialStep === 2
+            ? questionRef.current
+            : cameraButtonRef.current;
       if (!target) return;
 
       const modalRect = modalRef.current.getBoundingClientRect();
@@ -122,7 +128,7 @@ export default function DemoModal({ onClose }: DemoModalProps) {
       const spotHeight = targetRect.height + pad * 2;
 
       const cardW = 248;
-      const cardH = 170;
+      const cardH = tutorialStep === 3 ? 196 : 170;
       const gap = 18;
       const modalInnerW = modalRect.width;
       const modalInnerH = modalRect.height;
@@ -130,7 +136,7 @@ export default function DemoModal({ onClose }: DemoModalProps) {
       let cardTop = 12;
       let caret: "caret-top" | "caret-bottom" | "caret-left" = "caret-bottom";
 
-      if (tutorialStep === 1) {
+      if (tutorialStep === 1 || tutorialStep === 3) {
         cardLeft = Math.max(12, spotLeft);
         cardTop = spotTop - cardH - gap;
         caret = "caret-bottom";
@@ -370,17 +376,24 @@ export default function DemoModal({ onClose }: DemoModalProps) {
   const tutorialCopy =
     tutorialStep === 1
       ? {
-          badge: "Note for you · 1 of 2",
+          badge: "Note for you · 1 of 3",
           text: "The customer reward is completely optional — you can invite them without offering anything.",
           next: "Next",
           icon: "→",
         }
-      : {
-          badge: "Note for you · 2 of 2",
-          text: "Ask the customer a specific question, or let them decide what they want to talk about.",
-          next: "Start the demo",
-          icon: "✓",
-        };
+      : tutorialStep === 2
+        ? {
+            badge: "Note for you · 2 of 3",
+            text: "Ask the customer a specific question, or let them decide what they want to talk about.",
+            next: "Next",
+            icon: "→",
+          }
+        : {
+            badge: "Note for you · 3 of 3",
+            text: "Tap Enable camera and record a video to try the exact experience your customers get. Nothing you record in this demo is saved. 100% privacy guaranteed.",
+            next: "Try recording",
+            icon: "✓",
+          };
   const tutorialVisible = tutorialStep > 0 && !isSubmitted;
 
   return (
@@ -446,7 +459,7 @@ export default function DemoModal({ onClose }: DemoModalProps) {
                   <br />
                   and start recording
                 </p>
-                <button className="demo-camera-btn" onClick={startCamera}>Enable camera</button>
+                <button ref={cameraButtonRef} className="demo-camera-btn" onClick={startCamera}>Enable camera</button>
               </div>
             )}
 
@@ -522,12 +535,13 @@ export default function DemoModal({ onClose }: DemoModalProps) {
                 <div className="demo-t-step-badge">{tutorialCopy.badge}</div>
                 <div className="demo-t-progress">
                   <div className={`demo-t-prog-dot ${tutorialStep === 1 ? "active" : "done"}`}></div>
-                  <div className={`demo-t-prog-dot ${tutorialStep === 2 ? "active" : ""}`}></div>
+                  <div className={`demo-t-prog-dot ${tutorialStep === 2 ? "active" : tutorialStep === 3 ? "done" : ""}`}></div>
+                  <div className={`demo-t-prog-dot ${tutorialStep === 3 ? "active" : ""}`}></div>
                 </div>
                 <div className="demo-t-card-text">{tutorialCopy.text}</div>
                 <div className="demo-t-actions">
                   <button className="demo-t-skip" onClick={() => setTutorialStep(0)}>Skip</button>
-                  <button className="demo-t-next" onClick={() => setTutorialStep(tutorialStep === 1 ? 2 : 0)}>
+                  <button className="demo-t-next" onClick={() => setTutorialStep(tutorialStep === 1 ? 2 : tutorialStep === 2 ? 3 : 0)}>
                     <span>{tutorialCopy.next}</span>
                     <span className="demo-t-next-icon">{tutorialCopy.icon}</span>
                   </button>
