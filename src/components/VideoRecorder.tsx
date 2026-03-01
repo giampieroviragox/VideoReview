@@ -31,6 +31,8 @@ export default function VideoRecorder({
     const [isPlaybackPlaying, setIsPlaybackPlaying] = useState(false);
     const [isPlaybackMuted, setIsPlaybackMuted] = useState(false);
     const [playbackProgress, setPlaybackProgress] = useState(0);
+    const [playbackCurrentTime, setPlaybackCurrentTime] = useState(0);
+    const [playbackDuration, setPlaybackDuration] = useState(0);
 
     const videoPreviewRef = useRef<HTMLVideoElement>(null);
     const videoPlaybackRef = useRef<HTMLVideoElement>(null);
@@ -96,16 +98,29 @@ export default function VideoRecorder({
         }
 
         const syncState = () => {
-            const duration = video.duration || 0;
+            const duration =
+                Number.isFinite(video.duration) && video.duration > 0
+                    ? video.duration
+                    : durationRef.current;
             setIsPlaybackPlaying(!video.paused && !video.ended);
             setIsPlaybackMuted(video.muted);
+            setPlaybackCurrentTime(
+                Number.isFinite(video.currentTime) ? video.currentTime : 0
+            );
+            setPlaybackDuration(duration);
             setPlaybackProgress(
                 duration > 0 ? (video.currentTime / duration) * 100 : 0
             );
         };
 
         const handleEnded = () => {
+            const duration =
+                Number.isFinite(video.duration) && video.duration > 0
+                    ? video.duration
+                    : durationRef.current;
             setIsPlaybackPlaying(false);
+            setPlaybackCurrentTime(duration);
+            setPlaybackDuration(duration);
             setPlaybackProgress(100);
         };
 
@@ -297,6 +312,8 @@ export default function VideoRecorder({
             setPlaybackProgress(0);
             setIsPlaybackPlaying(false);
             setIsPlaybackMuted(false);
+            setPlaybackCurrentTime(0);
+            setPlaybackDuration(0);
             onRecordingComplete(blob, durationRef.current);
         };
 
@@ -352,6 +369,8 @@ export default function VideoRecorder({
         setPlaybackProgress(0);
         setIsPlaybackPlaying(false);
         setIsPlaybackMuted(false);
+        setPlaybackCurrentTime(0);
+        setPlaybackDuration(0);
         durationRef.current = 0;
         setState("idle");
         await startCamera();
@@ -363,8 +382,15 @@ export default function VideoRecorder({
             return;
         }
 
+        const duration =
+            Number.isFinite(video.duration) && video.duration > 0
+                ? video.duration
+                : durationRef.current;
+
         if (video.paused || video.ended) {
             if (video.ended) {
+                video.currentTime = 0;
+            } else if (duration > 0 && video.currentTime >= duration) {
                 video.currentTime = 0;
             }
 
@@ -389,6 +415,31 @@ export default function VideoRecorder({
         setIsPlaybackMuted(video.muted);
     }, []);
 
+    const handlePlaybackScrub = useCallback(
+        (event: React.MouseEvent<HTMLDivElement>) => {
+            const video = videoPlaybackRef.current;
+            const duration =
+                video &&
+                Number.isFinite(video.duration) &&
+                video.duration > 0
+                    ? video.duration
+                    : durationRef.current;
+
+            if (!video || !duration) {
+                return;
+            }
+
+            const rect = event.currentTarget.getBoundingClientRect();
+            const ratio = Math.min(
+                Math.max((event.clientX - rect.left) / rect.width, 0),
+                1
+            );
+
+            video.currentTime = ratio * duration;
+        },
+        []
+    );
+
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
@@ -409,13 +460,19 @@ export default function VideoRecorder({
             )}
 
             {state !== "recorded" && (
-                <div className="video-container">
+                <div
+                    className="video-container"
+                    style={{ position: "relative", width: "100%" }}
+                >
                     <video
                         ref={videoPreviewRef}
                         className="video-element"
                         playsInline
                         muted
                         style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
                             display: state === "idle" ? "none" : "block",
                             transform: "scaleX(-1)",
                         }}
@@ -455,7 +512,10 @@ export default function VideoRecorder({
             )}
 
             {state === "recorded" && (
-                <div className="video-container">
+                <div
+                    className="video-container"
+                    style={{ position: "relative", width: "100%" }}
+                >
                     <video
                         ref={videoPlaybackRef}
                         className="video-element"
@@ -463,7 +523,119 @@ export default function VideoRecorder({
                         preload="metadata"
                         onClick={togglePlayback}
                         src={recordedVideoUrl || undefined}
+                        style={{
+                            display: "block",
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                        }}
                     />
+
+                    <div
+                        style={{
+                            position: "absolute",
+                            left: "12px",
+                            right: "12px",
+                            bottom: "12px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "10px",
+                            padding: "10px 12px",
+                            borderRadius: "16px",
+                            background:
+                                "linear-gradient(180deg, rgba(15,15,15,.18), rgba(15,15,15,.72))",
+                            backdropFilter: "blur(8px)",
+                        }}
+                    >
+                        <button
+                            type="button"
+                            onClick={togglePlayback}
+                            aria-label={
+                                isPlaybackPlaying
+                                    ? "Pause recorded video"
+                                    : "Play recorded video"
+                            }
+                            style={{
+                                flexShrink: 0,
+                                border: "none",
+                                background: "rgba(255,255,255,.14)",
+                                width: "40px",
+                                height: "40px",
+                                borderRadius: "999px",
+                                display: "grid",
+                                placeItems: "center",
+                                cursor: "pointer",
+                            }}
+                        >
+                            {isPlaybackPlaying ? "⏸️" : "▶️"}
+                        </button>
+
+                        <div
+                            onClick={handlePlaybackScrub}
+                            role="progressbar"
+                            aria-label="Recorded video progress"
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-valuenow={Math.round(playbackProgress)}
+                            style={{
+                                flex: 1,
+                                height: "6px",
+                                borderRadius: "999px",
+                                background: "rgba(255,255,255,.26)",
+                                cursor: "pointer",
+                                overflow: "hidden",
+                            }}
+                        >
+                            <span
+                                style={{
+                                    display: "block",
+                                    width: `${playbackProgress}%`,
+                                    height: "100%",
+                                    borderRadius: "999px",
+                                    background: "var(--brand)",
+                                }}
+                            />
+                        </div>
+
+                        <span
+                            style={{
+                                flexShrink: 0,
+                                minWidth: "72px",
+                                textAlign: "right",
+                                color: "rgba(255,255,255,.88)",
+                                fontFamily:
+                                    '"DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                                fontSize: "10px",
+                                fontWeight: 500,
+                            }}
+                        >
+                            {formatTime(Math.floor(playbackCurrentTime))} /{" "}
+                            {formatTime(Math.floor(playbackDuration))}
+                        </span>
+
+                        <button
+                            type="button"
+                            onClick={togglePlaybackAudio}
+                            aria-label={
+                                isPlaybackMuted
+                                    ? "Unmute recorded video"
+                                    : "Mute recorded video"
+                            }
+                            style={{
+                                flexShrink: 0,
+                                border: "none",
+                                background: "rgba(255,255,255,.14)",
+                                width: "40px",
+                                height: "40px",
+                                borderRadius: "999px",
+                                display: "grid",
+                                placeItems: "center",
+                                cursor: "pointer",
+                            }}
+                        >
+                            {isPlaybackMuted ? "🔇" : "🔊"}
+                        </button>
+                    </div>
                 </div>
             )}
 
@@ -491,105 +663,9 @@ export default function VideoRecorder({
                 )}
 
                 {state === "recorded" && (
-                    <div
-                        className="recorder-playback-shell"
-                        style={{
-                            width: "100%",
-                            display: "grid",
-                            gap: "12px",
-                        }}
-                    >
-                        <div
-                            className="recorder-playback-progress"
-                            style={{
-                                width: "100%",
-                                height: "6px",
-                                borderRadius: "999px",
-                                background: "rgba(255,255,255,.12)",
-                                overflow: "hidden",
-                            }}
-                        >
-                            <div
-                                style={{
-                                    width: `${playbackProgress}%`,
-                                    height: "100%",
-                                    borderRadius: "999px",
-                                    background:
-                                        "linear-gradient(90deg, var(--brand), var(--brand-2))",
-                                }}
-                            />
-                        </div>
-
-                        <div
-                            className="recorder-playback-actions"
-                            style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                                gap: "10px",
-                                flexWrap: "wrap",
-                            }}
-                        >
-                            <div
-                                style={{
-                                    display: "flex",
-                                    gap: "10px",
-                                    alignItems: "center",
-                                }}
-                            >
-                                <button
-                                    type="button"
-                                    onClick={togglePlayback}
-                                    aria-label={
-                                        isPlaybackPlaying
-                                            ? "Pause recorded video"
-                                            : "Play recorded video"
-                                    }
-                                    style={{
-                                        width: "44px",
-                                        height: "44px",
-                                        borderRadius: "50%",
-                                        border: "1px solid rgba(255,95,61,.24)",
-                                        background: "rgba(255,95,61,.14)",
-                                        color: "var(--white)",
-                                        display: "grid",
-                                        placeItems: "center",
-                                        fontSize: "18px",
-                                        cursor: "pointer",
-                                    }}
-                                >
-                                    {isPlaybackPlaying ? "⏸️" : "▶️"}
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={togglePlaybackAudio}
-                                    aria-label={
-                                        isPlaybackMuted
-                                            ? "Unmute recorded video"
-                                            : "Mute recorded video"
-                                    }
-                                    style={{
-                                        width: "44px",
-                                        height: "44px",
-                                        borderRadius: "50%",
-                                        border: "1px solid rgba(255,95,61,.24)",
-                                        background: "rgba(255,95,61,.14)",
-                                        color: "var(--white)",
-                                        display: "grid",
-                                        placeItems: "center",
-                                        fontSize: "18px",
-                                        cursor: "pointer",
-                                    }}
-                                >
-                                    {isPlaybackMuted ? "🔇" : "🔊"}
-                                </button>
-                            </div>
-
-                            <button className="btn btn-secondary" onClick={reRecord}>
-                                🔄 {labels?.rerecord || "Record again"}
-                            </button>
-                        </div>
-                    </div>
+                    <button className="btn btn-ghost" onClick={reRecord}>
+                        🔄 {labels?.rerecord || "Record again"}
+                    </button>
                 )}
             </div>
         </div>
