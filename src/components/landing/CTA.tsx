@@ -12,6 +12,7 @@ export default function CTA() {
         if (!email) return;
 
         setStatus("loading");
+        setMessage("");
         try {
             const res = await fetch("/api/waitlist", {
                 method: "POST",
@@ -19,14 +20,22 @@ export default function CTA() {
                 body: JSON.stringify({ email }),
             });
 
-            const data = await res.json();
+            const contentType = res.headers.get("content-type") || "";
+            let data: { message?: string; error?: string } = {};
+
+            if (contentType.includes("application/json")) {
+                data = (await res.json()) as { message?: string; error?: string };
+            } else {
+                const text = await res.text();
+                data = { error: text || "Something went wrong." };
+            }
 
             if (!res.ok) {
                 throw new Error(data.error || "Something went wrong.");
             }
 
             setStatus("success");
-            setMessage(data.message);
+            setMessage(data.message || "Thank you! We've added you to our waitlist.");
             setEmail("");
         } catch (err) {
             setStatus("error");
@@ -52,7 +61,8 @@ export default function CTA() {
                             <p style={{ fontSize: 'var(--text-lg)', fontWeight: 600 }}>{message}</p>
                         </div>
                     ) : (
-                        <form className="cta-form" onSubmit={handleSubmit}>
+                        <>
+                            <form className="cta-form" onSubmit={handleSubmit}>
                             <input
                                 type="email"
                                 className="cta-input"
@@ -69,13 +79,16 @@ export default function CTA() {
                             >
                                 {status === "loading" ? "Sending..." : "Join the Waitlist →"}
                             </button>
-                        </form>
-                    )}
+                            </form>
 
-                    {status === "error" && (
-                        <p style={{ color: "var(--brand)", marginTop: "var(--s3)", fontSize: "var(--text-sm)" }}>
-                            {message}
-                        </p>
+                            {status === "loading" && (
+                                <p className="cta-status-note cta-status-note--loading">Sending your request...</p>
+                            )}
+
+                            {status === "error" && (
+                                <p className="cta-status-note cta-status-note--error">{message}</p>
+                            )}
+                        </>
                     )}
 
                     <p className="cta-legal">No spam. Only launch news. Privacy guaranteed.</p>

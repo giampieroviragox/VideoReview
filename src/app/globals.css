@@ -3831,6 +3831,22 @@ nav.scrolled {
   position: relative;
 }
 
+.cta-status-note {
+  margin-top: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  position: relative;
+}
+
+.cta-status-note--loading {
+  color: rgba(255,255,255,.78);
+}
+
+.cta-status-note--error {
+  color: rgba(255,255,255,.96);
+}
+
 @media (max-width: 900px) {
   .pricing-section {
     padding: 72px 20px;
