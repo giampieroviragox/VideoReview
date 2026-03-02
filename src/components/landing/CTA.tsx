@@ -56,9 +56,11 @@ export default function CTA() {
                     </p>
 
                     {status === "success" ? (
-                        <div className="success-message animate-fadeUp">
-                            <div className="check" style={{ margin: '0 auto 16px' }}>✓</div>
-                            <p style={{ fontSize: 'var(--text-lg)', fontWeight: 600 }}>{message}</p>
+                        <div className="cta-success-message animate-fadeUp" role="status" aria-live="polite">
+                            <div className="cta-success-pill">✨ You&apos;re in</div>
+                            <p className="cta-success-copy">
+                                {message || "You&apos;re on the list. We&apos;ll email you soon."}
+                            </p>
                         </div>
                     ) : (
                         <>
