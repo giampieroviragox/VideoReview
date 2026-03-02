@@ -5,7 +5,7 @@ function getFromAddress() {
     return process.env.RESEND_FROM_EMAIL || "Tellr.me <onboarding@tellr.me>";
 }
 
-async function sendWaitlistWelcomeEmail(email: string) {
+async function sendWaitlistWelcomeEmail(email: string, origin: string) {
     const apiKey = process.env.RESEND_API_KEY;
 
     if (!apiKey) {
@@ -13,13 +13,17 @@ async function sendWaitlistWelcomeEmail(email: string) {
         return;
     }
 
+    const logoUrl = new URL("/tellr-logo.svg", origin).toString();
+
     const html = `
       <div style="margin:0;padding:32px 24px;background:#f7f4f1;font-family:Inter,Arial,sans-serif;color:#111218;">
         <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid rgba(17,18,24,0.08);border-radius:24px;padding:32px;box-shadow:0 20px 50px rgba(17,18,24,0.08);">
-          <div style="display:inline-flex;align-items:center;gap:10px;margin:0 0 28px;">
-            <span style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9px;background:#ff5c35;color:#ffffff;font-size:14px;font-weight:900;line-height:1;">T</span>
-            <span style="font-size:24px;line-height:1;font-weight:800;letter-spacing:-0.03em;color:#111218;">Tellr.me</span>
-          </div>
+          <img
+            src="${logoUrl}"
+            alt="Tellr.me"
+            width="180"
+            style="display:block;height:auto;border:0;outline:none;text-decoration:none;margin:0 0 28px;"
+          />
           <div style="font-size:16px;line-height:1.7;color:#111218;">
             <p style="margin:0 0 16px;">Hi,</p>
             <p style="margin:0 0 16px;">thank you for joining our private beta.</p>
@@ -97,7 +101,7 @@ export async function POST(request: NextRequest) {
         }
 
         try {
-            await sendWaitlistWelcomeEmail(email);
+            await sendWaitlistWelcomeEmail(email, request.nextUrl.origin);
         } catch (emailError) {
             console.error("Waitlist email error:", emailError);
         }
