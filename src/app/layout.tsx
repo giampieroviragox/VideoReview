@@ -3,9 +3,14 @@ import Script from "next/script";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Tellr.me — Collect video reviews from your clients",
+  title: "Collect video reviews and reward your customers.",
   description:
-    "Platform to collect authentic video reviews from your customers.",
+    "Tellr helps you collet the most convincing social proof you'll ever have.",
+  icons: {
+    icon: "/favicon.png",
+    shortcut: "/favicon.png",
+    apple: "/favicon.png",
+  },
 };
 
 export default function RootLayout({
