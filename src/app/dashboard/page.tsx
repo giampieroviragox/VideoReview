@@ -1,3 +1,4 @@
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { getCampaignDelegate } from "@/lib/db";
 import { buildCampaignPublicPath } from "@/lib/campaigns";
 import { DEFAULT_WORKSPACE } from "@/lib/workspace";
@@ -53,6 +54,20 @@ function parseSubmissionAnswers(value: unknown) {
 }
 
 export default async function DashboardPage() {
+  const { userId, redirectToSignIn } = await auth();
+
+  if (!userId) {
+    return redirectToSignIn();
+  }
+
+  const user = await currentUser();
+  const viewerName =
+    user?.firstName ||
+    user?.username ||
+    user?.primaryEmailAddress?.emailAddress ||
+    user?.emailAddresses[0]?.emailAddress ||
+    "Account";
+
   const campaignDelegate = getCampaignDelegate() as unknown as
     | CampaignDashboardRuntimeDelegate
     | undefined;
@@ -63,6 +78,7 @@ export default async function DashboardPage() {
   if (campaignDelegate) {
     try {
       campaigns = await campaignDelegate.findMany({
+        where: { ownerUserId: userId },
         orderBy: { createdAt: "desc" },
         select: {
           id: true,
@@ -112,6 +128,7 @@ export default async function DashboardPage() {
 
   return (
     <DashboardShell
+      viewerName={viewerName}
       workspaceName={DEFAULT_WORKSPACE.brandName}
       campaignRuntimeReady={Boolean(campaignDelegate) && !campaignQueryFailed}
       campaigns={campaignRows}

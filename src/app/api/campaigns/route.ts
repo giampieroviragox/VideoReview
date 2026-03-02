@@ -1,3 +1,4 @@
+import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getCampaignDelegate } from "@/lib/db";
 import {
@@ -14,6 +15,15 @@ type CampaignCreateRuntimeDelegate = {
 
 export async function POST(request: NextRequest) {
   try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Authentication required." },
+        { status: 401 }
+      );
+    }
+
     const campaignDelegate = getCampaignDelegate() as unknown as
       | CampaignCreateRuntimeDelegate
       | undefined;
@@ -70,6 +80,7 @@ export async function POST(request: NextRequest) {
 
     const campaign = await campaignDelegate.create({
       data: {
+        ownerUserId: userId,
         brandName: DEFAULT_WORKSPACE.brandName,
         brandSlug: DEFAULT_WORKSPACE.brandSlug,
         brandLogoUrl: DEFAULT_WORKSPACE.brandLogoUrl,

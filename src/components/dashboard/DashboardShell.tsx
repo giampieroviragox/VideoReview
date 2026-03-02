@@ -1,5 +1,6 @@
 "use client";
 
+import { UserButton } from "@clerk/nextjs";
 import { useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -7,6 +8,7 @@ import { useRouter } from "next/navigation";
 import CampaignBuilder from "@/components/dashboard/CampaignBuilder";
 
 type DashboardShellProps = {
+  viewerName: string;
   workspaceName: string;
   campaignRuntimeReady: boolean;
   campaigns: Array<{
@@ -75,6 +77,7 @@ function getSubmissionExcerpt(
 }
 
 export default function DashboardShell({
+  viewerName,
   workspaceName,
   campaignRuntimeReady,
   campaigns,
@@ -210,9 +213,11 @@ export default function DashboardShell({
           </Link>
 
           <div className="dashboard-profile-card">
-            <div className="dashboard-avatar">G</div>
+            <div className="dashboard-avatar">
+              <UserButton afterSignOutUrl="/" />
+            </div>
             <div>
-              <p className="dashboard-profile-name">Giampiero</p>
+              <p className="dashboard-profile-name">{viewerName}</p>
               <p className="dashboard-profile-workspace">{workspaceName}</p>
             </div>
           </div>
@@ -598,16 +603,15 @@ const dashboardShellStyles = `
   .dashboard-avatar {
     width: 46px;
     height: 46px;
-    border-radius: 14px;
     display: grid;
     place-items: center;
-    background: #fff0ec;
-    border: 1.5px solid #ffd5c8;
-    color: var(--brand);
-    font-family: "Figtree", sans-serif;
-    font-weight: 800;
-    font-size: 22px;
     flex-shrink: 0;
+  }
+
+  .dashboard-avatar :where(.cl-userButtonBox, .cl-userButtonTrigger, .cl-avatarBox) {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
   }
 
   .dashboard-profile-name {

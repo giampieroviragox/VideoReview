@@ -19,6 +19,7 @@ model CollectionPage {
 
 model Campaign {
   id                  String             @id @default(cuid())
+  ownerUserId         String?
   brandName           String
   brandSlug           String
   brandLogoUrl        String?
@@ -36,6 +37,7 @@ model Campaign {
   submissions         Submission[]
 
   @@index([brandSlug])
+  @@index([ownerUserId])
 }
 
 model CampaignQuestion {

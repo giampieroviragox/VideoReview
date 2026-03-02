@@ -1,3 +1,4 @@
+import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
@@ -8,6 +9,15 @@ export async function PATCH(
   { params }: { params: Promise<{ campaignId: string; submissionId: string }> }
 ) {
   try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Authentication required." },
+        { status: 401 }
+      );
+    }
+
     const { campaignId, submissionId } = await params;
     const body = await request.json();
     const { status } = body;
@@ -16,10 +26,15 @@ export async function PATCH(
       return NextResponse.json({ error: "Invalid status." }, { status: 400 });
     }
 
-    const existing = await prisma.submission.findFirst({
+    const existing = await prisma.campaign.findFirst({
       where: {
-        id: submissionId,
-        campaignId,
+        id: campaignId,
+        ownerUserId: userId,
+        submissions: {
+          some: {
+            id: submissionId,
+          },
+        },
       },
       select: { id: true },
     });

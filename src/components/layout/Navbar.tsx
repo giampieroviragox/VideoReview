@@ -1,5 +1,7 @@
 "use client";
 
+import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import DemoModal from "@/components/landing/DemoModal";
@@ -92,10 +94,12 @@ export default function Navbar() {
       <div className="wrap">
         <div className="landing-nav-inner">
           <Link href="/" className="landing-nav-logo">
-            <img
+            <Image
               src="/tellr-logo.svg"
               alt="Tellr"
               className="landing-nav-logo-image"
+              width={132}
+              height={34}
             />
           </Link>
 
@@ -107,12 +111,21 @@ export default function Navbar() {
           </ul>
 
           <div className="landing-nav-actions desktop-only">
-            <button type="button" className="landing-nav-login">
-              Log in
-            </button>
-            <a href="#cta" className="landing-nav-signup">
-              Sign up free &rarr;
-            </a>
+            <SignedOut>
+              <Link href="/sign-in" className="landing-nav-login">
+                Log in
+              </Link>
+              <Link href="/sign-up" className="landing-nav-signup">
+                Sign up free &rarr;
+              </Link>
+            </SignedOut>
+
+            <SignedIn>
+              <Link href="/dashboard" className="landing-nav-signup">
+                Go to dashboard &rarr;
+              </Link>
+              <UserButton afterSignOutUrl="/" />
+            </SignedIn>
           </div>
 
           <button
@@ -139,9 +152,24 @@ export default function Navbar() {
           <li><a href="#pricing" onClick={() => setMenuOpen(false)}>Pricing</a></li>
         </ul>
         <div className="mobile-cta">
-          <a href="#cta" className="landing-nav-signup landing-mobile-full" onClick={() => setMenuOpen(false)}>
-            Join the waitlist &rarr;
-          </a>
+          <SignedOut>
+            <Link
+              href="/sign-up"
+              className="landing-nav-signup landing-mobile-full"
+              onClick={() => setMenuOpen(false)}
+            >
+              Sign up free &rarr;
+            </Link>
+          </SignedOut>
+          <SignedIn>
+            <Link
+              href="/dashboard"
+              className="landing-nav-signup landing-mobile-full"
+              onClick={() => setMenuOpen(false)}
+            >
+              Go to dashboard &rarr;
+            </Link>
+          </SignedIn>
         </div>
       </div>
 
