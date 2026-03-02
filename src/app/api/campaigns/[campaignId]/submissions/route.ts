@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCampaignDelegate, prisma } from "@/lib/db";
 import { objectExists } from "@/lib/s3";
 
+export const dynamic = "force-dynamic";
+
 type IncomingAnswer = {
   questionId: string;
   questionText: string;

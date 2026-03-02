@@ -25,25 +25,42 @@ function hasCampaignDelegate(client: PrismaClient) {
   return "campaign" in (client as PrismaClient & Record<string, unknown>);
 }
 
+let prismaInstance: PrismaClient | undefined;
+
+function getPrismaClient() {
+  if (prismaInstance) {
+    return prismaInstance;
+  }
+
+  if (globalForPrisma.prisma && hasCampaignDelegate(globalForPrisma.prisma)) {
+    prismaInstance = globalForPrisma.prisma;
+  } else {
+    prismaInstance = createPrismaClient();
+
+    if (process.env.NODE_ENV !== "production") {
+      globalForPrisma.prisma = prismaInstance;
+    }
+  }
+
+  return prismaInstance;
+}
+
 function getCampaignDelegate() {
-  const client = prisma as PrismaClient & {
+  const client = getPrismaClient() as PrismaClient & {
     campaign?: unknown;
   };
 
   return client.campaign;
 }
 
-let prisma: PrismaClient;
+const prisma = new Proxy({} as PrismaClient, {
+  get(_target, prop, receiver) {
+    const client = getPrismaClient();
+    const value = Reflect.get(client as unknown as object, prop, receiver);
 
-if (globalForPrisma.prisma && hasCampaignDelegate(globalForPrisma.prisma)) {
-  prisma = globalForPrisma.prisma;
-} else {
-  prisma = createPrismaClient();
-
-  if (process.env.NODE_ENV !== "production") {
-    globalForPrisma.prisma = prisma;
-  }
-}
+    return typeof value === "function" ? value.bind(client) : value;
+  },
+});
 
 export { prisma };
 export { getCampaignDelegate };
