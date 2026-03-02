@@ -17,6 +17,8 @@ type RuntimeCampaign = {
     reviewerRating: number | null;
     status: string;
     videoKey: string;
+    durationSeconds: number | null;
+    answers: unknown;
     createdAt: Date;
   }>;
 };
@@ -24,6 +26,31 @@ type RuntimeCampaign = {
 type CampaignDashboardRuntimeDelegate = {
   findMany: (args: unknown) => Promise<RuntimeCampaign[]>;
 };
+
+function parseSubmissionAnswers(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((entry, index) => {
+    if (!entry || typeof entry !== "object") {
+      return [];
+    }
+
+    const candidate = entry as Record<string, unknown>;
+
+    return [
+      {
+        questionId:
+          typeof candidate.questionId === "string" ? candidate.questionId : `answer-${index}`,
+        questionText:
+          typeof candidate.questionText === "string" ? candidate.questionText : "Question",
+        answer: typeof candidate.answer === "string" ? candidate.answer : "",
+        required: Boolean(candidate.required),
+      },
+    ];
+  });
+}
 
 export default async function DashboardPage() {
   const campaignDelegate = getCampaignDelegate() as unknown as
@@ -51,6 +78,8 @@ export default async function DashboardPage() {
               reviewerRating: true,
               status: true,
               videoKey: true,
+              durationSeconds: true,
+              answers: true,
               createdAt: true,
             },
           },
@@ -75,6 +104,8 @@ export default async function DashboardPage() {
       reviewerRating: submission.reviewerRating,
       status: submission.status,
       videoKey: submission.videoKey,
+      durationSeconds: submission.durationSeconds,
+      answers: parseSubmissionAnswers(submission.answers),
       createdAt: submission.createdAt.toISOString(),
     })),
   }));

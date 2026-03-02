@@ -22,6 +22,13 @@ type DashboardShellProps = {
       reviewerRating: number | null;
       status: string;
       videoKey: string;
+      durationSeconds: number | null;
+      answers: Array<{
+        questionId: string;
+        questionText: string;
+        answer: string;
+        required: boolean;
+      }>;
       createdAt: string;
     }>;
   }>;
@@ -33,6 +40,38 @@ function getCampaignState(hasNoEndDate: boolean, endsAt: string | null) {
   }
 
   return new Date(endsAt).getTime() >= Date.now() ? "Active" : "Inactive";
+}
+
+function normalizeSubmissionStatus(status: string) {
+  return status.toUpperCase();
+}
+
+function formatSubmissionDuration(durationSeconds: number | null) {
+  if (typeof durationSeconds !== "number" || Number.isNaN(durationSeconds) || durationSeconds <= 0) {
+    return null;
+  }
+
+  const minutes = Math.floor(durationSeconds / 60);
+  const seconds = durationSeconds % 60;
+
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
+function getSubmissionExcerpt(
+  answers: Array<{
+    questionId: string;
+    questionText: string;
+    answer: string;
+    required: boolean;
+  }>
+) {
+  const firstAnswer = answers.find((entry) => entry.answer.trim().length > 0);
+
+  if (!firstAnswer) {
+    return null;
+  }
+
+  return `"${firstAnswer.answer.trim()}"`;
 }
 
 export default function DashboardShell({
@@ -66,7 +105,7 @@ export default function DashboardShell({
           rated.length
         : 0;
     const approvedCount = selectedCampaign.submissions.filter(
-      (submission) => submission.status === "APPROVED"
+      (submission) => normalizeSubmissionStatus(submission.status) === "APPROVED"
     ).length;
 
     return {
@@ -319,10 +358,10 @@ export default function DashboardShell({
 
           {selectedCampaign && (
             <div className="dashboard-submissions-card">
-              <div className="dashboard-builder-toolbar">
+              <div className="dashboard-builder-toolbar dashboard-sub-toolbar">
                 <button
                   type="button"
-                  className="dashboard-secondary-btn"
+                  className="dashboard-secondary-btn dashboard-back-btn"
                   onClick={() => setSelectedCampaignId(null)}
                 >
                   ← All campaigns
@@ -340,7 +379,7 @@ export default function DashboardShell({
 
                 <button
                   type="button"
-                  className="dashboard-secondary-btn"
+                  className="dashboard-secondary-btn dashboard-copy-btn"
                   onClick={() => copyText(`tellr.me${selectedCampaign.publicPath}`)}
                 >
                   📋 Copy link
@@ -382,8 +421,11 @@ export default function DashboardShell({
                 ) : (
                   <div className="dashboard-review-grid">
                     {selectedCampaign.submissions.map((submission) => {
-                      const isApproved = submission.status === "APPROVED";
-                      const isPending = submission.status === "PENDING";
+                      const normalizedStatus = normalizeSubmissionStatus(submission.status);
+                      const isApproved = normalizedStatus === "APPROVED";
+                      const isPending = normalizedStatus === "PENDING";
+                      const durationLabel = formatSubmissionDuration(submission.durationSeconds);
+                      const excerpt = getSubmissionExcerpt(submission.answers);
                       const approveActionKey = `${submission.id}:APPROVED`;
                       const rejectActionKey = `${submission.id}:REJECTED`;
 
@@ -399,7 +441,7 @@ export default function DashboardShell({
                                     : "is-rejected"
                               }`}
                             >
-                              {isApproved ? "Approved" : isPending ? "Pending" : "Not approved"}
+                              {isApproved ? "Published" : isPending ? "Pending" : "Removed"}
                             </span>
 
                             <video
@@ -435,7 +477,8 @@ export default function DashboardShell({
                             )}
 
                             <span className="dashboard-review-time">
-                              {new Date(submission.createdAt).toLocaleDateString()}
+                              {durationLabel ||
+                                new Date(submission.createdAt).toLocaleDateString()}
                             </span>
                           </div>
 
@@ -449,13 +492,32 @@ export default function DashboardShell({
                               </span>
                             </p>
                             <p className="dashboard-review-note">
-                              Submitted on {new Date(submission.createdAt).toLocaleDateString()}
+                              {excerpt ||
+                                `Submitted on ${new Date(submission.createdAt).toLocaleDateString()}`}
                             </p>
                           </div>
 
                           <div className="dashboard-review-actions">
                             {isApproved ? (
-                              <span className="dashboard-status-badge is-active">Approved</span>
+                              <>
+                                <span className="dashboard-status-badge dashboard-review-status is-active">
+                                  Published
+                                </span>
+                                <button
+                                  type="button"
+                                  className="dashboard-secondary-btn dashboard-inline-action"
+                                  onClick={() => {
+                                    handleSubmissionAction(
+                                      selectedCampaign.id,
+                                      submission.id,
+                                      "REJECTED"
+                                    );
+                                  }}
+                                  disabled={submissionActionId === rejectActionKey}
+                                >
+                                  {submissionActionId === rejectActionKey ? "Saving..." : "Remove"}
+                                </button>
+                              </>
                             ) : (
                               <button
                                 type="button"
@@ -472,21 +534,6 @@ export default function DashboardShell({
                                 {submissionActionId === approveActionKey ? "Saving..." : "Approve"}
                               </button>
                             )}
-
-                            <button
-                              type="button"
-                              className="dashboard-secondary-btn dashboard-inline-action"
-                              onClick={() => {
-                                handleSubmissionAction(
-                                  selectedCampaign.id,
-                                  submission.id,
-                                  "REJECTED"
-                                );
-                              }}
-                              disabled={submissionActionId === rejectActionKey}
-                            >
-                              {submissionActionId === rejectActionKey ? "Saving..." : "Not approve"}
-                            </button>
                           </div>
                         </article>
                       );
@@ -671,6 +718,7 @@ const dashboardShellStyles = `
     display: grid;
     gap: 22px;
     padding: 22px;
+    width: 100%;
   }
 
   .dashboard-hero-card,
@@ -736,6 +784,11 @@ const dashboardShellStyles = `
   .dashboard-builder-toolbar {
     display: flex;
     justify-content: flex-end;
+  }
+
+  .dashboard-sub-toolbar {
+    justify-content: flex-start;
+    margin-bottom: -6px;
   }
 
   .dashboard-alert-card {
@@ -900,33 +953,61 @@ const dashboardShellStyles = `
 
   .dashboard-submissions-card {
     display: grid;
-    gap: 12px;
-    padding: 12px;
+    gap: 18px;
+    padding: 0;
+    width: 100%;
+    max-width: none;
+    border: none;
+    background: transparent;
+    box-shadow: none;
   }
 
   .dashboard-submissions-summary {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 12px;
-    padding: 16px 18px;
-    border: 1px solid rgba(24, 24, 32, 0.08);
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.96);
+    gap: 16px;
+    padding: 22px 26px;
+    border: 1.5px solid rgba(24, 24, 32, 0.08);
+    border-radius: 20px;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   }
 
   .dashboard-submissions-title {
-    font-size: 18px;
-    line-height: 0.98;
+    font-size: 24px;
+    line-height: 1;
     letter-spacing: -0.04em;
     color: #121218;
-    margin: 0 0 6px;
+    margin: 0 0 8px;
   }
 
   .dashboard-submissions-link {
-    font-size: 11px;
+    font-size: 12px;
     color: rgba(24, 24, 32, 0.34);
     font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  .dashboard-back-btn {
+    min-height: 34px;
+    padding: 0 10px;
+    border: none;
+    background: transparent;
+    color: rgba(24, 24, 32, 0.42);
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .dashboard-back-btn:hover {
+    background: #efede9;
+    color: #14141b;
+  }
+
+  .dashboard-copy-btn {
+    min-height: 36px;
+    padding: 0 14px;
+    font-size: 12px;
+    font-weight: 700;
   }
 
   .dashboard-count-badge {
@@ -944,38 +1025,38 @@ const dashboardShellStyles = `
   .dashboard-metrics-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
+    gap: 12px;
   }
 
   .dashboard-metric-card {
-    padding: 12px 14px;
-    border: 1px solid rgba(24, 24, 32, 0.08);
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.96);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04), 0 10px 22px rgba(0, 0, 0, 0.02);
+    padding: 16px;
+    border: 1.5px solid rgba(24, 24, 32, 0.08);
+    border-radius: 20px;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   }
 
   .dashboard-metric-label {
-    font-size: 11px;
-    font-weight: 700;
+    font-size: 12px;
+    font-weight: 600;
     color: rgba(24, 24, 32, 0.36);
-    margin-bottom: 6px;
+    margin-bottom: 8px;
   }
 
   .dashboard-metric-value {
-    font-size: 24px;
-    line-height: 0.9;
-    letter-spacing: -0.06em;
+    font-size: 28px;
+    line-height: 1;
+    letter-spacing: -0.05em;
     font-weight: 900;
     color: #121218;
   }
 
   .dashboard-reviews-shell {
     overflow: hidden;
-    border: 1px solid rgba(24, 24, 32, 0.08);
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.96);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04), 0 12px 28px rgba(0, 0, 0, 0.03);
+    border: 1.5px solid rgba(24, 24, 32, 0.08);
+    border-radius: 20px;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   }
 
   .dashboard-reviews-head {
@@ -983,7 +1064,7 @@ const dashboardShellStyles = `
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    padding: 12px 14px;
+    padding: 16px 18px;
     border-bottom: 1px solid rgba(24, 24, 32, 0.08);
   }
 
@@ -996,22 +1077,32 @@ const dashboardShellStyles = `
 
   .dashboard-review-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 10px;
-    padding: 12px;
+    grid-template-columns: repeat(auto-fill, 220px);
+    gap: 14px;
+    padding: 16px;
+    align-items: start;
+    justify-content: start;
   }
 
   .dashboard-review-card {
     overflow: hidden;
-    border: 1px solid rgba(24, 24, 32, 0.08);
-    border-radius: 16px;
+    border: 1.5px solid rgba(24, 24, 32, 0.08);
+    border-radius: 20px;
     background: #ffffff;
-    display: grid;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+  }
+
+  .dashboard-review-card:hover {
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
   }
 
   .dashboard-review-video {
     position: relative;
-    aspect-ratio: 4 / 4.25;
+    aspect-ratio: 4 / 5;
     background: #09090c;
     display: grid;
     place-items: center;
@@ -1056,13 +1147,13 @@ const dashboardShellStyles = `
 
   .dashboard-review-play {
     position: absolute;
-    width: 42px;
-    height: 42px;
+    width: 40px;
+    height: 40px;
     border-radius: 999px;
     display: grid;
     place-items: center;
-    background: rgba(255, 255, 255, 0.08);
-    border: 2px solid rgba(255, 255, 255, 0.22);
+    background: rgba(255, 255, 255, 0.14);
+    border: 2px solid rgba(255, 255, 255, 0.25);
     color: #ffffff;
     font-size: 16px;
     padding-left: 2px;
@@ -1092,30 +1183,34 @@ const dashboardShellStyles = `
   }
 
   .dashboard-review-body {
-    padding: 10px 12px 12px;
+    padding: 12px 14px;
     border-top: 1px solid rgba(24, 24, 32, 0.08);
+    flex: 1;
   }
 
   .dashboard-review-name {
     font-size: 13px;
     font-weight: 800;
     color: #14141b;
-    letter-spacing: -0.03em;
-    margin-bottom: 3px;
+    letter-spacing: -0.01em;
+    margin-bottom: 2px;
   }
 
   .dashboard-review-email {
-    font-size: 10px;
+    font-size: 11px;
     color: rgba(24, 24, 32, 0.34);
-    margin-bottom: 6px;
+    margin-bottom: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   }
 
   .dashboard-review-stars {
-    font-size: 12px;
+    font-size: 11px;
     letter-spacing: 0.03em;
     color: var(--brand);
-    margin-bottom: 5px;
+    margin-bottom: 6px;
   }
 
   .dashboard-review-stars-muted {
@@ -1123,22 +1218,35 @@ const dashboardShellStyles = `
   }
 
   .dashboard-review-note {
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1.45;
     color: rgba(24, 24, 32, 0.58);
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
 
   .dashboard-review-actions {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 10px 12px 12px;
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 10px 14px;
     border-top: 1px solid rgba(24, 24, 32, 0.08);
+    background: #f7f6f4;
+    flex-wrap: wrap;
   }
 
   .dashboard-inline-action {
-    min-height: 28px;
-    padding: 0 10px;
+    min-height: 32px;
+    padding: 0 12px;
+    font-size: 12px;
+  }
+
+  .dashboard-review-status {
+    min-height: 30px;
+    padding: 0 12px;
     font-size: 11px;
   }
 
@@ -1304,6 +1412,10 @@ const dashboardShellStyles = `
     .dashboard-campaign-actions {
       justify-content: flex-start;
     }
+
+    .dashboard-review-grid {
+      grid-template-columns: repeat(auto-fill, 220px);
+    }
   }
 
   @media (max-width: 720px) {
@@ -1355,6 +1467,11 @@ const dashboardShellStyles = `
 
     .dashboard-video-modal-head,
     .dashboard-video-modal-frame {
+      padding: 14px;
+    }
+
+    .dashboard-review-grid {
+      grid-template-columns: 1fr;
       padding: 14px;
     }
   }
