@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
 export default function Footer() {
+  const [showBlogTooltip, setShowBlogTooltip] = useState(false);
+
   return (
     <footer className="landing-footer">
       <div className="landing-footer-inner">
@@ -18,9 +21,21 @@ export default function Footer() {
         </Link>
 
         <ul className="landing-footer-links">
-          <li><a href="#examples">Product</a></li>
-          <li><a href="#pricing">Pricing</a></li>
-          <li><a href="#how-it-works">Blog</a></li>
+          <li className="landing-footer-tooltip-wrap">
+            <button
+              type="button"
+              className="landing-footer-link-button"
+              onClick={() => setShowBlogTooltip((current) => !current)}
+              aria-expanded={showBlogTooltip}
+            >
+              Blog
+            </button>
+            {showBlogTooltip ? (
+              <span className="landing-footer-tooltip">
+                Who click on the footer? Btw, we are working on it.
+              </span>
+            ) : null}
+          </li>
           <li>
             <a
               href="https://www.iubenda.com/privacy-policy/93675872"
@@ -39,12 +54,11 @@ export default function Footer() {
               Cookie Policy
             </a>
           </li>
-          <li><a href="#cta">Terms</a></li>
         </ul>
       </div>
 
       <div className="landing-footer-copy">
-        © {new Date().getFullYear()} Tellr.me — Video Review Platform. All rights reserved.
+        © 2026 Tellr.me — Built in Italy. All rights reserved.
       </div>
     </footer>
   );

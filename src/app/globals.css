@@ -1494,6 +1494,44 @@
   color: rgba(255, 255, 255, .8);
 }
 
+.landing-footer-tooltip-wrap {
+  position: relative;
+}
+
+.landing-footer-link-button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, .4);
+  cursor: pointer;
+  transition: color var(--dur-fast);
+}
+
+.landing-footer-link-button:hover {
+  color: rgba(255, 255, 255, .8);
+}
+
+.landing-footer-tooltip {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 10px);
+  width: max-content;
+  max-width: 240px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(17, 18, 24, 0.08);
+  color: rgba(17, 18, 24, 0.78);
+  font-size: 12px;
+  line-height: 1.45;
+  box-shadow: 0 14px 40px rgba(17, 18, 24, 0.16);
+  z-index: 2;
+}
+
 .landing-footer-copy {
   max-width: 960px;
   margin: 32px auto 0;

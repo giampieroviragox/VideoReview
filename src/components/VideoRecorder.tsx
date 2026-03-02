@@ -5,6 +5,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 interface VideoRecorderProps {
     onRecordingComplete: (blob: Blob, durationSeconds: number) => void;
     maxDurationSeconds?: number | null;
+    variant?: "default" | "immersive";
     labels?: {
         idlePrompt?: string;
         enableCamera?: string;
@@ -20,6 +21,7 @@ type RecorderState = "idle" | "previewing" | "recording" | "recorded";
 export default function VideoRecorder({
     onRecordingComplete,
     maxDurationSeconds = 90,
+    variant = "default",
     labels,
 }: VideoRecorderProps) {
     const [state, setState] = useState<RecorderState>("idle");
@@ -46,6 +48,7 @@ export default function VideoRecorder({
     const startTimeRef = useRef<number>(0);
     const durationRef = useRef<number>(0);
     const effectiveMaxDuration = maxDurationSeconds ?? null;
+    const isImmersive = variant === "immersive";
 
     const stopStream = useCallback(() => {
         if (streamRef.current) {
@@ -461,50 +464,181 @@ export default function VideoRecorder({
 
             {state !== "recorded" && (
                 <div
-                    className="video-container"
-                    style={{ position: "relative", width: "100%" }}
+                    style={
+                        isImmersive
+                            ? {
+                                  width: "100%",
+                                  border: "1px dashed rgba(17, 17, 17, 0.14)",
+                                  borderRadius: "28px",
+                                  padding: "10px",
+                                  background: "rgba(255,255,255,0.92)",
+                              }
+                            : undefined
+                    }
                 >
-                    <video
-                        ref={videoPreviewRef}
-                        className="video-element"
-                        playsInline
-                        muted
+                    <div
+                        className="video-container"
                         style={{
+                            position: "relative",
                             width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
-                            display: state === "idle" ? "none" : "block",
-                            transform: "scaleX(-1)",
+                            ...(isImmersive
+                                ? {
+                                      aspectRatio: "4 / 5",
+                                      borderRadius: "24px 24px 0 0",
+                                      overflow: "hidden",
+                                      background: "#05060b",
+                                  }
+                                : {}),
                         }}
-                    />
+                    >
+                        <video
+                            ref={videoPreviewRef}
+                            className="video-element"
+                            playsInline
+                            muted
+                            style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                                display: state === "idle" ? "none" : "block",
+                                transform: "scaleX(-1)",
+                            }}
+                        />
 
-                    {state === "idle" && (
-                        <div className="video-placeholder" onClick={startCamera}>
-                            <div className="placeholder-icon">📹</div>
-                            <p>{labels?.idlePrompt || "Tap to enable your camera"}</p>
-                        </div>
-                    )}
-
-                    {state === "recording" && (
-                        <div className="recording-overlay">
-                            <div className="recording-indicator">
-                                <span className="rec-dot" />
-                                REC
-                            </div>
-                            <div className="timer">
-                                {effectiveMaxDuration
-                                    ? `${formatTime(elapsedSeconds)} / ${formatTime(
-                                          effectiveMaxDuration
-                                      )}`
-                                    : formatTime(elapsedSeconds)}
-                            </div>
-                            {effectiveMaxDuration && (
-                                <div className="progress-bar-container">
-                                    <div
-                                        className="progress-bar-fill recording-progress"
-                                        style={{ width: `${progressPercent}%` }}
-                                    />
+                        {state === "idle" && (
+                            <div
+                                className="video-placeholder"
+                                onClick={!isImmersive ? startCamera : undefined}
+                                style={
+                                    isImmersive
+                                        ? {
+                                              display: "flex",
+                                              flexDirection: "column",
+                                              alignItems: "center",
+                                              justifyContent: "center",
+                                              gap: "18px",
+                                              textAlign: "center",
+                                              padding: "28px",
+                                          }
+                                        : undefined
+                                }
+                            >
+                                <div className="placeholder-icon">
+                                    {isImmersive ? "🎙️" : "📹"}
                                 </div>
+                                <p>
+                                    {labels?.idlePrompt ||
+                                        "Tap to enable your camera"}
+                                </p>
+                                {isImmersive && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-primary btn-large"
+                                        onClick={startCamera}
+                                    >
+                                        {labels?.enableCamera || "Enable camera"}
+                                    </button>
+                                )}
+                            </div>
+                        )}
+
+                        {state === "recording" && !isImmersive && (
+                            <div className="recording-overlay">
+                                <div className="recording-indicator">
+                                    <span className="rec-dot" />
+                                    REC
+                                </div>
+                                <div className="timer">
+                                    {effectiveMaxDuration
+                                        ? `${formatTime(elapsedSeconds)} / ${formatTime(
+                                              effectiveMaxDuration
+                                          )}`
+                                        : formatTime(elapsedSeconds)}
+                                </div>
+                                {effectiveMaxDuration && (
+                                    <div className="progress-bar-container">
+                                        <div
+                                            className="progress-bar-fill recording-progress"
+                                            style={{ width: `${progressPercent}%` }}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {isImmersive && (
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                gap: "12px",
+                                padding: "14px 18px",
+                                borderRadius: "0 0 24px 24px",
+                                background: "rgba(244, 239, 239, 0.95)",
+                                color: "rgba(17,17,17,.42)",
+                                fontFamily:
+                                    '"DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                                fontSize: "12px",
+                                fontWeight: 500,
+                                letterSpacing: "0.08em",
+                                textTransform: "uppercase",
+                            }}
+                        >
+                            <span>
+                                {state === "recording"
+                                    ? effectiveMaxDuration
+                                        ? `${formatTime(elapsedSeconds)} / ${formatTime(
+                                              effectiveMaxDuration
+                                          )}`
+                                        : formatTime(elapsedSeconds)
+                                    : "Press ● to start"}
+                            </span>
+
+                            {state === "previewing" && (
+                                <button
+                                    type="button"
+                                    onClick={startRecording}
+                                    aria-label={labels?.startRecording || "Start recording"}
+                                    style={{
+                                        border: "none",
+                                        background: "#ff5c35",
+                                        width: "54px",
+                                        height: "54px",
+                                        borderRadius: "999px",
+                                        display: "grid",
+                                        placeItems: "center",
+                                        cursor: "pointer",
+                                        boxShadow: "0 10px 24px rgba(255, 92, 53, 0.26)",
+                                        color: "#fff",
+                                        fontSize: "20px",
+                                    }}
+                                >
+                                    ●
+                                </button>
+                            )}
+
+                            {state === "recording" && (
+                                <button
+                                    type="button"
+                                    onClick={stopRecording}
+                                    aria-label={labels?.stopRecording || "Stop recording"}
+                                    style={{
+                                        border: "none",
+                                        background: "#111111",
+                                        width: "54px",
+                                        height: "54px",
+                                        borderRadius: "999px",
+                                        display: "grid",
+                                        placeItems: "center",
+                                        cursor: "pointer",
+                                        color: "#fff",
+                                        fontSize: "18px",
+                                    }}
+                                >
+                                    ⏹
+                                </button>
                             )}
                         </div>
                     )}
@@ -639,7 +773,14 @@ export default function VideoRecorder({
                 </div>
             )}
 
-            <div className="recorder-controls">
+            <div
+                className="recorder-controls"
+                style={
+                    isImmersive && state !== "recorded"
+                        ? { display: "none" }
+                        : undefined
+                }
+            >
                 {state === "idle" && (
                     <button className="btn btn-primary btn-large" onClick={startCamera}>
                         📹 {labels?.enableCamera || "Enable camera"}

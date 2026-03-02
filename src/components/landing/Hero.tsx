@@ -173,7 +173,7 @@ export default function Hero() {
                 </div>
 
                 <p className="landing-hero-proof">
-                    No credit card required · 14-day free trial
+                    No credit card required · Private beta open
                 </p>
             </section>
 

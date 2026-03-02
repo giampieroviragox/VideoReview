@@ -293,8 +293,9 @@ export default function CampaignSubmissionForm({ campaign }: CampaignSubmissionF
                           <VideoRecorder
                             onRecordingComplete={handleRecordingComplete}
                             maxDurationSeconds={60}
+                            variant="immersive"
                             labels={{
-                              idlePrompt: "Tap to enable your camera",
+                              idlePrompt: "Click to enable your camera and start recording",
                               enableCamera: "Enable camera",
                               startRecording: "Start recording",
                               stopRecording: "Stop recording",
