@@ -46,7 +46,7 @@ export default function UseCases() {
           business model.
         </h2>
         <p className="landing-section-sub">
-          Fixed or dynamic rewards, manual or automatic invites. VR adapts to your
+          Fixed or dynamic rewards, manual or automatic invites. Tellr.me adapts to your
           workflow.
         </p>
 

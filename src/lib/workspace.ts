@@ -1,5 +1,5 @@
 export const DEFAULT_WORKSPACE = {
-  brandName: "Video Reviews",
-  brandSlug: "video-reviews",
+  brandName: "Tellr.me",
+  brandSlug: "tellr-me",
   brandLogoUrl: null as string | null,
 };

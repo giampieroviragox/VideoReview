@@ -498,7 +498,7 @@ export default function DemoModal({ onClose }: DemoModalProps) {
         >
           {isSubmitting ? "Submitting..." : "Reply and get your reward  →"}
         </button>
-        <p className="demo-fine-print">Powered by VR · Your video will be reviewed before publication</p>
+        <p className="demo-fine-print">Powered by Tellr.me · Your video will be reviewed before publication</p>
 
         {tutorialVisible && tutorialGeometry && (
           <div className="demo-tutorial-layer">

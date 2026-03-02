@@ -92,8 +92,11 @@ export default function Navbar() {
       <div className="wrap">
         <div className="landing-nav-inner">
           <Link href="/" className="landing-nav-logo">
-            <div className="landing-nav-logo-mark">▶</div>
-            VR
+            <img
+              src="/tellr-logo.svg"
+              alt="Tellr"
+              className="landing-nav-logo-image"
+            />
           </Link>
 
           <ul className="landing-nav-links desktop-only">

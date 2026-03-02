@@ -439,8 +439,13 @@ export default function CampaignSubmissionForm({ campaign }: CampaignSubmissionF
         <div className="invite-powered">
           <span>Powered by</span>
           <span className="invite-powered-mark">
-            <span className="invite-powered-square">▶</span>
-            VR
+            <Image
+              src="/tellr-logo.svg"
+              alt="Tellr.me"
+              className="invite-powered-logo"
+              width={84}
+              height={16}
+            />
           </span>
         </div>
       </div>
@@ -1063,25 +1068,14 @@ const publicReviewStyles = `
   .invite-powered-mark {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    color: var(--brand);
-    font-weight: 800;
-    font-family: "Figtree", sans-serif;
-    font-size: 12px;
-    letter-spacing: -0.03em;
+    line-height: 1;
   }
 
-  .invite-powered-square {
-    width: 15px;
-    height: 15px;
-    border-radius: 4px;
-    background: var(--brand);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    font-size: 8px;
-    font-weight: 900;
+  .invite-powered-logo {
+    display: block;
+    height: 16px;
+    width: auto;
+    max-width: 84px;
   }
 
   @media (min-width: 900px) {

@@ -1,14 +1,9 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-});
-
 export const metadata: Metadata = {
-  title: "Video Reviews — Collect video reviews from your clients",
+  title: "Tellr.me — Collect video reviews from your clients",
   description:
     "Platform to collect authentic video reviews from your customers.",
 };
@@ -20,7 +15,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {children}
+        <Script
+          id="iubenda-loader"
+          src="https://cdn.iubenda.com/iubenda.js"
+          strategy="afterInteractive"
+        />
+      </body>
     </html>
   );
 }

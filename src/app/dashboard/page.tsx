@@ -15,6 +15,7 @@ type RuntimeCampaign = {
     reviewerName: string;
     reviewerEmail: string;
     reviewerRating: number | null;
+    status: string;
     videoKey: string;
     createdAt: Date;
   }>;
@@ -48,6 +49,7 @@ export default async function DashboardPage() {
               reviewerName: true,
               reviewerEmail: true,
               reviewerRating: true,
+              status: true,
               videoKey: true,
               createdAt: true,
             },
@@ -71,26 +73,17 @@ export default async function DashboardPage() {
       reviewerName: submission.reviewerName,
       reviewerEmail: submission.reviewerEmail,
       reviewerRating: submission.reviewerRating,
+      status: submission.status,
       videoKey: submission.videoKey,
       createdAt: submission.createdAt.toISOString(),
     })),
   }));
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background:
-          "radial-gradient(circle at top left, rgba(255,95,61,.08), transparent 26%), #f3efeb",
-      }}
-    >
-      <div className="wrap" style={{ paddingTop: 28, paddingBottom: 48 }}>
-        <DashboardShell
-          workspaceName={DEFAULT_WORKSPACE.brandName}
-          campaignRuntimeReady={Boolean(campaignDelegate) && !campaignQueryFailed}
-          campaigns={campaignRows}
-        />
-      </div>
-    </main>
+    <DashboardShell
+      workspaceName={DEFAULT_WORKSPACE.brandName}
+      campaignRuntimeReady={Boolean(campaignDelegate) && !campaignQueryFailed}
+      campaigns={campaignRows}
+    />
   );
 }

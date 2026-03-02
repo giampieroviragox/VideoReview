@@ -24,7 +24,7 @@ const featuresList = [
   {
     icon: "🔄",
     title: "API Automations",
-    desc: "Connect VR to your CRM or billing system. Send rewards and unlock features automatically via webhook.",
+    desc: "Connect Tellr.me to your CRM or billing system. Send rewards and unlock features automatically via webhook.",
   },
   {
     icon: "✨",
@@ -43,7 +43,7 @@ export default function Features() {
             Everything you need to scale your social proof.
           </h2>
           <p className="landing-section-sub">
-            From automatic invitations to reusable workflows, VR is the all-in-one
+            From automatic invitations to reusable workflows, Tellr.me is the all-in-one
             platform for video marketing.
           </p>
         </div>

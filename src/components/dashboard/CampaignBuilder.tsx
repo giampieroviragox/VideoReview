@@ -110,123 +110,127 @@ export default function CampaignBuilder() {
       </div>
 
       <form onSubmit={handleSubmit} className="builder-form">
-        <label className="builder-field">
-          <span className="builder-label">Campaign name *</span>
-          <input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            required
-            placeholder="Post-purchase product review"
-            className="builder-input"
-          />
-        </label>
+        <div className="builder-form-body">
+          <label className="builder-field">
+            <span className="builder-label">Campaign name <span>*</span></span>
+            <input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              required
+              placeholder="Post-purchase product review"
+              className="builder-input"
+            />
+          </label>
 
-        <label className="builder-field">
-          <span className="builder-label">Optional description</span>
-          <textarea
-            value={description}
-            onChange={(event) => setDescription(event.target.value.slice(0, 200))}
-            placeholder="Add a short note about the campaign."
-            rows={3}
-            className="builder-input builder-textarea"
-          />
-        </label>
+          <label className="builder-field">
+            <span className="builder-label">Optional description</span>
+            <textarea
+              value={description}
+              onChange={(event) => setDescription(event.target.value.slice(0, 200))}
+              placeholder="Add a short note about the campaign."
+              rows={3}
+              className="builder-input builder-textarea"
+            />
+          </label>
 
-        <div className="builder-section-card">
-          <div className="builder-section-head">
-            <div>
-              <p className="builder-label builder-section-label">Reward</p>
-              <p className="builder-section-copy">
-                Decide whether this campaign includes a reward.
-              </p>
+          <div className={hasReward ? "builder-section-card is-expanded is-reward" : "builder-section-card"}>
+            <div className="builder-section-head">
+              <div>
+                <p className="builder-label builder-section-label">Reward</p>
+                <p className="builder-section-copy">
+                  Decide whether this campaign includes a reward.
+                </p>
+              </div>
+              <div className="builder-toggle-group">
+                <button
+                  type="button"
+                  className={hasReward ? "builder-toggle is-yes-active" : "builder-toggle"}
+                  onClick={() => setHasReward(true)}
+                >
+                  Yes
+                </button>
+                <button
+                  type="button"
+                  className={!hasReward ? "builder-toggle is-no-active" : "builder-toggle"}
+                  onClick={() => setHasReward(false)}
+                >
+                  No
+                </button>
+              </div>
             </div>
-            <div className="builder-toggle-group">
-              <button
-                type="button"
-                className={hasReward ? "builder-toggle is-active" : "builder-toggle"}
-                onClick={() => setHasReward(true)}
-              >
-                Yes
-              </button>
-              <button
-                type="button"
-                className={!hasReward ? "builder-toggle is-active" : "builder-toggle"}
-                onClick={() => setHasReward(false)}
-              >
-                No
-              </button>
-            </div>
+
+            {hasReward && (
+              <div className="builder-section-fields">
+                <label className="builder-field">
+                  <span className="builder-label">Reward name <span>*</span></span>
+                  <input
+                    value={rewardName}
+                    onChange={(event) => setRewardName(event.target.value)}
+                    required={hasReward}
+                    placeholder="30-day premium access"
+                    className="builder-input"
+                  />
+                </label>
+
+                <label className="builder-field">
+                  <span className="builder-label">Reward description <span>*</span></span>
+                  <textarea
+                    value={rewardDescription}
+                    onChange={(event) => setRewardDescription(event.target.value)}
+                    required={hasReward}
+                    placeholder="Describe what the customer receives after approval."
+                    rows={3}
+                    className="builder-input builder-textarea"
+                  />
+                </label>
+              </div>
+            )}
           </div>
 
-          {hasReward && (
-            <div className="builder-subgrid">
-              <label className="builder-field">
-                <span className="builder-label">Reward name *</span>
-                <input
-                  value={rewardName}
-                  onChange={(event) => setRewardName(event.target.value)}
-                  required={hasReward}
-                  placeholder="30-day premium access"
-                  className="builder-input"
-                />
-              </label>
+          <div className={hasQuestion ? "builder-section-card is-expanded" : "builder-section-card"}>
+            <div className="builder-section-head">
+              <div>
+                <p className="builder-label builder-section-label">Question</p>
+                <p className="builder-section-copy">
+                  Add a single prompt if you want to guide the customer.
+                </p>
+              </div>
+              <div className="builder-toggle-group">
+                <button
+                  type="button"
+                  className={hasQuestion ? "builder-toggle is-yes-active" : "builder-toggle"}
+                  onClick={() => setHasQuestion(true)}
+                >
+                  Yes
+                </button>
+                <button
+                  type="button"
+                  className={!hasQuestion ? "builder-toggle is-no-active" : "builder-toggle"}
+                  onClick={() => setHasQuestion(false)}
+                >
+                  No
+                </button>
+              </div>
+            </div>
 
-              <label className="builder-field">
-                <span className="builder-label">Reward description *</span>
-                <textarea
-                  value={rewardDescription}
-                  onChange={(event) => setRewardDescription(event.target.value)}
-                  required={hasReward}
-                  placeholder="Describe what the customer receives after approval."
-                  rows={3}
-                  className="builder-input builder-textarea"
-                />
-              </label>
-            </div>
-          )}
-        </div>
-
-        <div className="builder-section-card">
-          <div className="builder-section-head">
-            <div>
-              <p className="builder-label builder-section-label">Question</p>
-              <p className="builder-section-copy">
-                Add a single prompt if you want to guide the customer.
-              </p>
-            </div>
-            <div className="builder-toggle-group">
-              <button
-                type="button"
-                className={hasQuestion ? "builder-toggle is-active" : "builder-toggle"}
-                onClick={() => setHasQuestion(true)}
-              >
-                Yes
-              </button>
-              <button
-                type="button"
-                className={!hasQuestion ? "builder-toggle is-active" : "builder-toggle"}
-                onClick={() => setHasQuestion(false)}
-              >
-                No
-              </button>
-            </div>
+            {hasQuestion && (
+              <div className="builder-section-fields">
+                <label className="builder-field">
+                  <span className="builder-label">Question</span>
+                  <textarea
+                    value={questionText}
+                    onChange={(event) => setQuestionText(event.target.value)}
+                    placeholder="What did you like most about the product?"
+                    rows={3}
+                    className="builder-input builder-textarea"
+                  />
+                </label>
+              </div>
+            )}
           </div>
 
-          {hasQuestion && (
-            <label className="builder-field">
-              <span className="builder-label">Question</span>
-              <textarea
-                value={questionText}
-                onChange={(event) => setQuestionText(event.target.value)}
-                placeholder="What did you like most about the product?"
-                rows={3}
-                className="builder-input builder-textarea"
-              />
-            </label>
-          )}
+          {error && <div className="builder-error-card">{error}</div>}
         </div>
-
-        {error && <div className="builder-error-card">{error}</div>}
 
         <div className="builder-footer-row">
           <p className="builder-footer-copy">
@@ -260,15 +264,16 @@ const builderStyles = `
   .builder-shell {
     border: 1px solid rgba(24, 24, 32, 0.08);
     border-radius: 24px;
-    padding: 22px clamp(18px, 3vw, 26px);
-    background: rgba(255, 255, 255, 0.88);
+    background: #fff;
     box-shadow:
-      0 18px 42px rgba(20, 18, 24, 0.06),
-      0 1px 0 rgba(255, 255, 255, 0.84) inset;
+      0 1px 4px rgba(0, 0, 0, 0.04),
+      0 12px 28px rgba(0, 0, 0, 0.03);
+    overflow: hidden;
   }
 
   .builder-head {
-    margin-bottom: 18px;
+    padding: 22px 26px;
+    border-bottom: 1px solid rgba(24, 24, 32, 0.08);
   }
 
   .builder-eyebrow,
@@ -277,10 +282,11 @@ const builderStyles = `
     letter-spacing: 0.14em;
     text-transform: uppercase;
     font-weight: 700;
+    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   }
 
   .builder-eyebrow {
-    color: var(--brand-2);
+    color: var(--brand);
     margin-bottom: 8px;
   }
 
@@ -288,24 +294,34 @@ const builderStyles = `
     font-size: clamp(22px, 3vw, 30px);
     margin-bottom: 6px;
     color: #121218;
+    letter-spacing: -0.04em;
   }
 
   .builder-copy,
   .builder-section-copy,
   .builder-footer-copy,
   .builder-link-box {
-    color: rgba(24, 24, 32, 0.5);
+    color: rgba(24, 24, 32, 0.54);
     font-size: 14px;
   }
 
   .builder-copy {
-    max-width: 620px;
+    max-width: 760px;
   }
 
-  .builder-form,
-  .builder-subgrid {
+  .builder-form {
+    display: grid;
+  }
+
+  .builder-form-body,
+  .builder-subgrid,
+  .builder-section-fields {
     display: grid;
     gap: 18px;
+  }
+
+  .builder-form-body {
+    padding: 26px;
   }
 
   .builder-field {
@@ -314,17 +330,31 @@ const builderStyles = `
   }
 
   .builder-label {
-    color: rgba(24, 24, 32, 0.4);
+    color: rgba(24, 24, 32, 0.38);
+  }
+
+  .builder-label span {
+    color: var(--brand);
   }
 
   .builder-input {
     width: 100%;
-    padding: 14px 16px;
-    border-radius: 14px;
-    border: 1px solid rgba(24, 24, 32, 0.1);
-    background: rgba(255, 255, 255, 0.92);
+    padding: 14px 18px;
+    border-radius: 20px;
+    border: 2px solid rgba(24, 24, 32, 0.12);
+    background: #fff;
     color: #14141b;
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset;
+    font-size: 15px;
+    font-weight: 600;
+    outline: none;
+    transition:
+      border-color 160ms ease,
+      box-shadow 160ms ease;
+  }
+
+  .builder-input:focus {
+    border-color: rgba(255, 92, 53, 0.42);
+    box-shadow: 0 0 0 4px rgba(255, 92, 53, 0.08);
   }
 
   .builder-input::placeholder {
@@ -333,16 +363,19 @@ const builderStyles = `
 
   .builder-textarea {
     resize: vertical;
+    min-height: 128px;
+    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 14px;
+    line-height: 1.55;
   }
 
   .builder-section-card,
   .builder-success-card,
   .builder-error-card {
-    border-radius: 18px;
+    border-radius: 22px;
     border: 1px solid rgba(24, 24, 32, 0.08);
-    padding: 16px;
-    background: rgba(255, 255, 255, 0.68);
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.76) inset;
+    padding: 18px 20px;
+    background: #f7f6f4;
   }
 
   .builder-section-head,
@@ -359,9 +392,31 @@ const builderStyles = `
     margin-bottom: 6px;
   }
 
+  .builder-section-card.is-expanded {
+    border-color: rgba(24, 24, 32, 0.12);
+  }
+
+  .builder-section-card.is-reward {
+    border-color: rgba(255, 92, 53, 0.22);
+    background: #fff8f6;
+  }
+
+  .builder-section-fields {
+    margin-top: 14px;
+    padding-top: 18px;
+    border-top: 1px solid rgba(24, 24, 32, 0.08);
+  }
+
+  .builder-section-card.is-reward .builder-section-fields {
+    border-top-color: rgba(255, 92, 53, 0.16);
+  }
+
   .builder-toggle-group {
     display: inline-flex;
-    gap: 8px;
+    gap: 6px;
+    padding: 4px;
+    border-radius: 999px;
+    background: rgba(24, 24, 32, 0.05);
   }
 
   .builder-toggle,
@@ -377,22 +432,33 @@ const builderStyles = `
 
   .builder-toggle,
   .builder-secondary-btn {
-    padding: 10px 16px;
-    border: 1px solid rgba(24, 24, 32, 0.1);
-    background: rgba(255, 255, 255, 0.9);
+    padding: 10px 18px;
+    border: 1px solid rgba(24, 24, 32, 0.12);
+    background: #fff;
     color: #14141b;
   }
 
-  .builder-toggle.is-active,
+  .builder-toggle {
+    min-width: 76px;
+  }
+
+  .builder-toggle.is-yes-active,
   .builder-primary-btn {
-    border: none;
+    border-color: transparent;
     background: var(--brand);
     color: #fff;
-    box-shadow: 0 10px 24px rgba(255, 92, 53, 0.18);
+    box-shadow: 0 8px 18px rgba(255, 92, 53, 0.18);
+  }
+
+  .builder-toggle.is-no-active {
+    border-color: #14141b;
+    background: #14141b;
+    color: #fff;
   }
 
   .builder-primary-btn {
-    padding: 14px 22px;
+    min-height: 52px;
+    padding: 0 24px;
   }
 
   .builder-primary-btn:disabled {
@@ -402,17 +468,19 @@ const builderStyles = `
   }
 
   .builder-footer-copy {
-    max-width: 620px;
+    max-width: 560px;
   }
 
   .builder-error-card {
     color: #c94d2e;
     border-color: rgba(255, 92, 53, 0.14);
+    background: #fff5f1;
   }
 
   .builder-success-card {
-    margin-top: 18px;
+    margin: 18px 26px 0;
     border-color: rgba(47, 153, 100, 0.14);
+    background: #f6fff9;
   }
 
   .builder-success-label {
@@ -430,23 +498,41 @@ const builderStyles = `
   }
 
   .builder-link-box {
-    border-radius: 14px;
+    border-radius: 16px;
     border: 1px solid rgba(24, 24, 32, 0.08);
-    padding: 12px;
-    background: rgba(255, 255, 255, 0.9);
+    padding: 12px 14px;
+    background: #fff;
     word-break: break-all;
+  }
+
+  .builder-footer-row {
+    padding: 18px 26px 22px;
+    border-top: 1px solid rgba(24, 24, 32, 0.08);
+    background: #f7f6f4;
   }
 
   @media (max-width: 760px) {
     .builder-shell {
       border-radius: 20px;
-      padding: 18px 16px;
+    }
+
+    .builder-head,
+    .builder-form-body,
+    .builder-footer-row {
+      padding-left: 16px;
+      padding-right: 16px;
     }
 
     .builder-section-card,
     .builder-success-card,
     .builder-error-card {
-      border-radius: 16px;
+      border-radius: 18px;
+      padding: 16px;
+    }
+
+    .builder-success-card {
+      margin-left: 16px;
+      margin-right: 16px;
     }
 
     .builder-primary-btn,
@@ -461,6 +547,8 @@ const builderStyles = `
       width: 100%;
       display: grid;
       grid-template-columns: 1fr 1fr;
+      padding: 0;
+      background: transparent;
     }
   }
 `;
