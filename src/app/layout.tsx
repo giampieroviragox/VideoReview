@@ -7,8 +7,11 @@ export const metadata: Metadata = {
   description:
     "Tellr helps you collet the most convincing social proof you'll ever have.",
   icons: {
-    icon: "/favicon.png",
-    shortcut: "/favicon.png",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon.png", type: "image/png", sizes: "512x512" },
+    ],
+    shortcut: "/favicon.ico",
     apple: "/favicon.png",
   },
 };
