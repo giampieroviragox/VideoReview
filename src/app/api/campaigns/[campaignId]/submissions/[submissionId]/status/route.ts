@@ -60,36 +60,39 @@ export async function PATCH(
       return NextResponse.json({ error: "Submission not found." }, { status: 404 });
     }
 
-    const submission = await prisma.$transaction(async (tx) => {
-      const updatedSubmission = await tx.submission.update({
-        where: { id: submissionId },
-        data: {
-          status,
-          rewardPending: status === "APPROVED",
-        },
-      });
+    const submission = await prisma.submission.update({
+      where: { id: submissionId },
+      data: {
+        status,
+        rewardPending: status === "APPROVED",
+      },
+    });
 
-      if (status === "APPROVED" && currentSubmission.status !== "APPROVED") {
+    if (status === "APPROVED" && currentSubmission.status !== "APPROVED") {
+      try {
         const eventId = crypto.randomUUID();
-        await queueWebhookEvent({
-          tx,
-          ownerUserId: existing.ownerUserId,
-          eventId,
-          type: "submission.approved",
-          payload: buildSubmissionWebhookPayload({
+
+        await prisma.$transaction(async (tx) => {
+          await queueWebhookEvent({
+            tx,
+            ownerUserId: existing.ownerUserId,
             eventId,
             type: "submission.approved",
-            campaign: {
-              id: existing.id,
-              name: existing.name,
-            },
-            submission: updatedSubmission,
-          }),
+            payload: buildSubmissionWebhookPayload({
+              eventId,
+              type: "submission.approved",
+              campaign: {
+                id: existing.id,
+                name: existing.name,
+              },
+              submission,
+            }),
+          });
         });
+      } catch (error) {
+        console.error("Webhook enqueue failed for submission.approved:", error);
       }
-
-      return updatedSubmission;
-    });
+    }
 
     return NextResponse.json({ submission });
   } catch (error) {

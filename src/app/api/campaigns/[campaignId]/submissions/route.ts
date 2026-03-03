@@ -120,40 +120,43 @@ export async function POST(
       );
     }
 
-    const createdSubmission = await prisma.$transaction(async (tx) => {
-      const eventId = crypto.randomUUID();
-      const nextSubmission = await tx.submission.create({
-        data: {
-          campaignId: campaign.id,
-          reviewerName: reviewerName.trim(),
-          reviewerEmail: reviewerEmail.trim().toLowerCase(),
-          reviewerRating,
-          answers: normalizedAnswers,
-          videoKey,
-          durationSeconds: durationSeconds ? Math.round(durationSeconds) : null,
-          status: "PENDING",
-          rewardPending: false,
-        },
-      });
+    const createdSubmission = await prisma.submission.create({
+      data: {
+        campaignId: campaign.id,
+        reviewerName: reviewerName.trim(),
+        reviewerEmail: reviewerEmail.trim().toLowerCase(),
+        reviewerRating,
+        answers: normalizedAnswers,
+        videoKey,
+        durationSeconds: durationSeconds ? Math.round(durationSeconds) : null,
+        status: "PENDING",
+        rewardPending: false,
+      },
+    });
 
-      await queueWebhookEvent({
-        tx,
-        ownerUserId: campaign.ownerUserId,
-        eventId,
-        type: "submission.created",
-        payload: buildSubmissionWebhookPayload({
+    try {
+      const eventId = crypto.randomUUID();
+
+      await prisma.$transaction(async (tx) => {
+        await queueWebhookEvent({
+          tx,
+          ownerUserId: campaign.ownerUserId,
           eventId,
           type: "submission.created",
-          campaign: {
-            id: campaign.id,
-            name: campaign.name,
-          },
-          submission: nextSubmission,
-        }),
+          payload: buildSubmissionWebhookPayload({
+            eventId,
+            type: "submission.created",
+            campaign: {
+              id: campaign.id,
+              name: campaign.name,
+            },
+            submission: createdSubmission,
+          }),
+        });
       });
-
-      return nextSubmission;
-    });
+    } catch (error) {
+      console.error("Webhook enqueue failed for submission.created:", error);
+    }
 
     return NextResponse.json({ submission: createdSubmission }, { status: 201 });
   } catch (error) {
