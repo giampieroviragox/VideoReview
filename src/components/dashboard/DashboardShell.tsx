@@ -460,16 +460,25 @@ export default function DashboardShell({
     });
   }
 
+  function scrollDashboardToTop() {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
+
   function openCampaignsSection() {
     setActiveSection("campaigns");
     setShowBuilder(false);
     setSelectedCampaignId(null);
+    scrollDashboardToTop();
   }
 
   function openSettingsSection() {
     setActiveSection("settings");
     setShowBuilder(false);
     setSelectedCampaignId(null);
+    scrollDashboardToTop();
   }
 
   return (
