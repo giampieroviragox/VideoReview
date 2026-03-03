@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCampaignDelegate, prisma } from "@/lib/db";
 import { objectExists } from "@/lib/s3";
+import { queueWebhookEvent } from "@/lib/webhooks/emit";
+import { buildSubmissionWebhookPayload } from "@/lib/webhooks/payloads";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +16,8 @@ type IncomingAnswer = {
 type CampaignSubmissionRuntimeDelegate = {
   findUnique: (args: unknown) => Promise<{
     id: string;
+    ownerUserId: string | null;
+    name: string;
     questions: Array<{ id: string; text: string; required: boolean }>;
   } | null>;
 };
@@ -116,21 +120,42 @@ export async function POST(
       );
     }
 
-    const submission = await prisma.submission.create({
-      data: {
-        campaignId: campaign.id,
-        reviewerName: reviewerName.trim(),
-        reviewerEmail: reviewerEmail.trim().toLowerCase(),
-        reviewerRating,
-        answers: normalizedAnswers,
-        videoKey,
-        durationSeconds: durationSeconds ? Math.round(durationSeconds) : null,
-        status: "PENDING",
-        rewardPending: false,
-      },
+    const createdSubmission = await prisma.$transaction(async (tx) => {
+      const eventId = crypto.randomUUID();
+      const nextSubmission = await tx.submission.create({
+        data: {
+          campaignId: campaign.id,
+          reviewerName: reviewerName.trim(),
+          reviewerEmail: reviewerEmail.trim().toLowerCase(),
+          reviewerRating,
+          answers: normalizedAnswers,
+          videoKey,
+          durationSeconds: durationSeconds ? Math.round(durationSeconds) : null,
+          status: "PENDING",
+          rewardPending: false,
+        },
+      });
+
+      await queueWebhookEvent({
+        tx,
+        ownerUserId: campaign.ownerUserId,
+        eventId,
+        type: "submission.created",
+        payload: buildSubmissionWebhookPayload({
+          eventId,
+          type: "submission.created",
+          campaign: {
+            id: campaign.id,
+            name: campaign.name,
+          },
+          submission: nextSubmission,
+        }),
+      });
+
+      return nextSubmission;
     });
 
-    return NextResponse.json({ submission }, { status: 201 });
+    return NextResponse.json({ submission: createdSubmission }, { status: 201 });
   } catch (error) {
     console.error("Campaign submission error:", error);
     return NextResponse.json(

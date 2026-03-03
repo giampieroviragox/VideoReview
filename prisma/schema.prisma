@@ -78,3 +78,55 @@ model Waitlist {
   email     String   @unique
   createdAt DateTime @default(now())
 }
+
+model WebhookEndpoint {
+  id               String            @id @default(cuid())
+  ownerUserId      String
+  url              String
+  description      String?
+  subscribedEvents String[]          @default([])
+  signingSecret    String
+  isActive         Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  deliveries       WebhookDelivery[]
+
+  @@index([ownerUserId, createdAt])
+  @@index([ownerUserId, isActive])
+}
+
+model WebhookEvent {
+  id            String            @id @default(cuid())
+  ownerUserId   String
+  type          String
+  schemaVersion Int               @default(1)
+  payload       Json
+  createdAt     DateTime          @default(now())
+  deliveries    WebhookDelivery[]
+
+  @@index([ownerUserId, createdAt])
+  @@index([type, createdAt])
+}
+
+model WebhookDelivery {
+  id             String          @id @default(cuid())
+  eventId        String
+  endpointId     String
+  status         String          @default("PENDING")
+  attemptCount   Int             @default(0)
+  nextAttemptAt  DateTime        @default(now())
+  lastAttemptAt  DateTime?
+  responseStatus Int?
+  lastError      String?
+  lockedAt       DateTime?
+  lockedBy       String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  endpoint       WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  event          WebhookEvent    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, endpointId])
+  @@index([status, nextAttemptAt, createdAt])
+  @@index([endpointId, createdAt])
+  @@index([lockedAt])
+}

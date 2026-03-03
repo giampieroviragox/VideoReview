@@ -1,7 +1,7 @@
 "use client";
 
 import { UserButton } from "@clerk/nextjs";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -35,6 +35,38 @@ type DashboardShellProps = {
     }>;
   }>;
 };
+
+type DashboardWebhookEndpoint = {
+  id: string;
+  url: string;
+  description: string | null;
+  subscribedEvents: string[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  deliveries: Array<{
+    id: string;
+    status: string;
+    attemptCount: number;
+    responseStatus: number | null;
+    lastError: string | null;
+    createdAt: string;
+    eventType: string;
+  }>;
+};
+
+const WEBHOOK_EVENT_OPTIONS = [
+  {
+    value: "submission.created",
+    label: "New submission",
+    helper: "Fire when a customer sends a new review.",
+  },
+  {
+    value: "submission.approved",
+    label: "Submission approved",
+    helper: "Fire when you approve a submission in the dashboard.",
+  },
+] as const;
 
 function getCampaignState(hasNoEndDate: boolean, endsAt: string | null) {
   if (hasNoEndDate || !endsAt) {
@@ -84,11 +116,71 @@ export default function DashboardShell({
 }: DashboardShellProps) {
   const router = useRouter();
   const [campaignsState, setCampaignsState] = useState(campaigns);
+  const [activeSection, setActiveSection] = useState<"campaigns" | "settings">("campaigns");
   const [showBuilder, setShowBuilder] = useState(false);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
   const [submissionActionId, setSubmissionActionId] = useState<string | null>(null);
   const [playingSubmissionId, setPlayingSubmissionId] = useState<string | null>(null);
+  const [webhookEndpoints, setWebhookEndpoints] = useState<DashboardWebhookEndpoint[]>([]);
+  const [webhookLoaded, setWebhookLoaded] = useState(false);
+  const [webhookLoading, setWebhookLoading] = useState(false);
+  const [webhookError, setWebhookError] = useState<string | null>(null);
+  const [webhookActionId, setWebhookActionId] = useState<string | null>(null);
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [webhookDescription, setWebhookDescription] = useState("");
+  const [webhookEvents, setWebhookEvents] = useState<string[]>([
+    "submission.created",
+    "submission.approved",
+  ]);
+  const [webhookFormSaving, setWebhookFormSaving] = useState(false);
+  const [latestWebhookSecret, setLatestWebhookSecret] = useState<string | null>(null);
+  const [webhookNotice, setWebhookNotice] = useState<string | null>(null);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
+
+  useEffect(() => {
+    if (activeSection !== "settings" || webhookLoaded || webhookLoading) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadWebhooks() {
+      setWebhookLoading(true);
+      setWebhookError(null);
+
+      try {
+        const response = await fetch("/api/webhooks/endpoints", {
+          cache: "no-store",
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to load webhook endpoints.");
+        }
+
+        if (!cancelled) {
+          setWebhookEndpoints(data.endpoints || []);
+          setWebhookLoaded(true);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setWebhookError(
+            error instanceof Error ? error.message : "Failed to load webhook endpoints."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setWebhookLoading(false);
+        }
+      }
+    }
+
+    loadWebhooks();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSection, webhookLoaded, webhookLoading]);
 
   const selectedCampaign =
     campaignsState.find((campaign) => campaign.id === selectedCampaignId) || null;
@@ -198,6 +290,188 @@ export default function DashboardShell({
     }
   }
 
+  function toggleWebhookEventSelection(eventType: string) {
+    setWebhookEvents((current) =>
+      current.includes(eventType)
+        ? current.filter((entry) => entry !== eventType)
+        : [...current, eventType]
+    );
+  }
+
+  async function refreshWebhookEndpoints() {
+    setWebhookLoading(true);
+    setWebhookError(null);
+
+    try {
+      const response = await fetch("/api/webhooks/endpoints", {
+        cache: "no-store",
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to load webhook endpoints.");
+      }
+
+      setWebhookEndpoints(data.endpoints || []);
+      setWebhookLoaded(true);
+    } catch (error) {
+      setWebhookError(
+        error instanceof Error ? error.message : "Failed to load webhook endpoints."
+      );
+    } finally {
+      setWebhookLoading(false);
+    }
+  }
+
+  async function handleCreateWebhook(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setWebhookFormSaving(true);
+    setWebhookError(null);
+    setWebhookNotice(null);
+
+    try {
+      const response = await fetch("/api/webhooks/endpoints", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          url: webhookUrl,
+          description: webhookDescription,
+          subscribedEvents: webhookEvents,
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create webhook endpoint.");
+      }
+
+      setWebhookUrl("");
+      setWebhookDescription("");
+      setWebhookEvents(["submission.created", "submission.approved"]);
+      setLatestWebhookSecret(data.signingSecret || null);
+      setWebhookNotice("Webhook endpoint created. Save the signing secret now.");
+      await refreshWebhookEndpoints();
+    } catch (error) {
+      setWebhookError(
+        error instanceof Error ? error.message : "Failed to create webhook endpoint."
+      );
+    } finally {
+      setWebhookFormSaving(false);
+    }
+  }
+
+  async function handleWebhookAction(
+    actionId: string,
+    run: () => Promise<void>
+  ) {
+    setWebhookActionId(actionId);
+    setWebhookError(null);
+    setWebhookNotice(null);
+
+    try {
+      await run();
+    } catch (error) {
+      setWebhookError(
+        error instanceof Error ? error.message : "Webhook action failed."
+      );
+    } finally {
+      setWebhookActionId(null);
+    }
+  }
+
+  async function handleToggleWebhook(endpoint: DashboardWebhookEndpoint) {
+    await handleWebhookAction(`toggle:${endpoint.id}`, async () => {
+      const response = await fetch(`/api/webhooks/endpoints/${endpoint.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          isActive: !endpoint.isActive,
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to update webhook endpoint.");
+      }
+
+      setWebhookNotice(
+        endpoint.isActive ? "Webhook paused." : "Webhook re-enabled."
+      );
+      await refreshWebhookEndpoints();
+    });
+  }
+
+  async function handleRotateWebhookSecret(endpointId: string) {
+    await handleWebhookAction(`rotate:${endpointId}`, async () => {
+      const response = await fetch(`/api/webhooks/endpoints/${endpointId}/rotate`, {
+        method: "POST",
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to rotate webhook secret.");
+      }
+
+      setLatestWebhookSecret(data.signingSecret || null);
+      setWebhookNotice("Signing secret rotated. Save the new secret now.");
+      await refreshWebhookEndpoints();
+    });
+  }
+
+  async function handleSendWebhookTest(endpointId: string) {
+    await handleWebhookAction(`test:${endpointId}`, async () => {
+      const response = await fetch(`/api/webhooks/endpoints/${endpointId}/test`, {
+        method: "POST",
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to send webhook test.");
+      }
+
+      const result = data.dispatch?.results?.[0];
+      setWebhookNotice(
+        result?.status === "SUCCESS"
+          ? "Test event delivered."
+          : "Test event queued. Check delivery status below."
+      );
+      await refreshWebhookEndpoints();
+    });
+  }
+
+  async function handleDeleteWebhook(endpointId: string) {
+    await handleWebhookAction(`delete:${endpointId}`, async () => {
+      const response = await fetch(`/api/webhooks/endpoints/${endpointId}`, {
+        method: "DELETE",
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to delete webhook endpoint.");
+      }
+
+      setLatestWebhookSecret(null);
+      setWebhookNotice("Webhook endpoint deleted.");
+      await refreshWebhookEndpoints();
+    });
+  }
+
+  function openCampaignsSection() {
+    setActiveSection("campaigns");
+    setShowBuilder(false);
+    setSelectedCampaignId(null);
+  }
+
+  function openSettingsSection() {
+    setActiveSection("settings");
+    setShowBuilder(false);
+    setSelectedCampaignId(null);
+  }
+
   return (
     <div className="dashboard-shell">
       <aside className="dashboard-sidebar">
@@ -226,18 +500,25 @@ export default function DashboardShell({
         <div className="dashboard-sidebar-nav">
           <p className="dashboard-nav-label">Menu</p>
 
-          <button type="button" className="dashboard-nav-item dashboard-nav-item-active">
+          <button
+            type="button"
+            className={`dashboard-nav-item ${
+              activeSection === "campaigns" ? "dashboard-nav-item-active" : "dashboard-nav-item-muted"
+            }`}
+            onClick={openCampaignsSection}
+          >
             <span className="dashboard-nav-icon">🎥</span>
             <span>Campaign</span>
             <span className="dashboard-nav-count">{campaignsState.length}</span>
           </button>
 
-          <button type="button" className="dashboard-nav-item dashboard-nav-item-muted">
-            <span className="dashboard-nav-icon">📈</span>
-            <span>Analytics</span>
-          </button>
-
-          <button type="button" className="dashboard-nav-item dashboard-nav-item-muted">
+          <button
+            type="button"
+            className={`dashboard-nav-item ${
+              activeSection === "settings" ? "dashboard-nav-item-active" : "dashboard-nav-item-muted"
+            }`}
+            onClick={openSettingsSection}
+          >
             <span className="dashboard-nav-icon">⚙️</span>
             <span>Settings</span>
           </button>
@@ -247,7 +528,9 @@ export default function DashboardShell({
       <section className="dashboard-main">
         <div className="dashboard-topbar">
           <p className="dashboard-topbar-title">
-            {showBuilder
+            {activeSection === "settings"
+              ? "Settings"
+              : showBuilder
               ? "New Campaign"
               : selectedCampaign
                 ? `${selectedCampaign.name} — Submissions`
@@ -256,7 +539,7 @@ export default function DashboardShell({
         </div>
 
         <div className="dashboard-content">
-          {!showBuilder && !selectedCampaign && (
+          {activeSection === "campaigns" && !showBuilder && !selectedCampaign && (
             <div className="dashboard-hero-card">
               <div>
                 <p className="dashboard-eyebrow">Campaign</p>
@@ -276,13 +559,13 @@ export default function DashboardShell({
             </div>
           )}
 
-          {!campaignRuntimeReady && (
+          {activeSection === "campaigns" && !campaignRuntimeReady && (
             <div className="dashboard-alert-card">
               Campaign data is not available in the current server runtime. Restart the dev server if this message appears again.
             </div>
           )}
 
-          {showBuilder && (
+          {activeSection === "campaigns" && showBuilder && (
             <div className="dashboard-builder-wrap">
               <div className="dashboard-builder-toolbar">
                 <button
@@ -297,7 +580,7 @@ export default function DashboardShell({
             </div>
           )}
 
-          {!showBuilder && !selectedCampaign && (
+          {activeSection === "campaigns" && !showBuilder && !selectedCampaign && (
             <div className="dashboard-list-card">
               <div className="dashboard-list-head">
                 <h2 className="dashboard-list-title">Active campaigns</h2>
@@ -361,7 +644,7 @@ export default function DashboardShell({
             </div>
           )}
 
-          {selectedCampaign && (
+          {activeSection === "campaigns" && selectedCampaign && (
             <div className="dashboard-submissions-card">
               <div className="dashboard-builder-toolbar dashboard-sub-toolbar">
                 <button
@@ -545,6 +828,259 @@ export default function DashboardShell({
                     })}
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {activeSection === "settings" && (
+            <div className="dashboard-settings-shell">
+              <div className="dashboard-settings-card">
+                <p className="dashboard-eyebrow">Settings</p>
+                <h2 className="dashboard-settings-title">Workspace access</h2>
+                <p className="dashboard-settings-copy">
+                  This is the private workspace currently linked to your Clerk account.
+                </p>
+
+                <div className="dashboard-settings-grid">
+                  <div className="dashboard-settings-item">
+                    <p className="dashboard-settings-label">Account</p>
+                    <p className="dashboard-settings-value">{viewerName}</p>
+                  </div>
+                  <div className="dashboard-settings-item">
+                    <p className="dashboard-settings-label">Workspace</p>
+                    <p className="dashboard-settings-value">{workspaceName}</p>
+                  </div>
+                  <div className="dashboard-settings-item">
+                    <p className="dashboard-settings-label">Campaigns</p>
+                    <p className="dashboard-settings-value">{campaignsState.length}</p>
+                  </div>
+                  <div className="dashboard-settings-item">
+                    <p className="dashboard-settings-label">Authentication</p>
+                    <p className="dashboard-settings-value">Managed by Clerk</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="dashboard-settings-card">
+                <div className="dashboard-settings-head">
+                  <div>
+                    <p className="dashboard-eyebrow">Automation</p>
+                    <h2 className="dashboard-settings-title">Webhook endpoints</h2>
+                    <p className="dashboard-settings-copy">
+                      Connect Tellr to external tools and receive signed events for new
+                      submissions and approvals.
+                    </p>
+                  </div>
+                  <div className="dashboard-settings-pill">
+                    Cron dispatcher runs every minute
+                  </div>
+                </div>
+
+                {webhookError && (
+                  <div className="dashboard-settings-alert dashboard-settings-alert-error">
+                    {webhookError}
+                  </div>
+                )}
+
+                {webhookNotice && (
+                  <div className="dashboard-settings-alert dashboard-settings-alert-success">
+                    {webhookNotice}
+                  </div>
+                )}
+
+                {latestWebhookSecret && (
+                  <div className="dashboard-secret-card">
+                    <div>
+                      <p className="dashboard-settings-label">Signing secret</p>
+                      <p className="dashboard-secret-value">{latestWebhookSecret}</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="dashboard-action-btn dashboard-secondary-action"
+                      onClick={() => {
+                        copyText(latestWebhookSecret);
+                      }}
+                    >
+                      Copy secret
+                    </button>
+                  </div>
+                )}
+
+                <form className="dashboard-webhook-form" onSubmit={handleCreateWebhook}>
+                  <div className="dashboard-webhook-form-grid">
+                    <label className="dashboard-webhook-field">
+                      <span className="dashboard-settings-label">Endpoint URL</span>
+                      <input
+                        type="url"
+                        className="dashboard-webhook-input"
+                        placeholder="https://hooks.zapier.com/..."
+                        value={webhookUrl}
+                        onChange={(event) => {
+                          setWebhookUrl(event.target.value);
+                        }}
+                        required
+                      />
+                    </label>
+                    <label className="dashboard-webhook-field">
+                      <span className="dashboard-settings-label">Description</span>
+                      <input
+                        type="text"
+                        className="dashboard-webhook-input"
+                        placeholder="Zapier, Make, n8n, custom API..."
+                        value={webhookDescription}
+                        onChange={(event) => {
+                          setWebhookDescription(event.target.value);
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  <div className="dashboard-webhook-events">
+                    {WEBHOOK_EVENT_OPTIONS.map((option) => (
+                      <label key={option.value} className="dashboard-webhook-event-option">
+                        <input
+                          type="checkbox"
+                          checked={webhookEvents.includes(option.value)}
+                          onChange={() => {
+                            toggleWebhookEventSelection(option.value);
+                          }}
+                        />
+                        <span>
+                          <strong>{option.label}</strong>
+                          <small>{option.helper}</small>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+
+                  <div className="dashboard-webhook-actions">
+                    <button
+                      type="submit"
+                      className="dashboard-action-btn"
+                      disabled={webhookFormSaving || webhookEvents.length === 0}
+                    >
+                      {webhookFormSaving ? "Saving..." : "Add endpoint"}
+                    </button>
+                    <button
+                      type="button"
+                      className="dashboard-action-btn dashboard-secondary-action"
+                      onClick={() => {
+                        refreshWebhookEndpoints();
+                      }}
+                      disabled={webhookLoading}
+                    >
+                      {webhookLoading ? "Refreshing..." : "Refresh status"}
+                    </button>
+                  </div>
+                </form>
+
+                <div className="dashboard-signature-card">
+                  <p className="dashboard-settings-label">Signature contract</p>
+                  <p className="dashboard-settings-copy dashboard-signature-copy">
+                    Verify requests with <code>X-Tellr-Signature</code> by computing an
+                    HMAC SHA-256 of <code>X-Tellr-Timestamp + {'.'} + rawBody</code> using
+                    the signing secret. Every delivery also includes
+                    <code> X-Tellr-Event</code>, <code>X-Tellr-Event-Id</code> and
+                    <code> X-Tellr-Delivery-Id</code> for idempotency and tracing.
+                  </p>
+                </div>
+
+                <div className="dashboard-webhook-list">
+                  {webhookEndpoints.length === 0 ? (
+                    <div className="dashboard-empty-state">
+                      {webhookLoading
+                        ? "Loading webhook endpoints..."
+                        : "No webhook endpoints yet. Add one to start sending events."}
+                    </div>
+                  ) : (
+                    webhookEndpoints.map((endpoint) => (
+                      <div key={endpoint.id} className="dashboard-webhook-card">
+                        <div className="dashboard-webhook-card-head">
+                          <div>
+                            <p className="dashboard-webhook-url">{endpoint.url}</p>
+                            <p className="dashboard-webhook-meta">
+                              {endpoint.description || "No description"} ·{" "}
+                              {endpoint.isActive ? "Active" : "Paused"}
+                            </p>
+                          </div>
+                          <div className="dashboard-webhook-card-actions">
+                            <button
+                              type="button"
+                              className="dashboard-action-btn dashboard-secondary-action dashboard-inline-action"
+                              onClick={() => {
+                                handleSendWebhookTest(endpoint.id);
+                              }}
+                              disabled={webhookActionId === `test:${endpoint.id}`}
+                            >
+                              {webhookActionId === `test:${endpoint.id}` ? "Sending..." : "Send test"}
+                            </button>
+                            <button
+                              type="button"
+                              className="dashboard-action-btn dashboard-secondary-action dashboard-inline-action"
+                              onClick={() => {
+                                handleRotateWebhookSecret(endpoint.id);
+                              }}
+                              disabled={webhookActionId === `rotate:${endpoint.id}`}
+                            >
+                              {webhookActionId === `rotate:${endpoint.id}` ? "Rotating..." : "Rotate secret"}
+                            </button>
+                            <button
+                              type="button"
+                              className="dashboard-action-btn dashboard-secondary-action dashboard-inline-action"
+                              onClick={() => {
+                                handleToggleWebhook(endpoint);
+                              }}
+                              disabled={webhookActionId === `toggle:${endpoint.id}`}
+                            >
+                              {webhookActionId === `toggle:${endpoint.id}`
+                                ? "Saving..."
+                                : endpoint.isActive
+                                  ? "Pause"
+                                  : "Enable"}
+                            </button>
+                            <button
+                              type="button"
+                              className="dashboard-action-btn dashboard-inline-action"
+                              onClick={() => {
+                                handleDeleteWebhook(endpoint.id);
+                              }}
+                              disabled={webhookActionId === `delete:${endpoint.id}`}
+                            >
+                              {webhookActionId === `delete:${endpoint.id}` ? "Deleting..." : "Delete"}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="dashboard-webhook-tag-row">
+                          {endpoint.subscribedEvents.map((eventType) => (
+                            <span key={eventType} className="dashboard-webhook-tag">
+                              {eventType}
+                            </span>
+                          ))}
+                        </div>
+
+                        <div className="dashboard-webhook-deliveries">
+                          <p className="dashboard-settings-label">Recent deliveries</p>
+                          {endpoint.deliveries.length === 0 ? (
+                            <p className="dashboard-webhook-meta">No deliveries yet.</p>
+                          ) : (
+                            endpoint.deliveries.map((delivery) => (
+                              <div key={delivery.id} className="dashboard-webhook-delivery-row">
+                                <span>{delivery.eventType}</span>
+                                <span>{delivery.status}</span>
+                                <span>
+                                  {delivery.responseStatus
+                                    ? `HTTP ${delivery.responseStatus}`
+                                    : `Attempt ${delivery.attemptCount}`}
+                                </span>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -964,6 +1500,322 @@ const dashboardShellStyles = `
     border: none;
     background: transparent;
     box-shadow: none;
+  }
+
+  .dashboard-settings-shell {
+    width: 100%;
+    max-width: 1040px;
+    display: grid;
+    gap: 18px;
+  }
+
+  .dashboard-settings-card {
+    border: 1px solid rgba(24, 24, 32, 0.08);
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04), 0 12px 28px rgba(0, 0, 0, 0.03);
+    padding: 28px;
+  }
+
+  .dashboard-settings-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .dashboard-settings-title {
+    font-size: 28px;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    color: #121218;
+    margin: 0 0 10px;
+  }
+
+  .dashboard-settings-copy {
+    font-size: 14px;
+    line-height: 1.6;
+    color: rgba(24, 24, 32, 0.54);
+    margin: 0 0 22px;
+    max-width: 560px;
+  }
+
+  .dashboard-settings-pill {
+    border-radius: 999px;
+    border: 1px solid rgba(24, 24, 32, 0.08);
+    background: #faf8f6;
+    color: rgba(24, 24, 32, 0.56);
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .dashboard-settings-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .dashboard-settings-item {
+    border: 1px solid rgba(24, 24, 32, 0.08);
+    border-radius: 18px;
+    background: #ffffff;
+    padding: 16px 18px;
+  }
+
+  .dashboard-settings-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(24, 24, 32, 0.34);
+    margin: 0 0 8px;
+    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  .dashboard-settings-value {
+    font-size: 16px;
+    font-weight: 800;
+    color: #14141b;
+    letter-spacing: -0.02em;
+    margin: 0;
+  }
+
+  .dashboard-settings-alert {
+    border-radius: 16px;
+    padding: 12px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+
+  .dashboard-settings-alert-error {
+    border: 1px solid rgba(215, 68, 35, 0.18);
+    background: rgba(255, 242, 238, 0.95);
+    color: #c64d27;
+  }
+
+  .dashboard-settings-alert-success {
+    border: 1px solid rgba(38, 147, 71, 0.16);
+    background: rgba(240, 251, 243, 0.95);
+    color: #1e8a42;
+  }
+
+  .dashboard-secret-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    border: 1px solid rgba(24, 24, 32, 0.08);
+    border-radius: 18px;
+    background: #ffffff;
+    padding: 14px 16px;
+    margin-bottom: 18px;
+  }
+
+  .dashboard-secret-value {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: #14141b;
+    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    word-break: break-all;
+  }
+
+  .dashboard-webhook-form {
+    display: grid;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .dashboard-webhook-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .dashboard-webhook-field {
+    display: grid;
+    gap: 8px;
+  }
+
+  .dashboard-webhook-input {
+    width: 100%;
+    min-height: 48px;
+    border-radius: 14px;
+    border: 1px solid rgba(24, 24, 32, 0.1);
+    background: #ffffff;
+    padding: 0 14px;
+    font-size: 14px;
+    color: #14141b;
+    outline: none;
+  }
+
+  .dashboard-webhook-input:focus {
+    border-color: rgba(255, 102, 51, 0.4);
+    box-shadow: 0 0 0 4px rgba(255, 102, 51, 0.08);
+  }
+
+  .dashboard-webhook-events {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .dashboard-webhook-event-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    border: 1px solid rgba(24, 24, 32, 0.08);
+    border-radius: 16px;
+    background: #ffffff;
+    padding: 12px 14px;
+  }
+
+  .dashboard-webhook-event-option input {
+    margin-top: 4px;
+  }
+
+  .dashboard-webhook-event-option span {
+    display: grid;
+    gap: 4px;
+  }
+
+  .dashboard-webhook-event-option strong {
+    font-size: 14px;
+    color: #14141b;
+  }
+
+  .dashboard-webhook-event-option small {
+    font-size: 12px;
+    line-height: 1.5;
+    color: rgba(24, 24, 32, 0.5);
+  }
+
+  .dashboard-webhook-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .dashboard-secondary-action {
+    background: #ffffff;
+    border: 1px solid rgba(24, 24, 32, 0.12);
+    color: #14141b;
+    box-shadow: none;
+  }
+
+  .dashboard-secondary-action:hover:not(:disabled) {
+    background: #faf8f6;
+  }
+
+  .dashboard-webhook-list {
+    display: grid;
+    gap: 14px;
+  }
+
+  .dashboard-signature-card {
+    border: 1px solid rgba(24, 24, 32, 0.08);
+    border-radius: 18px;
+    background: #ffffff;
+    padding: 14px 16px;
+    margin-bottom: 20px;
+  }
+
+  .dashboard-signature-copy {
+    max-width: none;
+    margin-bottom: 0;
+  }
+
+  .dashboard-signature-copy code {
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: #faf8f6;
+    color: #14141b;
+    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  .dashboard-empty-state {
+    border: 1px dashed rgba(24, 24, 32, 0.16);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.72);
+    padding: 18px;
+    color: rgba(24, 24, 32, 0.5);
+    font-size: 14px;
+  }
+
+  .dashboard-webhook-card {
+    border: 1px solid rgba(24, 24, 32, 0.08);
+    border-radius: 20px;
+    background: #ffffff;
+    padding: 18px;
+    display: grid;
+    gap: 14px;
+  }
+
+  .dashboard-webhook-card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+  }
+
+  .dashboard-webhook-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .dashboard-webhook-url {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 800;
+    color: #14141b;
+    word-break: break-all;
+  }
+
+  .dashboard-webhook-meta {
+    margin: 6px 0 0;
+    font-size: 13px;
+    color: rgba(24, 24, 32, 0.48);
+  }
+
+  .dashboard-webhook-tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .dashboard-webhook-tag {
+    border-radius: 999px;
+    background: #faf8f6;
+    color: rgba(24, 24, 32, 0.64);
+    padding: 7px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  .dashboard-webhook-deliveries {
+    display: grid;
+    gap: 8px;
+  }
+
+  .dashboard-webhook-delivery-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) 110px 110px;
+    gap: 12px;
+    font-size: 12px;
+    color: rgba(24, 24, 32, 0.62);
+    padding-top: 8px;
+    border-top: 1px solid rgba(24, 24, 32, 0.06);
+    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   }
 
   .dashboard-submissions-summary {
@@ -1420,6 +2272,30 @@ const dashboardShellStyles = `
     .dashboard-review-grid {
       grid-template-columns: repeat(auto-fill, 220px);
     }
+
+    .dashboard-settings-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .dashboard-settings-head,
+    .dashboard-webhook-card-head {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .dashboard-webhook-form-grid,
+    .dashboard-webhook-events {
+      grid-template-columns: 1fr;
+    }
+
+    .dashboard-webhook-card-actions {
+      justify-content: flex-start;
+    }
+
+    .dashboard-webhook-delivery-row {
+      grid-template-columns: 1fr;
+      gap: 4px;
+    }
   }
 
   @media (max-width: 720px) {
@@ -1446,6 +2322,10 @@ const dashboardShellStyles = `
     }
 
     .dashboard-action-btn {
+      width: 100%;
+    }
+
+    .dashboard-secondary-action {
       width: 100%;
     }
 
