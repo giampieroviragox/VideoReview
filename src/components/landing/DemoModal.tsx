@@ -256,11 +256,17 @@ export default function DemoModal({ onClose }: DemoModalProps) {
     }
 
     const frame = requestAnimationFrame(updateTutorialGeometry);
+    const modalElement = modalRef.current;
+
     window.addEventListener("resize", updateTutorialGeometry);
+    window.addEventListener("scroll", updateTutorialGeometry, { passive: true });
+    modalElement?.addEventListener("scroll", updateTutorialGeometry, { passive: true });
 
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", updateTutorialGeometry);
+      window.removeEventListener("scroll", updateTutorialGeometry);
+      modalElement?.removeEventListener("scroll", updateTutorialGeometry);
     };
   }, [hasActiveTutorial, updateTutorialGeometry]);
 
@@ -457,6 +463,14 @@ export default function DemoModal({ onClose }: DemoModalProps) {
 }
 
 const demoCampaignModalStyles = `
+  .demo-modal-campaign {
+    overflow: hidden;
+  }
+
+  .demo-modal-campaign .demo-modal-close {
+    z-index: 60;
+  }
+
   .demo-modal-campaign .invite-review-head {
     padding: 16px 24px;
     border-bottom: 1px solid rgba(0,0,0,.08);
@@ -1119,6 +1133,14 @@ const demoCampaignModalStyles = `
   }
 
   @media (max-width: 600px) {
+    .demo-modal-campaign {
+      height: 100dvh;
+      max-height: 100dvh;
+      border-radius: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
     .demo-modal-campaign .demo-modal-close {
       top: calc(env(safe-area-inset-top, 0px) + 10px);
       right: 10px;
@@ -1144,8 +1166,34 @@ const demoCampaignModalStyles = `
       padding-right: 16px;
     }
 
+    .demo-modal-campaign .invite-review-body {
+      padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .demo-modal-campaign .invite-powered-demo {
+      margin-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .demo-modal-campaign .review-stars-row {
+      gap: 6px;
+    }
+
+    .demo-modal-campaign .review-star-tile {
+      border-radius: 12px;
+      font-size: 20px;
+    }
+
+    .demo-modal-campaign .invite-review-main .invite-submit-btn,
+    .demo-modal-campaign .invite-review-main .invite-submit-hint {
+      max-width: none;
+    }
+
+    .demo-modal-campaign .demo-tour-layer {
+      border-radius: 0;
+    }
+
     .demo-modal-campaign .demo-tour-tooltip {
-      width: min(300px, calc(100% - 24px));
+      width: min(280px, calc(100% - 24px));
     }
 
   }
