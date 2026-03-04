@@ -61,12 +61,7 @@ export async function POST(
         return { deliveryIds: [] };
       }
 
-      const deliveries = await tx.webhookDelivery.findMany({
-        where: { eventId: queued.event.id },
-        select: { id: true },
-      });
-
-      return { deliveryIds: deliveries.map((delivery) => delivery.id) };
+      return { deliveryIds: queued.deliveryIds };
     });
 
     const dispatch = await dispatchWebhookDeliveries({

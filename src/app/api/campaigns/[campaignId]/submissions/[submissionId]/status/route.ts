@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { queueWebhookEvent } from "@/lib/webhooks/emit";
 import { buildSubmissionWebhookPayload } from "@/lib/webhooks/payloads";
+import { triggerWebhookDispatchAfterResponse } from "@/lib/webhooks/trigger";
 
 export const dynamic = "force-dynamic";
 
@@ -71,9 +72,10 @@ export async function PATCH(
     if (status === "APPROVED" && currentSubmission.status !== "APPROVED") {
       try {
         const eventId = crypto.randomUUID();
+        let deliveryIds: string[] = [];
 
         await prisma.$transaction(async (tx) => {
-          await queueWebhookEvent({
+          const queued = await queueWebhookEvent({
             tx,
             ownerUserId: existing.ownerUserId,
             eventId,
@@ -88,7 +90,11 @@ export async function PATCH(
               submission,
             }),
           });
+
+          deliveryIds = queued.deliveryIds;
         });
+
+        triggerWebhookDispatchAfterResponse(deliveryIds);
       } catch (error) {
         console.error("Webhook enqueue failed for submission.approved:", error);
       }

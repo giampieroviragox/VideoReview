@@ -303,6 +303,10 @@ export default function DashboardShell({
     setWebhookError(null);
 
     try {
+      await fetch("/api/webhooks/dispatch", {
+        method: "POST",
+      });
+
       const response = await fetch("/api/webhooks/endpoints", {
         cache: "no-store",
       });

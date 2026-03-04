@@ -23,7 +23,7 @@ export async function queueWebhookEvent({
   endpointIds,
 }: QueueWebhookEventInput) {
   if (!ownerUserId) {
-    return { event: null, deliveriesCreated: 0 };
+    return { event: null, deliveriesCreated: 0, deliveryIds: [] };
   }
 
   const endpoints = await tx.webhookEndpoint.findMany({
@@ -42,7 +42,7 @@ export async function queueWebhookEvent({
   });
 
   if (endpoints.length === 0) {
-    return { event: null, deliveriesCreated: 0 };
+    return { event: null, deliveriesCreated: 0, deliveryIds: [] };
   }
 
   const event = await tx.webhookEvent.create({
@@ -56,14 +56,23 @@ export async function queueWebhookEvent({
     select: { id: true },
   });
 
-  await tx.webhookDelivery.createMany({
-    data: endpoints.map((endpoint) => ({
-      eventId: event.id,
-      endpointId: endpoint.id,
-      status: WEBHOOK_DELIVERY_STATUSES.pending,
-      nextAttemptAt: new Date(),
-    })),
-  });
+  const deliveries = await Promise.all(
+    endpoints.map((endpoint) =>
+      tx.webhookDelivery.create({
+        data: {
+          eventId: event.id,
+          endpointId: endpoint.id,
+          status: WEBHOOK_DELIVERY_STATUSES.pending,
+          nextAttemptAt: new Date(),
+        },
+        select: { id: true },
+      })
+    )
+  );
 
-  return { event, deliveriesCreated: endpoints.length };
+  return {
+    event,
+    deliveriesCreated: deliveries.length,
+    deliveryIds: deliveries.map((delivery) => delivery.id),
+  };
 }

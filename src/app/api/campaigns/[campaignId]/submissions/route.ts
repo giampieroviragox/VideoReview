@@ -3,6 +3,7 @@ import { getCampaignDelegate, prisma } from "@/lib/db";
 import { objectExists } from "@/lib/s3";
 import { queueWebhookEvent } from "@/lib/webhooks/emit";
 import { buildSubmissionWebhookPayload } from "@/lib/webhooks/payloads";
+import { triggerWebhookDispatchAfterResponse } from "@/lib/webhooks/trigger";
 
 export const dynamic = "force-dynamic";
 
@@ -136,9 +137,10 @@ export async function POST(
 
     try {
       const eventId = crypto.randomUUID();
+      let deliveryIds: string[] = [];
 
       await prisma.$transaction(async (tx) => {
-        await queueWebhookEvent({
+        const queued = await queueWebhookEvent({
           tx,
           ownerUserId: campaign.ownerUserId,
           eventId,
@@ -153,7 +155,11 @@ export async function POST(
             submission: createdSubmission,
           }),
         });
+
+        deliveryIds = queued.deliveryIds;
       });
+
+      triggerWebhookDispatchAfterResponse(deliveryIds);
     } catch (error) {
       console.error("Webhook enqueue failed for submission.created:", error);
     }
