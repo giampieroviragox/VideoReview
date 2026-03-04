@@ -2,7 +2,12 @@ import { auth } from "@clerk/nextjs/server";
 import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { parseWebhookEvents, validateWebhookUrl } from "@/lib/webhooks/utils";
+import {
+  WebhookResolutionError,
+  WebhookValidationError,
+  parseWebhookEvents,
+  validateWebhookUrl,
+} from "@/lib/webhooks/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +25,7 @@ export async function PATCH(
     const { endpointId } = await params;
     const body = await request.json();
     const nextUrl =
-      body.url !== undefined ? validateWebhookUrl(body.url) : undefined;
+      body.url !== undefined ? await validateWebhookUrl(body.url) : undefined;
     const existing = await prisma.webhookEndpoint.findFirst({
       where: { id: endpointId, ownerUserId: userId },
       select: { id: true },
@@ -100,6 +105,13 @@ export async function PATCH(
       },
     });
   } catch (error) {
+    if (
+      error instanceof WebhookValidationError ||
+      error instanceof WebhookResolutionError
+    ) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
     const message =
       error instanceof Error ? error.message : "Failed to update webhook endpoint.";
 

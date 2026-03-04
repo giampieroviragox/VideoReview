@@ -19,7 +19,7 @@ model CollectionPage {
 
 model Campaign {
   id                  String             @id @default(cuid())
-  ownerUserId         String?
+  ownerUserId         String
   brandName           String
   brandSlug           String
   brandLogoUrl        String?

@@ -7,7 +7,7 @@ import {
 
 type QueueWebhookEventInput = {
   tx: Prisma.TransactionClient;
-  ownerUserId: string | null | undefined;
+  ownerUserId: string;
   eventId?: string;
   type: WebhookEventType | "webhook.test";
   payload: Prisma.InputJsonValue;
@@ -22,10 +22,6 @@ export async function queueWebhookEvent({
   payload,
   endpointIds,
 }: QueueWebhookEventInput) {
-  if (!ownerUserId) {
-    return { event: null, deliveriesCreated: 0, deliveryIds: [] };
-  }
-
   const endpoints = await tx.webhookEndpoint.findMany({
     where: {
       ownerUserId,

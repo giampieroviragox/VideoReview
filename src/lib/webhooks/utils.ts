@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import dns from "node:dns/promises";
 import net from "node:net";
 import {
   WEBHOOK_EVENT_TYPES,
@@ -12,6 +13,14 @@ const BLOCKED_HOSTNAMES = new Set([
   "127.0.0.1",
   "::1",
 ]);
+
+export class WebhookValidationError extends Error {}
+
+export class WebhookResolutionError extends Error {}
+
+function normalizeHostname(value: string) {
+  return value.trim().toLowerCase().replace(/\.+$/, "");
+}
 
 function isPrivateIpv4(value: string) {
   const octets = value.split(".").map((part) => Number(part));
@@ -32,16 +41,59 @@ function isPrivateIpv4(value: string) {
 }
 
 function isBlockedIpAddress(value: string) {
+  const normalizedValue = value.toLowerCase();
+
   if (net.isIP(value) === 4) {
     return isPrivateIpv4(value);
   }
 
   if (net.isIP(value) === 6) {
-    const normalized = value.toLowerCase();
-    return normalized === "::1" || normalized.startsWith("fc") || normalized.startsWith("fd");
+    if (
+      normalizedValue === "::" ||
+      normalizedValue === "::1" ||
+      normalizedValue.startsWith("fc") ||
+      normalizedValue.startsWith("fd") ||
+      normalizedValue.startsWith("fe8") ||
+      normalizedValue.startsWith("fe9") ||
+      normalizedValue.startsWith("fea") ||
+      normalizedValue.startsWith("feb")
+    ) {
+      return true;
+    }
+
+    if (normalizedValue.startsWith("::ffff:")) {
+      return isPrivateIpv4(normalizedValue.slice("::ffff:".length));
+    }
   }
 
   return false;
+}
+
+async function resolvePublicIpAddresses(hostname: string) {
+  try {
+    const resolved = await dns.lookup(hostname, {
+      all: true,
+      verbatim: true,
+    });
+
+    if (resolved.length === 0) {
+      throw new WebhookResolutionError("Webhook URL hostname could not be resolved.");
+    }
+
+    return resolved.map((entry) => entry.address);
+  } catch (error) {
+    if (error instanceof WebhookResolutionError) {
+      throw error;
+    }
+
+    if (error instanceof Error) {
+      throw new WebhookResolutionError(
+        `Webhook URL hostname could not be resolved: ${error.message}`
+      );
+    }
+
+    throw new WebhookResolutionError("Webhook URL hostname could not be resolved.");
+  }
 }
 
 export function generateWebhookSecret() {
@@ -62,9 +114,9 @@ export function parseWebhookEvents(value: unknown): WebhookEventType[] {
   return normalized.length > 0 ? Array.from(new Set(normalized)) : DEFAULT_WEBHOOK_EVENTS;
 }
 
-export function validateWebhookUrl(value: unknown) {
+export async function validateWebhookUrl(value: unknown) {
   if (typeof value !== "string" || value.trim().length === 0) {
-    throw new Error("Webhook URL is required.");
+    throw new WebhookValidationError("Webhook URL is required.");
   }
 
   let parsed: URL;
@@ -72,33 +124,43 @@ export function validateWebhookUrl(value: unknown) {
   try {
     parsed = new URL(value.trim());
   } catch {
-    throw new Error("Webhook URL must be a valid absolute URL.");
+    throw new WebhookValidationError("Webhook URL must be a valid absolute URL.");
   }
 
   if (parsed.protocol !== "https:") {
-    throw new Error("Webhook URL must use HTTPS.");
+    throw new WebhookValidationError("Webhook URL must use HTTPS.");
   }
 
   if (parsed.username || parsed.password) {
-    throw new Error("Webhook URL cannot include embedded credentials.");
+    throw new WebhookValidationError("Webhook URL cannot include embedded credentials.");
   }
 
-  const hostname = parsed.hostname.toLowerCase();
+  const hostname = normalizeHostname(parsed.hostname);
 
   if (
     BLOCKED_HOSTNAMES.has(hostname) ||
     hostname.endsWith(".local") ||
     hostname.endsWith(".internal")
   ) {
-    throw new Error("Webhook URL hostname is not allowed.");
+    throw new WebhookValidationError("Webhook URL hostname is not allowed.");
   }
 
   if (isBlockedIpAddress(hostname)) {
-    throw new Error("Webhook URL must not target private network addresses.");
+    throw new WebhookValidationError(
+      "Webhook URL must not target private network addresses."
+    );
   }
 
+  const resolvedAddresses = await resolvePublicIpAddresses(hostname);
+
+  if (resolvedAddresses.some((address) => isBlockedIpAddress(address))) {
+    throw new WebhookValidationError(
+      "Webhook URL must not resolve to private network addresses."
+    );
+  }
+
+  parsed.hostname = hostname;
   parsed.hash = "";
 
   return parsed.toString();
 }
-

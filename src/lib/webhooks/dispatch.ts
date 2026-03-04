@@ -2,6 +2,10 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db";
 import { signWebhookPayload } from "@/lib/webhooks/sign";
 import { WEBHOOK_DELIVERY_STATUSES } from "@/lib/webhooks/types";
+import {
+  WebhookValidationError,
+  validateWebhookUrl,
+} from "@/lib/webhooks/utils";
 
 const DELIVERY_BATCH_SIZE = 10;
 const LOCK_TTL_MS = 5 * 60 * 1000;
@@ -198,7 +202,8 @@ async function deliverWebhook(delivery: Awaited<ReturnType<typeof claimWebhookDe
   const signature = signWebhookPayload(body, delivery.endpoint.signingSecret, timestamp);
 
   try {
-    const response = await fetch(delivery.endpoint.url, {
+    const targetUrl = await validateWebhookUrl(delivery.endpoint.url);
+    const response = await fetch(targetUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -238,6 +243,20 @@ async function deliverWebhook(delivery: Awaited<ReturnType<typeof claimWebhookDe
       responseStatus: response.status,
     };
   } catch (error) {
+    if (error instanceof WebhookValidationError) {
+      await markWebhookDeliveryDead(
+        delivery.id,
+        delivery.attemptCount,
+        error.message
+      );
+
+      return {
+        id: delivery.id,
+        status: WEBHOOK_DELIVERY_STATUSES.dead,
+        responseStatus: null,
+      };
+    }
+
     const message =
       error instanceof Error ? error.message : "Webhook delivery request failed.";
 

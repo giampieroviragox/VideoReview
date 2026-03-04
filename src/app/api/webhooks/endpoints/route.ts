@@ -2,7 +2,13 @@ import { auth } from "@clerk/nextjs/server";
 import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { generateWebhookSecret, parseWebhookEvents, validateWebhookUrl } from "@/lib/webhooks/utils";
+import {
+  WebhookResolutionError,
+  WebhookValidationError,
+  generateWebhookSecret,
+  parseWebhookEvents,
+  validateWebhookUrl,
+} from "@/lib/webhooks/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -76,7 +82,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const url = validateWebhookUrl(body.url);
+    const url = await validateWebhookUrl(body.url);
     const description =
       typeof body.description === "string" && body.description.trim().length > 0
         ? body.description.trim()
@@ -147,6 +153,13 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
+    if (
+      error instanceof WebhookValidationError ||
+      error instanceof WebhookResolutionError
+    ) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
     const message =
       error instanceof Error ? error.message : "Failed to create webhook endpoint.";
 

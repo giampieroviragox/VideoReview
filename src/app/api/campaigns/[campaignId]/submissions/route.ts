@@ -17,7 +17,7 @@ type IncomingAnswer = {
 type CampaignSubmissionRuntimeDelegate = {
   findUnique: (args: unknown) => Promise<{
     id: string;
-    ownerUserId: string | null;
+    ownerUserId: string;
     name: string;
     questions: Array<{ id: string; text: string; required: boolean }>;
   } | null>;
