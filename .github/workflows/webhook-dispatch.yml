@@ -1,0 +1,25 @@
+name: Webhook Dispatch
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger webhook dispatcher
+        env:
+          TELLR_CRON_SECRET: ${{ secrets.TELLR_CRON_SECRET }}
+        run: |
+          if [ -z "$TELLR_CRON_SECRET" ]; then
+            echo "Missing required secret: TELLR_CRON_SECRET"
+            exit 1
+          fi
+
+          curl --fail --silent --show-error \
+            -X POST \
+            -H "Authorization: Bearer $TELLR_CRON_SECRET" \
+            https://tellr.me/api/internal/webhooks/dispatch
