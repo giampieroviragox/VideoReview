@@ -523,9 +523,9 @@ export default function VideoRecorder({
                                         : undefined
                                 }
                             >
-                                <div className="placeholder-icon">
-                                    {isImmersive ? "🎙️" : "📹"}
-                                </div>
+                                {!isImmersive && (
+                                    <div className="placeholder-icon">📹</div>
+                                )}
                                 <p>
                                     {labels?.idlePrompt ||
                                         "Tap to enable your camera"}

@@ -413,10 +413,11 @@ export default function DemoModal({ onClose }: DemoModalProps) {
         )}
 
         <div className="demo-modal-header">
-          <div className="demo-modal-brand-logo">AC</div>
+          <div className="demo-modal-brand-logo">TE</div>
           <div>
-            <div className="demo-modal-brand-name">ACME Corp</div>
-            <div className="demo-modal-brand-sub">invited you to share your experience</div>
+            <div className="demo-modal-brand-eyebrow">YOU WERE INVITED TO REVIEW THEM</div>
+            <div className="demo-modal-brand-name">Tellr.me</div>
+            <div className="demo-modal-brand-sub">It takes less than 2 minutes</div>
           </div>
         </div>
 
@@ -428,7 +429,7 @@ export default function DemoModal({ onClose }: DemoModalProps) {
 
         <div className="demo-meta-grid">
           <div className="demo-modal-question-box" ref={questionRef}>
-            <div className="demo-modal-question-label">Video prompt</div>
+            <div className="demo-modal-question-label">Tellr&apos;s question</div>
             <div className="demo-modal-question-text">
               What is the <span className="demo-accent-1">one thing</span> you{" "}
               <span className="demo-accent-2">liked most</span> about the product?
@@ -436,7 +437,7 @@ export default function DemoModal({ onClose }: DemoModalProps) {
           </div>
 
           <div className="demo-reward-hint" ref={rewardRef}>
-            <div className="demo-reward-icon">🎁</div>
+            <div className="demo-reward-icon">+30</div>
             <div>
               <div className="demo-reward-title">30 free Premium days</div>
               <div className="demo-reward-sub">Sent after approval</div>
@@ -455,7 +456,7 @@ export default function DemoModal({ onClose }: DemoModalProps) {
 
             {recorderState === "idle" && (
               <div className="demo-recorder-empty">
-                <div className="demo-recorder-avatar">🎙</div>
+                <div className="demo-recorder-avatar" aria-hidden="true"></div>
                 <p>
                   Click to enable your camera
                   <br />
@@ -496,9 +497,9 @@ export default function DemoModal({ onClose }: DemoModalProps) {
           onClick={handleSubmit}
           disabled={recorderState !== "recorded" || isSubmitting}
         >
-          {isSubmitting ? "Submitting..." : "Reply and get your reward  →"}
+          {isSubmitting ? "Submitting..." : "Confirm and receive the reward  →"}
         </button>
-        <p className="demo-fine-print">Powered by Tellr.me · Your video will be reviewed before publication</p>
+        <p className="demo-fine-print">Demo mode · nothing is published or stored</p>
 
         {tutorialVisible && tutorialGeometry && (
           <div className="demo-tutorial-layer">

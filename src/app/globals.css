@@ -4106,14 +4106,14 @@ footer .divider {
 
 .demo-modal {
   position: relative;
-  width: min(100%, 700px);
+  width: min(100%, 760px);
   max-height: min(92vh, 900px);
-  background: #f6f1ee;
+  background: #fcfbfa;
   border: 1px solid rgba(24, 24, 32, 0.08);
   border-radius: 28px;
   box-shadow:
-    0 28px 72px rgba(20, 18, 24, 0.16),
-    0 2px 0 rgba(255, 255, 255, 0.65) inset;
+    0 26px 68px rgba(20, 18, 24, 0.14),
+    0 2px 0 rgba(255, 255, 255, 0.72) inset;
   overflow: auto;
 }
 
@@ -4123,10 +4123,7 @@ footer .divider {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-image:
-    linear-gradient(rgba(24, 24, 32, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(24, 24, 32, 0.035) 1px, transparent 1px);
-  background-size: 44px 44px;
+  background: linear-gradient(180deg, rgba(255, 92, 53, 0.04), transparent 30%);
 }
 
 .demo-modal::after {
@@ -4135,11 +4132,11 @@ footer .divider {
   top: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 420px;
-  height: 190px;
+  width: 520px;
+  height: 220px;
   z-index: 0;
   pointer-events: none;
-  background: radial-gradient(ellipse, rgba(255, 92, 53, 0.12) 0%, transparent 72%);
+  background: radial-gradient(ellipse, rgba(255, 92, 53, 0.1) 0%, transparent 74%);
 }
 
 .demo-modal-close {
@@ -4150,9 +4147,9 @@ footer .divider {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  border: 1px solid rgba(24, 24, 32, 0.1);
-  background: rgba(255, 255, 255, 0.72);
-  color: rgba(24, 24, 32, 0.5);
+  border: 1px solid rgba(24, 24, 32, 0.12);
+  background: rgba(255, 255, 255, 0.94);
+  color: rgba(24, 24, 32, 0.62);
   font-size: 13px;
   cursor: pointer;
   box-shadow: 0 8px 22px rgba(20, 18, 24, 0.08);
@@ -4171,8 +4168,8 @@ footer .divider {
   z-index: 1;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 16px 18px 12px;
+  gap: 12px;
+  padding: 18px 20px 14px;
   border-bottom: 1px solid rgba(24, 24, 32, 0.06);
 }
 
@@ -4182,27 +4179,35 @@ footer .divider {
   border-radius: 10px;
   display: grid;
   place-items: center;
-  background: linear-gradient(180deg, #eef1f8, #e3e7f2);
-  border: 1px solid rgba(92, 109, 168, 0.14);
+  background: #fff1eb;
+  border: 1px solid rgba(255, 92, 53, 0.22);
   font-family: "Figtree", sans-serif;
   font-size: 14px;
   font-weight: 800;
-  color: #344dbd;
+  color: #ff5c35;
+}
+
+.demo-modal-brand-eyebrow {
+  color: rgba(24, 24, 32, 0.34);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  margin-bottom: 5px;
 }
 
 .demo-modal-brand-name {
   font-family: "Figtree", sans-serif;
-  font-size: clamp(26px, 3.6vw, 32px);
+  font-size: clamp(32px, 4.2vw, 42px);
   font-weight: 800;
   line-height: 1;
   color: #14141b;
 }
 
 .demo-modal-brand-sub {
-  color: rgba(24, 24, 32, 0.42);
-  font-size: 11px;
-  margin-top: 4px;
-  font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: rgba(24, 24, 32, 0.48);
+  font-size: 13px;
+  margin-top: 3px;
 }
 
 .demo-modal-steps {
@@ -4211,17 +4216,17 @@ footer .divider {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 18px 8px;
+  padding: 12px 20px 8px;
 }
 
 .demo-meta-grid {
   position: relative;
   z-index: 1;
-  width: min(100%, calc(100% - 36px));
+  width: min(100%, calc(100% - 40px));
   margin: 0 auto 12px;
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(210px, 0.9fr);
-  gap: 10px;
+  grid-template-columns: minmax(0, 1.45fr) minmax(220px, 0.95fr);
+  gap: 12px;
   align-items: start;
 }
 
@@ -4253,8 +4258,8 @@ footer .divider {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(255, 92, 53, 0.26);
+  background: #fff7f3;
+  border: 1px solid rgba(255, 92, 53, 0.24);
   border-radius: 18px;
   padding: 14px 15px;
   box-shadow:
@@ -4263,18 +4268,29 @@ footer .divider {
 }
 
 .demo-reward-icon {
-  font-size: 18px;
+  min-width: 36px;
+  min-height: 24px;
+  border-radius: 999px;
+  padding: 0 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 92, 53, 0.14);
+  color: #ff5c35;
+  font-size: 12px;
+  font-weight: 800;
+  font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 .demo-reward-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
-  color: #ff8c35;
+  color: #14141b;
   line-height: 1.25;
 }
 
 .demo-reward-sub {
-  font-size: 11px;
+  font-size: 12px;
   color: rgba(24, 24, 32, 0.46);
   margin-top: 4px;
 }
@@ -4283,10 +4299,10 @@ footer .divider {
   position: relative;
   z-index: 1;
   margin: 0;
-  background: rgba(255, 255, 255, 0.64);
+  background: #ffffff;
   border: 1px solid rgba(24, 24, 32, 0.08);
-  border-radius: 20px;
-  padding: 14px 16px;
+  border-radius: 18px;
+  padding: 15px 16px;
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.78) inset,
     0 10px 24px rgba(20, 18, 24, 0.05);
@@ -4297,14 +4313,14 @@ footer .divider {
   text-transform: uppercase;
   letter-spacing: 0.12em;
   font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 10px;
+  font-size: 11px;
   margin-bottom: 6px;
 }
 
 .demo-modal-question-text {
   font-family: "Figtree", sans-serif;
-  font-size: clamp(18px, 2.8vw, 24px);
-  line-height: 1.2;
+  font-size: clamp(19px, 2.9vw, 24px);
+  line-height: 1.25;
   font-weight: 800;
   color: #111117;
 }
@@ -4320,12 +4336,12 @@ footer .divider {
 .demo-recorder {
   position: relative;
   z-index: 1;
-  width: min(100%, 460px);
+  width: min(100%, 480px);
   margin: 0 auto 10px;
-  border: 1.5px dashed rgba(24, 24, 32, 0.12);
+  border: 1px solid rgba(24, 24, 32, 0.1);
   border-radius: 22px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.7);
+  background: #ffffff;
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.78) inset,
     0 12px 26px rgba(20, 18, 24, 0.05);
@@ -4354,7 +4370,7 @@ footer .divider {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 12px;
   text-align: center;
   background: rgba(10, 10, 16, 0.94);
 }
@@ -4363,27 +4379,37 @@ footer .divider {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-size: 20px;
+  position: relative;
   background: linear-gradient(180deg, #25273a, #1d2134);
   border: 2px solid rgba(255, 255, 255, 0.14);
   box-shadow: 0 12px 26px rgba(0, 0, 0, 0.24);
 }
 
+.demo-recorder-avatar::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 13px;
+  border-radius: 4px;
+  border: 2px solid rgba(255, 255, 255, 0.82);
+  transform: translate(-50%, -50%);
+}
+
 .demo-recorder-empty p {
-  color: rgba(240, 240, 245, 0.44);
-  font-size: 13px;
+  color: rgba(240, 240, 245, 0.72);
+  font-size: 14px;
   line-height: 1.4;
 }
 
 .demo-camera-btn {
-  padding: 9px 16px;
+  padding: 11px 20px;
   border-radius: 999px;
   background: #ff5c35;
   color: #ffffff;
   border: 1px solid rgba(255, 92, 53, 0.1);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
   cursor: pointer;
   box-shadow: 0 10px 24px rgba(255, 92, 53, 0.24);
@@ -4502,10 +4528,10 @@ footer .divider {
 .demo-submit-btn {
   position: relative;
   z-index: 1;
-  width: min(100%, 460px);
+  width: min(100%, 480px);
   margin: 0 auto;
   display: block;
-  padding: 12px;
+  padding: 13px;
   border-radius: 999px;
   border: none;
   background: #ff5c35;
@@ -4529,7 +4555,7 @@ footer .divider {
   position: relative;
   z-index: 1;
   text-align: center;
-  font-size: 10px;
+  font-size: 11px;
   color: rgba(24, 24, 32, 0.28);
   margin: 10px 0 16px;
   font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -4749,7 +4775,7 @@ footer .divider {
 
 @media (max-width: 1200px) {
   .demo-modal {
-    width: min(100%, 680px);
+    width: min(100%, 720px);
   }
 }
 
@@ -4791,7 +4817,7 @@ footer .divider {
   }
 
   .demo-modal-header {
-    padding: calc(env(safe-area-inset-top, 0px) + 12px) 14px 10px 56px;
+    padding: calc(env(safe-area-inset-top, 0px) + 12px) 14px 12px 56px;
   }
 
   .demo-modal-brand-logo {
@@ -4801,7 +4827,11 @@ footer .divider {
   }
 
   .demo-modal-brand-name {
-    font-size: 24px;
+    font-size: 28px;
+  }
+
+  .demo-modal-brand-sub {
+    font-size: 12px;
   }
 
   .demo-modal-steps {
