@@ -8,7 +8,7 @@ interface DemoModalProps {
   onClose: () => void;
 }
 
-type TutorialStepKey = "rating" | "question" | "reward" | "camera";
+type TutorialStepKey = "rating" | "question" | "reward";
 
 interface TutorialStep {
   key: TutorialStepKey;
@@ -36,11 +36,6 @@ const tutorialSteps: TutorialStep[] = [
     key: "reward",
     title: "Reward Preview",
     description: "Users can see what they receive once the submission gets approved.",
-  },
-  {
-    key: "camera",
-    title: "Video Recording",
-    description: "Users tap here to enable camera access and start recording.",
   },
 ];
 
@@ -167,10 +162,7 @@ export default function DemoModal({ onClose }: DemoModalProps) {
         return rewardCard ?? rewardRef.current;
       }
 
-      const cameraButton =
-        cameraRef.current?.querySelector<HTMLButtonElement>(".video-placeholder .btn.btn-primary");
-      const videoContainer = cameraRef.current?.querySelector<HTMLElement>(".video-container");
-      return cameraButton ?? videoContainer ?? cameraRef.current;
+      return null;
     },
     [],
   );
@@ -194,15 +186,13 @@ export default function DemoModal({ onClose }: DemoModalProps) {
       rating: 6,
       question: 6,
       reward: 6,
-      camera: 4,
     };
     const padding = paddingByStep[currentTutorialStep.key];
     const left = targetRect.left - modalRect.left - padding;
     const top = targetRect.top - modalRect.top - padding;
     const width = targetRect.width + padding * 2;
     const height = targetRect.height + padding * 2;
-    const spotlightRadius =
-      currentTutorialStep.key === "camera" && target.tagName === "BUTTON" ? 999 : 20;
+    const spotlightRadius = 20;
 
     const tooltipWidth = Math.min(320, modalRect.width - 24);
     const tooltipHeight = 176;
@@ -1195,6 +1185,5 @@ const demoCampaignModalStyles = `
     .demo-modal-campaign .demo-tour-tooltip {
       width: min(280px, calc(100% - 24px));
     }
-
   }
 `;
