@@ -1,4 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
+import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { parseWebhookEvents, validateWebhookUrl } from "@/lib/webhooks/utils";
@@ -18,6 +19,8 @@ export async function PATCH(
 
     const { endpointId } = await params;
     const body = await request.json();
+    const nextUrl =
+      body.url !== undefined ? validateWebhookUrl(body.url) : undefined;
     const existing = await prisma.webhookEndpoint.findFirst({
       where: { id: endpointId, ownerUserId: userId },
       select: { id: true },
@@ -27,33 +30,67 @@ export async function PATCH(
       return NextResponse.json({ error: "Webhook endpoint not found." }, { status: 404 });
     }
 
-    const updated = await prisma.webhookEndpoint.update({
-      where: { id: endpointId },
-      data: {
-        ...(body.url !== undefined ? { url: validateWebhookUrl(body.url) } : {}),
-        ...(body.description !== undefined
-          ? {
-              description:
-                typeof body.description === "string" && body.description.trim().length > 0
-                  ? body.description.trim()
-                  : null,
-            }
-          : {}),
-        ...(body.subscribedEvents !== undefined
-          ? { subscribedEvents: parseWebhookEvents(body.subscribedEvents) }
-          : {}),
-        ...(body.isActive !== undefined ? { isActive: Boolean(body.isActive) } : {}),
-      },
-      select: {
-        id: true,
-        url: true,
-        description: true,
-        subscribedEvents: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
+    if (nextUrl) {
+      const duplicate = await prisma.webhookEndpoint.findFirst({
+        where: {
+          ownerUserId: userId,
+          url: nextUrl,
+          id: { not: endpointId },
+        },
+        select: { id: true },
+      });
+
+      if (duplicate) {
+        return NextResponse.json(
+          { error: "This webhook URL is already configured for your account." },
+          { status: 409 }
+        );
+      }
+    }
+
+    let updated;
+
+    try {
+      updated = await prisma.webhookEndpoint.update({
+        where: { id: endpointId },
+        data: {
+          ...(nextUrl ? { url: nextUrl } : {}),
+          ...(body.description !== undefined
+            ? {
+                description:
+                  typeof body.description === "string" && body.description.trim().length > 0
+                    ? body.description.trim()
+                    : null,
+              }
+            : {}),
+          ...(body.subscribedEvents !== undefined
+            ? { subscribedEvents: parseWebhookEvents(body.subscribedEvents) }
+            : {}),
+          ...(body.isActive !== undefined ? { isActive: Boolean(body.isActive) } : {}),
+        },
+        select: {
+          id: true,
+          url: true,
+          description: true,
+          subscribedEvents: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        return NextResponse.json(
+          { error: "This webhook URL is already configured for your account." },
+          { status: 409 }
+        );
+      }
+
+      throw error;
+    }
 
     return NextResponse.json({
       endpoint: {
@@ -66,7 +103,7 @@ export async function PATCH(
     const message =
       error instanceof Error ? error.message : "Failed to update webhook endpoint.";
 
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -104,4 +141,3 @@ export async function DELETE(
     );
   }
 }
-

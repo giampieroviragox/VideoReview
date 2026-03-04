@@ -1,4 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
+import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { generateWebhookSecret, parseWebhookEvents, validateWebhookUrl } from "@/lib/webhooks/utils";
@@ -83,25 +84,56 @@ export async function POST(request: NextRequest) {
     const subscribedEvents = parseWebhookEvents(body.subscribedEvents);
     const signingSecret = generateWebhookSecret();
 
-    const endpoint = await prisma.webhookEndpoint.create({
-      data: {
+    const existing = await prisma.webhookEndpoint.findFirst({
+      where: {
         ownerUserId: userId,
         url,
-        description,
-        subscribedEvents,
-        signingSecret,
-        isActive: body.isActive !== false,
       },
-      select: {
-        id: true,
-        url: true,
-        description: true,
-        subscribedEvents: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: { id: true },
     });
+
+    if (existing) {
+      return NextResponse.json(
+        { error: "This webhook URL is already configured for your account." },
+        { status: 409 }
+      );
+    }
+
+    let endpoint;
+
+    try {
+      endpoint = await prisma.webhookEndpoint.create({
+        data: {
+          ownerUserId: userId,
+          url,
+          description,
+          subscribedEvents,
+          signingSecret,
+          isActive: body.isActive !== false,
+        },
+        select: {
+          id: true,
+          url: true,
+          description: true,
+          subscribedEvents: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        return NextResponse.json(
+          { error: "This webhook URL is already configured for your account." },
+          { status: 409 }
+        );
+      }
+
+      throw error;
+    }
 
     return NextResponse.json(
       {
@@ -118,7 +150,6 @@ export async function POST(request: NextRequest) {
     const message =
       error instanceof Error ? error.message : "Failed to create webhook endpoint.";
 
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-

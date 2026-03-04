@@ -93,6 +93,7 @@ model WebhookEndpoint {
 
   @@index([ownerUserId, createdAt])
   @@index([ownerUserId, isActive])
+  @@unique([ownerUserId, url])
 }
 
 model WebhookEvent {
