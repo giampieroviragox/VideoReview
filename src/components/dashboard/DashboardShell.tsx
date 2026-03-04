@@ -885,7 +885,7 @@ export default function DashboardShell({
                     </p>
                   </div>
                   <div className="dashboard-settings-pill">
-                    Cron dispatcher runs every minute
+                    Dispatches immediately; retries every 15 min
                   </div>
                 </div>
 
@@ -1204,6 +1204,7 @@ const dashboardShellStyles = `
     font-size: 14px;
     font-weight: 700;
     text-align: left;
+    cursor: pointer;
   }
 
   .dashboard-nav-item-active {
@@ -1327,6 +1328,7 @@ const dashboardShellStyles = `
     font-size: 16px;
     font-weight: 800;
     box-shadow: 0 10px 24px rgba(255, 92, 53, 0.2);
+    cursor: pointer;
   }
 
   .dashboard-builder-wrap {
@@ -1477,6 +1479,7 @@ const dashboardShellStyles = `
     font-size: 14px;
     font-weight: 800;
     text-decoration: none;
+    cursor: pointer;
   }
 
   .dashboard-secondary-btn:hover {
@@ -1497,6 +1500,12 @@ const dashboardShellStyles = `
     text-decoration: none;
     font-size: 16px;
     font-weight: 700;
+    cursor: pointer;
+  }
+
+  .dashboard-action-btn:disabled,
+  .dashboard-secondary-btn:disabled {
+    cursor: not-allowed;
   }
 
   .dashboard-icon-link:hover {
