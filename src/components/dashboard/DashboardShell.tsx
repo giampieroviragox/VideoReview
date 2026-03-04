@@ -17,6 +17,15 @@ type DashboardShellProps = {
     hasNoEndDate: boolean;
     endsAt: string | null;
     publicPath: string;
+    webhookEndpoint: {
+      id: string;
+      url: string;
+      description: string | null;
+      subscribedEvents: string[];
+      isActive: boolean;
+      createdAt: string;
+      updatedAt: string;
+    } | null;
     submissions: Array<{
       id: string;
       reviewerName: string;
@@ -34,6 +43,16 @@ type DashboardShellProps = {
       createdAt: string;
     }>;
   }>;
+};
+
+type CampaignWebhookPayload = {
+  id: string;
+  url: string;
+  description: string | null;
+  subscribedEvents: string[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 };
 
 type DashboardWebhookEndpoint = {
@@ -135,6 +154,18 @@ export default function DashboardShell({
   const [webhookFormSaving, setWebhookFormSaving] = useState(false);
   const [latestWebhookSecret, setLatestWebhookSecret] = useState<string | null>(null);
   const [webhookNotice, setWebhookNotice] = useState<string | null>(null);
+  const [campaignWebhookUrl, setCampaignWebhookUrl] = useState("");
+  const [campaignWebhookDescription, setCampaignWebhookDescription] = useState("");
+  const [campaignWebhookEvents, setCampaignWebhookEvents] = useState<string[]>([
+    "submission.created",
+    "submission.approved",
+  ]);
+  const [campaignWebhookSaving, setCampaignWebhookSaving] = useState(false);
+  const [campaignWebhookError, setCampaignWebhookError] = useState<string | null>(null);
+  const [campaignWebhookNotice, setCampaignWebhookNotice] = useState<string | null>(null);
+  const [latestCampaignWebhookSecret, setLatestCampaignWebhookSecret] = useState<string | null>(
+    null
+  );
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
 
   useEffect(() => {
@@ -184,6 +215,29 @@ export default function DashboardShell({
 
   const selectedCampaign =
     campaignsState.find((campaign) => campaign.id === selectedCampaignId) || null;
+
+  useEffect(() => {
+    if (!selectedCampaign) {
+      setCampaignWebhookUrl("");
+      setCampaignWebhookDescription("");
+      setCampaignWebhookEvents(["submission.created", "submission.approved"]);
+      setCampaignWebhookError(null);
+      setCampaignWebhookNotice(null);
+      setLatestCampaignWebhookSecret(null);
+      return;
+    }
+
+    setCampaignWebhookUrl(selectedCampaign.webhookEndpoint?.url || "");
+    setCampaignWebhookDescription(selectedCampaign.webhookEndpoint?.description || "");
+    setCampaignWebhookEvents(
+      selectedCampaign.webhookEndpoint?.subscribedEvents?.length
+        ? selectedCampaign.webhookEndpoint.subscribedEvents
+        : ["submission.created", "submission.approved"]
+    );
+    setCampaignWebhookError(null);
+    setCampaignWebhookNotice(null);
+    setLatestCampaignWebhookSecret(null);
+  }, [selectedCampaignId, selectedCampaign]);
 
   const selectedCampaignStats = useMemo(() => {
     if (!selectedCampaign) {
@@ -464,6 +518,109 @@ export default function DashboardShell({
     });
   }
 
+  function toggleCampaignWebhookEventSelection(eventType: string) {
+    setCampaignWebhookEvents((current) =>
+      current.includes(eventType)
+        ? current.filter((entry) => entry !== eventType)
+        : [...current, eventType]
+    );
+  }
+
+  function updateCampaignWebhookState(
+    campaignId: string,
+    endpoint: CampaignWebhookPayload | null
+  ) {
+    setCampaignsState((current) =>
+      current.map((campaign) =>
+        campaign.id === campaignId
+          ? {
+              ...campaign,
+              webhookEndpoint: endpoint,
+            }
+          : campaign
+      )
+    );
+  }
+
+  async function handleSaveCampaignWebhook(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedCampaign) {
+      return;
+    }
+
+    setCampaignWebhookSaving(true);
+    setCampaignWebhookError(null);
+    setCampaignWebhookNotice(null);
+
+    try {
+      const response = await fetch(`/api/campaigns/${selectedCampaign.id}/webhook`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          url: campaignWebhookUrl,
+          description: campaignWebhookDescription,
+          subscribedEvents: campaignWebhookEvents,
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to save campaign webhook.");
+      }
+
+      updateCampaignWebhookState(selectedCampaign.id, data.endpoint || null);
+      setCampaignWebhookNotice(
+        data.signingSecret
+          ? "Campaign webhook saved. Save the signing secret now."
+          : "Campaign webhook updated."
+      );
+      setLatestCampaignWebhookSecret(data.signingSecret || null);
+    } catch (error) {
+      setCampaignWebhookError(
+        error instanceof Error ? error.message : "Failed to save campaign webhook."
+      );
+    } finally {
+      setCampaignWebhookSaving(false);
+    }
+  }
+
+  async function handleRemoveCampaignWebhook() {
+    if (!selectedCampaign) {
+      return;
+    }
+
+    setCampaignWebhookSaving(true);
+    setCampaignWebhookError(null);
+    setCampaignWebhookNotice(null);
+
+    try {
+      const response = await fetch(`/api/campaigns/${selectedCampaign.id}/webhook`, {
+        method: "DELETE",
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to remove campaign webhook.");
+      }
+
+      updateCampaignWebhookState(selectedCampaign.id, null);
+      setCampaignWebhookUrl("");
+      setCampaignWebhookDescription("");
+      setCampaignWebhookEvents(["submission.created", "submission.approved"]);
+      setLatestCampaignWebhookSecret(null);
+      setCampaignWebhookNotice("Campaign webhook removed. Account-level webhooks will be used.");
+    } catch (error) {
+      setCampaignWebhookError(
+        error instanceof Error ? error.message : "Failed to remove campaign webhook."
+      );
+    } finally {
+      setCampaignWebhookSaving(false);
+    }
+  }
+
   function scrollDashboardToTop() {
     window.scrollTo({
       top: 0,
@@ -685,6 +842,125 @@ export default function DashboardShell({
                 >
                   📋 Copy link
                 </button>
+              </div>
+
+              <div className="dashboard-campaign-webhook-card">
+                <div className="dashboard-campaign-webhook-head">
+                  <div>
+                    <p className="dashboard-eyebrow">Automation</p>
+                    <h3 className="dashboard-campaign-webhook-title">
+                      Campaign webhook override
+                    </h3>
+                    <p className="dashboard-campaign-webhook-copy">
+                      If set, this campaign sends events only to the custom endpoint below.
+                      Otherwise events fall back to your account-level webhooks.
+                    </p>
+                  </div>
+                  <span className="dashboard-settings-pill">
+                    {selectedCampaign.webhookEndpoint
+                      ? "Using campaign webhook"
+                      : "Using account webhooks"}
+                  </span>
+                </div>
+
+                {campaignWebhookError && (
+                  <div className="dashboard-settings-alert dashboard-settings-alert-error">
+                    {campaignWebhookError}
+                  </div>
+                )}
+
+                {campaignWebhookNotice && (
+                  <div className="dashboard-settings-alert dashboard-settings-alert-success">
+                    {campaignWebhookNotice}
+                  </div>
+                )}
+
+                {latestCampaignWebhookSecret && (
+                  <div className="dashboard-secret-card">
+                    <div>
+                      <p className="dashboard-settings-label">Campaign signing secret</p>
+                      <p className="dashboard-secret-value">{latestCampaignWebhookSecret}</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="dashboard-action-btn dashboard-secondary-action"
+                      onClick={() => {
+                        copyText(latestCampaignWebhookSecret);
+                      }}
+                    >
+                      Copy secret
+                    </button>
+                  </div>
+                )}
+
+                <form className="dashboard-webhook-form" onSubmit={handleSaveCampaignWebhook}>
+                  <div className="dashboard-webhook-form-grid">
+                    <label className="dashboard-webhook-field">
+                      <span className="dashboard-settings-label">Endpoint URL</span>
+                      <input
+                        type="url"
+                        className="dashboard-webhook-input"
+                        placeholder="https://hooks.zapier.com/..."
+                        value={campaignWebhookUrl}
+                        onChange={(event) => {
+                          setCampaignWebhookUrl(event.target.value);
+                        }}
+                        required
+                      />
+                    </label>
+                    <label className="dashboard-webhook-field">
+                      <span className="dashboard-settings-label">Description</span>
+                      <input
+                        type="text"
+                        className="dashboard-webhook-input"
+                        placeholder="Campaign-specific integration"
+                        value={campaignWebhookDescription}
+                        onChange={(event) => {
+                          setCampaignWebhookDescription(event.target.value);
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  <div className="dashboard-webhook-events">
+                    {WEBHOOK_EVENT_OPTIONS.map((option) => (
+                      <label key={`campaign-${option.value}`} className="dashboard-webhook-event-option">
+                        <input
+                          type="checkbox"
+                          checked={campaignWebhookEvents.includes(option.value)}
+                          onChange={() => {
+                            toggleCampaignWebhookEventSelection(option.value);
+                          }}
+                        />
+                        <span>
+                          <strong>{option.label}</strong>
+                          <small>{option.helper}</small>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+
+                  <div className="dashboard-webhook-actions">
+                    <button
+                      type="submit"
+                      className="dashboard-action-btn"
+                      disabled={campaignWebhookSaving || campaignWebhookEvents.length === 0}
+                    >
+                      {campaignWebhookSaving ? "Saving..." : "Save campaign webhook"}
+                    </button>
+
+                    {selectedCampaign.webhookEndpoint && (
+                      <button
+                        type="button"
+                        className="dashboard-action-btn dashboard-secondary-action"
+                        disabled={campaignWebhookSaving}
+                        onClick={handleRemoveCampaignWebhook}
+                      >
+                        {campaignWebhookSaving ? "Removing..." : "Remove override"}
+                      </button>
+                    )}
+                  </div>
+                </form>
               </div>
 
               <div className="dashboard-metrics-grid">
@@ -1524,6 +1800,39 @@ const dashboardShellStyles = `
     box-shadow: none;
   }
 
+  .dashboard-campaign-webhook-card {
+    border: 1px solid rgba(24, 24, 32, 0.08);
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04), 0 12px 28px rgba(0, 0, 0, 0.03);
+    padding: 22px;
+    display: grid;
+    gap: 14px;
+  }
+
+  .dashboard-campaign-webhook-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+  }
+
+  .dashboard-campaign-webhook-title {
+    font-size: 24px;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    color: #121218;
+    margin: 0 0 8px;
+  }
+
+  .dashboard-campaign-webhook-copy {
+    font-size: 13px;
+    line-height: 1.5;
+    color: rgba(24, 24, 32, 0.54);
+    margin: 0;
+    max-width: 620px;
+  }
+
   .dashboard-settings-shell {
     width: 100%;
     max-width: 1040px;
@@ -2300,6 +2609,7 @@ const dashboardShellStyles = `
     }
 
     .dashboard-settings-head,
+    .dashboard-campaign-webhook-head,
     .dashboard-webhook-card-head {
       flex-direction: column;
       align-items: flex-start;
@@ -2360,6 +2670,10 @@ const dashboardShellStyles = `
     .dashboard-submissions-summary {
       flex-direction: column;
       align-items: flex-start;
+    }
+
+    .dashboard-campaign-webhook-card {
+      padding: 18px;
     }
 
     .dashboard-metrics-grid,

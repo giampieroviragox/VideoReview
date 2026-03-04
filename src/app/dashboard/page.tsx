@@ -11,6 +11,15 @@ type RuntimeCampaign = {
   name: string;
   hasNoEndDate: boolean;
   endsAt: Date | null;
+  webhookEndpoint: {
+    id: string;
+    url: string;
+    description: string | null;
+    subscribedEvents: string[];
+    isActive: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  } | null;
   submissions: Array<{
     id: string;
     reviewerName: string;
@@ -85,6 +94,17 @@ export default async function DashboardPage() {
           name: true,
           hasNoEndDate: true,
           endsAt: true,
+          webhookEndpoint: {
+            select: {
+              id: true,
+              url: true,
+              description: true,
+              subscribedEvents: true,
+              isActive: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+          },
           submissions: {
             orderBy: { createdAt: "desc" },
             select: {
@@ -113,6 +133,17 @@ export default async function DashboardPage() {
     hasNoEndDate: campaign.hasNoEndDate,
     endsAt: campaign.endsAt ? campaign.endsAt.toISOString() : null,
     publicPath: buildCampaignPublicPath(campaign.id),
+    webhookEndpoint: campaign.webhookEndpoint
+      ? {
+          id: campaign.webhookEndpoint.id,
+          url: campaign.webhookEndpoint.url,
+          description: campaign.webhookEndpoint.description,
+          subscribedEvents: campaign.webhookEndpoint.subscribedEvents,
+          isActive: campaign.webhookEndpoint.isActive,
+          createdAt: campaign.webhookEndpoint.createdAt.toISOString(),
+          updatedAt: campaign.webhookEndpoint.updatedAt.toISOString(),
+        }
+      : null,
     submissions: campaign.submissions.map((submission) => ({
       id: submission.id,
       reviewerName: submission.reviewerName,

@@ -143,6 +143,7 @@ export async function POST(
         const queued = await queueWebhookEvent({
           tx,
           ownerUserId: campaign.ownerUserId,
+          campaignId: campaign.id,
           eventId,
           type: "submission.created",
           payload: buildSubmissionWebhookPayload({

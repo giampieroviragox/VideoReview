@@ -78,6 +78,7 @@ export async function PATCH(
           const queued = await queueWebhookEvent({
             tx,
             ownerUserId: existing.ownerUserId,
+            campaignId: existing.id,
             eventId,
             type: "submission.approved",
             payload: buildSubmissionWebhookPayload({

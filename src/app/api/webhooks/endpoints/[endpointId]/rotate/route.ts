@@ -18,7 +18,7 @@ export async function POST(
 
     const { endpointId } = await params;
     const existing = await prisma.webhookEndpoint.findFirst({
-      where: { id: endpointId, ownerUserId: userId },
+      where: { id: endpointId, ownerUserId: userId, campaignId: null },
       select: { id: true },
     });
 
@@ -42,4 +42,3 @@ export async function POST(
     );
   }
 }
-

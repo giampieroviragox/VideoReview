@@ -27,7 +27,7 @@ export async function PATCH(
     const nextUrl =
       body.url !== undefined ? await validateWebhookUrl(body.url) : undefined;
     const existing = await prisma.webhookEndpoint.findFirst({
-      where: { id: endpointId, ownerUserId: userId },
+      where: { id: endpointId, ownerUserId: userId, campaignId: null },
       select: { id: true },
     });
 
@@ -132,7 +132,7 @@ export async function DELETE(
 
     const { endpointId } = await params;
     const existing = await prisma.webhookEndpoint.findFirst({
-      where: { id: endpointId, ownerUserId: userId },
+      where: { id: endpointId, ownerUserId: userId, campaignId: null },
       select: { id: true },
     });
 

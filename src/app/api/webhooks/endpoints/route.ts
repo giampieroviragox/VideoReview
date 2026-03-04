@@ -21,7 +21,7 @@ export async function GET() {
     }
 
     const endpoints = await prisma.webhookEndpoint.findMany({
-      where: { ownerUserId: userId },
+      where: { ownerUserId: userId, campaignId: null },
       orderBy: { createdAt: "desc" },
       include: {
         deliveries: {
@@ -111,6 +111,7 @@ export async function POST(request: NextRequest) {
       endpoint = await prisma.webhookEndpoint.create({
         data: {
           ownerUserId: userId,
+          campaignId: null,
           url,
           description,
           subscribedEvents,

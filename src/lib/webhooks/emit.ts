@@ -8,6 +8,7 @@ import {
 type QueueWebhookEventInput = {
   tx: Prisma.TransactionClient;
   ownerUserId: string;
+  campaignId?: string | null;
   eventId?: string;
   type: WebhookEventType | "webhook.test";
   payload: Prisma.InputJsonValue;
@@ -17,25 +18,60 @@ type QueueWebhookEventInput = {
 export async function queueWebhookEvent({
   tx,
   ownerUserId,
+  campaignId,
   eventId,
   type,
   payload,
   endpointIds,
 }: QueueWebhookEventInput) {
-  const endpoints = await tx.webhookEndpoint.findMany({
-    where: {
-      ownerUserId,
-      ...(Array.isArray(endpointIds) && endpointIds.length > 0
-        ? { id: { in: endpointIds } }
-        : type === "webhook.test"
-          ? { isActive: true }
-          : {
-              isActive: true,
-              subscribedEvents: { has: type },
-            }),
-    },
-    select: { id: true },
-  });
+  let endpoints: Array<{ id: string }> = [];
+
+  if (Array.isArray(endpointIds) && endpointIds.length > 0) {
+    endpoints = await tx.webhookEndpoint.findMany({
+      where: {
+        ownerUserId,
+        id: { in: endpointIds },
+      },
+      select: { id: true },
+    });
+  } else if (type === "webhook.test") {
+    endpoints = await tx.webhookEndpoint.findMany({
+      where: {
+        ownerUserId,
+        campaignId: null,
+        isActive: true,
+      },
+      select: { id: true },
+    });
+  } else {
+    if (campaignId) {
+      const campaignScopedEndpoints = await tx.webhookEndpoint.findMany({
+        where: {
+          ownerUserId,
+          campaignId,
+          isActive: true,
+          subscribedEvents: { has: type },
+        },
+        select: { id: true },
+      });
+
+      if (campaignScopedEndpoints.length > 0) {
+        endpoints = campaignScopedEndpoints;
+      }
+    }
+
+    if (endpoints.length === 0) {
+      endpoints = await tx.webhookEndpoint.findMany({
+        where: {
+          ownerUserId,
+          campaignId: null,
+          isActive: true,
+          subscribedEvents: { has: type },
+        },
+        select: { id: true },
+      });
+    }
+  }
 
   if (endpoints.length === 0) {
     return { event: null, deliveriesCreated: 0, deliveryIds: [] };

@@ -21,7 +21,7 @@ export async function POST(
 
     const { endpointId } = await params;
     const endpoint = await prisma.webhookEndpoint.findFirst({
-      where: { id: endpointId, ownerUserId: userId },
+      where: { id: endpointId, ownerUserId: userId, campaignId: null },
       select: {
         id: true,
         url: true,
