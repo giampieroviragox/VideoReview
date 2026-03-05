@@ -88,13 +88,25 @@ export default function WallOfLovePage({ wall, reviews }: WallOfLovePageProps) {
 
   return (
     <main className="wol-shell">
-      <nav className="wol-nav">
-        <Link href="/" className="wol-logo">
-          <Image src="/tellr-logo.svg" alt="Tellr" width={96} height={22} />
-        </Link>
-        <Link href="/sign-in" className="wol-nav-cta">
-          Try Tellr free →
-        </Link>
+      <nav className="landing-nav">
+        <div className="wrap">
+          <div className="landing-nav-inner">
+            <Link href="/" className="landing-nav-logo">
+              <Image
+                src="/tellr-logo.svg"
+                alt="Tellr"
+                className="landing-nav-logo-image"
+                width={132}
+                height={34}
+              />
+            </Link>
+            <div className="landing-nav-actions">
+              <Link href="/sign-in" className="landing-nav-signup">
+                Try Tellr free &rarr;
+              </Link>
+            </div>
+          </div>
+        </div>
       </nav>
 
       <section className="wol-hero">
@@ -251,39 +263,7 @@ const wallStyles = `
     min-height: 100vh;
     background: #f7f6f4;
     color: #0f0f0f;
-  }
-
-  .wol-nav {
-    position: sticky;
-    top: 0;
-    z-index: 40;
-    height: 58px;
-    border-bottom: 1px solid rgba(0,0,0,.08);
-    background: rgba(247,246,244,.9);
-    backdrop-filter: blur(12px);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 24px;
-  }
-
-  .wol-logo {
-    display: inline-flex;
-    align-items: center;
-  }
-
-  .wol-nav-cta {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 38px;
-    padding: 0 18px;
-    border-radius: 999px;
-    background: var(--brand);
-    color: #fff;
-    font-size: 13px;
-    font-weight: 800;
-    text-decoration: none;
+    padding-top: 60px;
   }
 
   .wol-hero {
@@ -669,16 +649,6 @@ const wallStyles = `
   }
 
   @media (max-width: 640px) {
-    .wol-nav {
-      padding: 0 14px;
-    }
-
-    .wol-nav-cta {
-      min-height: 34px;
-      padding: 0 14px;
-      font-size: 12px;
-    }
-
     .wol-hero,
     .wol-filters,
     .wol-grid,
