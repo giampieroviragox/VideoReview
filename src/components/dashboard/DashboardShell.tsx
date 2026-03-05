@@ -124,17 +124,6 @@ const WEBHOOK_EVENT_OPTIONS = [
   },
 ] as const;
 
-const BRAND_COLOR_PRESETS = [
-  "#ff5c35",
-  "#111318",
-  "#0ea5e9",
-  "#16a34a",
-  "#9333ea",
-  "#e11d48",
-  "#f59e0b",
-  "#0f766e",
-] as const;
-
 function getCampaignState(hasNoEndDate: boolean, endsAt: string | null) {
   if (hasNoEndDate || !endsAt) {
     return "Active";
@@ -181,6 +170,106 @@ function normalizeHexInput(value: string, fallback: string) {
     return trimmed;
   }
   return fallback;
+}
+
+function hexToRgb(hex: string) {
+  const safe = normalizeHexInput(hex, "#000000").slice(1);
+  return {
+    r: Number.parseInt(safe.slice(0, 2), 16),
+    g: Number.parseInt(safe.slice(2, 4), 16),
+    b: Number.parseInt(safe.slice(4, 6), 16),
+  };
+}
+
+function rgbToHex(r: number, g: number, b: number) {
+  const toHex = (value: number) =>
+    Math.max(0, Math.min(255, Math.round(value))).toString(16).padStart(2, "0");
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+function rgbToHsl(r: number, g: number, b: number) {
+  const nr = r / 255;
+  const ng = g / 255;
+  const nb = b / 255;
+
+  const max = Math.max(nr, ng, nb);
+  const min = Math.min(nr, ng, nb);
+  const delta = max - min;
+  const lightness = (max + min) / 2;
+
+  let hue = 0;
+  if (delta !== 0) {
+    if (max === nr) {
+      hue = ((ng - nb) / delta) % 6;
+    } else if (max === ng) {
+      hue = (nb - nr) / delta + 2;
+    } else {
+      hue = (nr - ng) / delta + 4;
+    }
+    hue *= 60;
+    if (hue < 0) {
+      hue += 360;
+    }
+  }
+
+  const saturation =
+    delta === 0 ? 0 : delta / (1 - Math.abs(2 * lightness - 1));
+
+  return {
+    h: Math.round(hue),
+    s: Math.round(saturation * 100),
+    l: Math.round(lightness * 100),
+  };
+}
+
+function hslToRgb(h: number, s: number, l: number) {
+  const hue = ((h % 360) + 360) % 360;
+  const saturation = Math.max(0, Math.min(100, s)) / 100;
+  const lightness = Math.max(0, Math.min(100, l)) / 100;
+
+  if (saturation === 0) {
+    const gray = Math.round(lightness * 255);
+    return { r: gray, g: gray, b: gray };
+  }
+
+  const chroma = (1 - Math.abs(2 * lightness - 1)) * saturation;
+  const x = chroma * (1 - Math.abs(((hue / 60) % 2) - 1));
+  const m = lightness - chroma / 2;
+
+  let r1 = 0;
+  let g1 = 0;
+  let b1 = 0;
+
+  if (hue < 60) {
+    r1 = chroma;
+    g1 = x;
+  } else if (hue < 120) {
+    r1 = x;
+    g1 = chroma;
+  } else if (hue < 180) {
+    g1 = chroma;
+    b1 = x;
+  } else if (hue < 240) {
+    g1 = x;
+    b1 = chroma;
+  } else if (hue < 300) {
+    r1 = x;
+    b1 = chroma;
+  } else {
+    r1 = chroma;
+    b1 = x;
+  }
+
+  return {
+    r: Math.round((r1 + m) * 255),
+    g: Math.round((g1 + m) * 255),
+    b: Math.round((b1 + m) * 255),
+  };
+}
+
+function hslToHex(h: number, s: number, l: number) {
+  const rgb = hslToRgb(h, s, l);
+  return rgbToHex(rgb.r, rgb.g, rgb.b);
 }
 
 export default function DashboardShell({
@@ -501,6 +590,18 @@ export default function DashboardShell({
   }, [campaignsState, wallIncludeAllCampaigns, wallSelectedCampaignIds]);
 
   const wallPublicPath = wallConfig ? `/wall/${wallConfig.slug}` : null;
+
+  const primaryColorModel = useMemo(() => {
+    const hex = normalizeHexInput(brandPrimaryColor, "#ff5c35");
+    const rgb = hexToRgb(hex);
+    return { hex, ...rgbToHsl(rgb.r, rgb.g, rgb.b) };
+  }, [brandPrimaryColor]);
+
+  const secondaryColorModel = useMemo(() => {
+    const hex = normalizeHexInput(brandSecondaryColor, "#111318");
+    const rgb = hexToRgb(hex);
+    return { hex, ...rgbToHsl(rgb.r, rgb.g, rgb.b) };
+  }, [brandSecondaryColor]);
 
   async function handleSubmissionAction(
     campaignId: string,
@@ -925,12 +1026,18 @@ export default function DashboardShell({
     }
   }
 
-  function applyBrandPrimaryPreset(color: string) {
-    setBrandPrimaryColor(color);
+  function updatePrimaryColorFromHsl(next: Partial<{ h: number; s: number; l: number }>) {
+    const h = next.h ?? primaryColorModel.h;
+    const s = next.s ?? primaryColorModel.s;
+    const l = next.l ?? primaryColorModel.l;
+    setBrandPrimaryColor(hslToHex(h, s, l));
   }
 
-  function applyBrandSecondaryPreset(color: string) {
-    setBrandSecondaryColor(color);
+  function updateSecondaryColorFromHsl(next: Partial<{ h: number; s: number; l: number }>) {
+    const h = next.h ?? secondaryColorModel.h;
+    const s = next.s ?? secondaryColorModel.s;
+    const l = next.l ?? secondaryColorModel.l;
+    setBrandSecondaryColor(hslToHex(h, s, l));
   }
 
   async function handleBrandLogoFileChange(event: ChangeEvent<HTMLInputElement>) {
@@ -1892,13 +1999,9 @@ export default function DashboardShell({
                     <label className="dashboard-webhook-field">
                       <span className="dashboard-settings-label">Primary color</span>
                       <div className="dashboard-brand-color-field">
-                        <input
-                          type="color"
-                          className="dashboard-brand-color-picker"
-                          value={normalizeHexInput(brandPrimaryColor, "#ff5c35")}
-                          onChange={(event) => {
-                            setBrandPrimaryColor(event.target.value);
-                          }}
+                        <div
+                          className="dashboard-brand-color-chip"
+                          style={{ background: primaryColorModel.hex }}
                         />
                         <input
                           type="text"
@@ -1915,34 +2018,71 @@ export default function DashboardShell({
                           placeholder="#ff5c35"
                         />
                       </div>
-                      <div className="dashboard-brand-color-preset-row">
-                        {BRAND_COLOR_PRESETS.map((color) => (
-                          <button
-                            key={`primary-${color}`}
-                            type="button"
-                            className={`dashboard-brand-swatch ${
-                              normalizeHexInput(brandPrimaryColor, "#ff5c35") === color
-                                ? "is-active"
-                                : ""
-                            }`}
-                            style={{ background: color }}
-                            onClick={() => applyBrandPrimaryPreset(color)}
-                            aria-label={`Set primary color ${color}`}
+                      <div className="dashboard-brand-color-composer">
+                        <label className="dashboard-brand-slider-row">
+                          <span>Hue</span>
+                          <input
+                            type="range"
+                            min={0}
+                            max={360}
+                            value={primaryColorModel.h}
+                            className="dashboard-brand-slider"
+                            style={{
+                              background:
+                                "linear-gradient(90deg,#ff0000 0%,#ffff00 17%,#00ff00 33%,#00ffff 50%,#0000ff 67%,#ff00ff 83%,#ff0000 100%)",
+                            }}
+                            onChange={(event) => {
+                              updatePrimaryColorFromHsl({
+                                h: Number(event.target.value),
+                              });
+                            }}
                           />
-                        ))}
+                        </label>
+                        <label className="dashboard-brand-slider-row">
+                          <span>Saturation</span>
+                          <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            value={primaryColorModel.s}
+                            className="dashboard-brand-slider"
+                            style={{
+                              background: `linear-gradient(90deg, hsl(${primaryColorModel.h} 0% ${primaryColorModel.l}%), hsl(${primaryColorModel.h} 100% ${primaryColorModel.l}%))`,
+                            }}
+                            onChange={(event) => {
+                              updatePrimaryColorFromHsl({
+                                s: Number(event.target.value),
+                              });
+                            }}
+                          />
+                        </label>
+                        <label className="dashboard-brand-slider-row">
+                          <span>Lightness</span>
+                          <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            value={primaryColorModel.l}
+                            className="dashboard-brand-slider"
+                            style={{
+                              background: `linear-gradient(90deg, #000000 0%, hsl(${primaryColorModel.h} ${primaryColorModel.s}% 50%) 50%, #ffffff 100%)`,
+                            }}
+                            onChange={(event) => {
+                              updatePrimaryColorFromHsl({
+                                l: Number(event.target.value),
+                              });
+                            }}
+                          />
+                        </label>
                       </div>
                     </label>
 
                     <label className="dashboard-webhook-field">
                       <span className="dashboard-settings-label">Secondary color</span>
                       <div className="dashboard-brand-color-field">
-                        <input
-                          type="color"
-                          className="dashboard-brand-color-picker"
-                          value={normalizeHexInput(brandSecondaryColor, "#111318")}
-                          onChange={(event) => {
-                            setBrandSecondaryColor(event.target.value);
-                          }}
+                        <div
+                          className="dashboard-brand-color-chip"
+                          style={{ background: secondaryColorModel.hex }}
                         />
                         <input
                           type="text"
@@ -1959,21 +2099,62 @@ export default function DashboardShell({
                           placeholder="#111318"
                         />
                       </div>
-                      <div className="dashboard-brand-color-preset-row">
-                        {BRAND_COLOR_PRESETS.map((color) => (
-                          <button
-                            key={`secondary-${color}`}
-                            type="button"
-                            className={`dashboard-brand-swatch ${
-                              normalizeHexInput(brandSecondaryColor, "#111318") === color
-                                ? "is-active"
-                                : ""
-                            }`}
-                            style={{ background: color }}
-                            onClick={() => applyBrandSecondaryPreset(color)}
-                            aria-label={`Set secondary color ${color}`}
+                      <div className="dashboard-brand-color-composer">
+                        <label className="dashboard-brand-slider-row">
+                          <span>Hue</span>
+                          <input
+                            type="range"
+                            min={0}
+                            max={360}
+                            value={secondaryColorModel.h}
+                            className="dashboard-brand-slider"
+                            style={{
+                              background:
+                                "linear-gradient(90deg,#ff0000 0%,#ffff00 17%,#00ff00 33%,#00ffff 50%,#0000ff 67%,#ff00ff 83%,#ff0000 100%)",
+                            }}
+                            onChange={(event) => {
+                              updateSecondaryColorFromHsl({
+                                h: Number(event.target.value),
+                              });
+                            }}
                           />
-                        ))}
+                        </label>
+                        <label className="dashboard-brand-slider-row">
+                          <span>Saturation</span>
+                          <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            value={secondaryColorModel.s}
+                            className="dashboard-brand-slider"
+                            style={{
+                              background: `linear-gradient(90deg, hsl(${secondaryColorModel.h} 0% ${secondaryColorModel.l}%), hsl(${secondaryColorModel.h} 100% ${secondaryColorModel.l}%))`,
+                            }}
+                            onChange={(event) => {
+                              updateSecondaryColorFromHsl({
+                                s: Number(event.target.value),
+                              });
+                            }}
+                          />
+                        </label>
+                        <label className="dashboard-brand-slider-row">
+                          <span>Lightness</span>
+                          <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            value={secondaryColorModel.l}
+                            className="dashboard-brand-slider"
+                            style={{
+                              background: `linear-gradient(90deg, #000000 0%, hsl(${secondaryColorModel.h} ${secondaryColorModel.s}% 50%) 50%, #ffffff 100%)`,
+                            }}
+                            onChange={(event) => {
+                              updateSecondaryColorFromHsl({
+                                l: Number(event.target.value),
+                              });
+                            }}
+                          />
+                        </label>
                       </div>
                     </label>
                   </div>
@@ -2913,39 +3094,73 @@ const dashboardShellStyles = `
     align-items: center;
   }
 
-  .dashboard-brand-color-picker {
+  .dashboard-brand-color-chip {
     width: 48px;
     height: 48px;
-    padding: 4px;
-    border: 1px solid rgba(24, 24, 32, 0.1);
+    border: 1.5px solid rgba(24, 24, 32, 0.14);
     border-radius: 12px;
-    background: #fff;
-    cursor: pointer;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.65), 0 6px 16px rgba(0, 0, 0, 0.08);
   }
 
-  .dashboard-brand-color-preset-row {
-    display: flex;
-    flex-wrap: wrap;
+  .dashboard-brand-color-composer {
+    border: 1px solid rgba(24, 24, 32, 0.08);
+    border-radius: 14px;
+    background: #faf8f6;
+    padding: 10px;
+    display: grid;
     gap: 8px;
   }
 
-  .dashboard-brand-swatch {
-    width: 22px;
-    height: 22px;
+  .dashboard-brand-slider-row {
+    display: grid;
+    grid-template-columns: 78px minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+  }
+
+  .dashboard-brand-slider-row span {
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(24, 24, 32, 0.45);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  .dashboard-brand-slider {
+    appearance: none;
+    width: 100%;
+    height: 10px;
     border-radius: 999px;
-    border: 1.5px solid rgba(24, 24, 32, 0.14);
+    border: 1px solid rgba(24, 24, 32, 0.12);
+    outline: none;
+  }
+
+  .dashboard-brand-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+    background: #14141b;
     cursor: pointer;
-    transition: transform 0.18s ease, box-shadow 0.18s ease;
   }
 
-  .dashboard-brand-swatch:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 5px 14px rgba(0, 0, 0, 0.16);
+  .dashboard-brand-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+    background: #14141b;
+    cursor: pointer;
   }
 
-  .dashboard-brand-swatch.is-active {
-    box-shadow: 0 0 0 3px rgba(255, 92, 53, 0.28);
-    border-color: #ffffff;
+  .dashboard-brand-slider::-moz-range-track {
+    height: 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(24, 24, 32, 0.12);
   }
 
   .dashboard-brand-logo-row {
