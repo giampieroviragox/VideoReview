@@ -43,7 +43,7 @@ export default function RootLayout({
           <Script
             id="iubenda-widget"
             src="https://embeds.iubenda.com/widgets/12381140-145d-424a-80e6-74a69fe430b8.js"
-            strategy="beforeInteractive"
+            strategy="afterInteractive"
           />
         </head>
         <body>
