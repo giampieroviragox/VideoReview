@@ -1762,8 +1762,8 @@ export default function DashboardShell({
                     </label>
                   </div>
 
-                  <div className="dashboard-wall-toggle-grid">
-                    <label className="dashboard-webhook-event-option">
+                    <div className="dashboard-wall-toggle-grid">
+                      <label className="dashboard-webhook-event-option">
                       <input
                         type="checkbox"
                         checked={wallPublished}
@@ -1771,13 +1771,15 @@ export default function DashboardShell({
                           setWallPublished(event.target.checked);
                         }}
                       />
-                      <span>
-                        <strong>Publish Wall of Love</strong>
-                        <small>
-                          Make your wall public at {wallPublicPath ? `tellr.me${wallPublicPath}` : "..."}.
-                        </small>
-                      </span>
-                    </label>
+                        <span>
+                          <strong>Publish Wall of Love</strong>
+                          <small>
+                            {wallPublicPath
+                              ? `Make your wall public at tellr.me${wallPublicPath}.`
+                              : "Make your wall public at your personal wall URL."}
+                          </small>
+                        </span>
+                      </label>
 
                     <label className="dashboard-webhook-event-option">
                       <input
@@ -1813,8 +1815,36 @@ export default function DashboardShell({
                         <strong>Include all approved submissions</strong>
                         <small>Disable to manually choose which reviews are visible.</small>
                       </span>
-                    </label>
-                  </div>
+                      </label>
+                    </div>
+
+                    {wallPublished && wallPublicPath && (
+                      <div className="dashboard-wall-link-card">
+                        <div>
+                          <p className="dashboard-settings-label">Public wall link</p>
+                          <p className="dashboard-wall-link-value">tellr.me{wallPublicPath}</p>
+                        </div>
+                        <div className="dashboard-webhook-actions">
+                          <button
+                            type="button"
+                            className="dashboard-action-btn dashboard-secondary-action"
+                            onClick={() => {
+                              copyText(`tellr.me${wallPublicPath}`);
+                            }}
+                          >
+                            Copy link
+                          </button>
+                          <a
+                            href={wallPublicPath}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="dashboard-action-btn dashboard-secondary-action"
+                          >
+                            Open wall
+                          </a>
+                        </div>
+                      </div>
+                    )}
 
                   <div className="dashboard-wall-selection-card">
                     <p className="dashboard-settings-label">Wall preview data</p>
@@ -3286,6 +3316,26 @@ const dashboardShellStyles = `
     padding: 14px;
     display: grid;
     gap: 12px;
+  }
+
+  .dashboard-wall-link-card {
+    border: 1px solid rgba(24, 24, 32, 0.08);
+    border-radius: 18px;
+    background: #ffffff;
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  .dashboard-wall-link-value {
+    margin: 0;
+    font-size: 13px;
+    color: rgba(24, 24, 32, 0.6);
+    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    word-break: break-all;
   }
 
   .dashboard-wall-list {
