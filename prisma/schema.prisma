@@ -80,6 +80,23 @@ model Waitlist {
   createdAt DateTime @default(now())
 }
 
+model WallOfLove {
+  id                           String   @id @default(cuid())
+  ownerUserId                  String   @unique
+  slug                         String   @unique
+  title                        String   @default("Real people. Real results.")
+  subtitle                     String?  @default("These are our customers speaking — unscripted, unedited, unrehearsed.")
+  isPublished                  Boolean  @default(false)
+  includeAllCampaigns          Boolean  @default(true)
+  selectedCampaignIds          String[] @default([])
+  includeAllApprovedSubmissions Boolean @default(true)
+  selectedSubmissionIds        String[] @default([])
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+
+  @@index([ownerUserId, isPublished])
+}
+
 model WebhookEndpoint {
   id               String            @id @default(cuid())
   ownerUserId      String

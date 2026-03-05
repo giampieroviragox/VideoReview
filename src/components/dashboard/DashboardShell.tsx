@@ -74,6 +74,31 @@ type DashboardWebhookEndpoint = {
   }>;
 };
 
+type WallOfLoveConfig = {
+  id: string;
+  ownerUserId: string;
+  slug: string;
+  title: string;
+  subtitle: string | null;
+  isPublished: boolean;
+  includeAllCampaigns: boolean;
+  selectedCampaignIds: string[];
+  includeAllApprovedSubmissions: boolean;
+  selectedSubmissionIds: string[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+type WallReviewSelection = {
+  id: string;
+  campaignId: string;
+  campaignName: string;
+  reviewerName: string;
+  reviewerEmail: string;
+  reviewerRating: number | null;
+  createdAt: string;
+};
+
 const WEBHOOK_EVENT_OPTIONS = [
   {
     value: "submission.created",
@@ -135,7 +160,9 @@ export default function DashboardShell({
 }: DashboardShellProps) {
   const router = useRouter();
   const [campaignsState, setCampaignsState] = useState(campaigns);
-  const [activeSection, setActiveSection] = useState<"campaigns" | "settings">("campaigns");
+  const [activeSection, setActiveSection] = useState<"campaigns" | "wall" | "settings">(
+    "campaigns"
+  );
   const [showBuilder, setShowBuilder] = useState(false);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
   const [submissionActionId, setSubmissionActionId] = useState<string | null>(null);
@@ -166,6 +193,21 @@ export default function DashboardShell({
   const [latestCampaignWebhookSecret, setLatestCampaignWebhookSecret] = useState<string | null>(
     null
   );
+  const [wallConfig, setWallConfig] = useState<WallOfLoveConfig | null>(null);
+  const [wallLoading, setWallLoading] = useState(false);
+  const [wallLoaded, setWallLoaded] = useState(false);
+  const [wallSaving, setWallSaving] = useState(false);
+  const [wallError, setWallError] = useState<string | null>(null);
+  const [wallNotice, setWallNotice] = useState<string | null>(null);
+  const [wallTitle, setWallTitle] = useState("Real people. Real results.");
+  const [wallSubtitle, setWallSubtitle] = useState(
+    "These are our customers speaking — unscripted, unedited, unrehearsed."
+  );
+  const [wallPublished, setWallPublished] = useState(false);
+  const [wallIncludeAllCampaigns, setWallIncludeAllCampaigns] = useState(true);
+  const [wallSelectedCampaignIds, setWallSelectedCampaignIds] = useState<string[]>([]);
+  const [wallIncludeAllSubmissions, setWallIncludeAllSubmissions] = useState(true);
+  const [wallSelectedSubmissionIds, setWallSelectedSubmissionIds] = useState<string[]>([]);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
 
   useEffect(() => {
@@ -239,6 +281,79 @@ export default function DashboardShell({
     setLatestCampaignWebhookSecret(null);
   }, [selectedCampaignId, selectedCampaign]);
 
+  useEffect(() => {
+    if (activeSection !== "wall" || wallLoaded || wallLoading) {
+      return;
+    }
+
+    let cancelled = false;
+    const abortController = new AbortController();
+    const timeoutId = window.setTimeout(() => {
+      abortController.abort();
+    }, 8000);
+
+    async function loadWallConfig() {
+      setWallLoading(true);
+      setWallError(null);
+
+      try {
+        const response = await fetch("/api/wall-of-love", {
+          cache: "no-store",
+          signal: abortController.signal,
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to load Wall of Love settings.");
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        const config = data.wall as WallOfLoveConfig;
+        setWallConfig(config);
+        setWallTitle(config.title || "Real people. Real results.");
+        setWallSubtitle(
+          config.subtitle ||
+            "These are our customers speaking — unscripted, unedited, unrehearsed."
+        );
+        setWallPublished(Boolean(config.isPublished));
+        setWallIncludeAllCampaigns(config.includeAllCampaigns !== false);
+        setWallSelectedCampaignIds(config.selectedCampaignIds || []);
+        setWallIncludeAllSubmissions(config.includeAllApprovedSubmissions !== false);
+        setWallSelectedSubmissionIds(config.selectedSubmissionIds || []);
+        setWallLoaded(true);
+      } catch (error) {
+        if (!cancelled) {
+          const message =
+            error instanceof Error && error.name === "AbortError"
+              ? "Loading took too long. Showing local draft settings."
+              : error instanceof Error
+              ? error.message
+              : "Failed to load Wall of Love settings.";
+          setWallError(
+            message
+          );
+          setWallLoaded(true);
+        }
+      } finally {
+        window.clearTimeout(timeoutId);
+        if (!cancelled) {
+          setWallLoading(false);
+        }
+      }
+    }
+
+    loadWallConfig();
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+      abortController.abort();
+    };
+  }, [activeSection, wallLoaded, wallLoading]);
+
   const selectedCampaignStats = useMemo(() => {
     if (!selectedCampaign) {
       return null;
@@ -263,6 +378,30 @@ export default function DashboardShell({
       approvedCount,
     };
   }, [selectedCampaign]);
+
+  const approvedSubmissionsForWall = useMemo<WallReviewSelection[]>(() => {
+    const selectedCampaignSet = new Set(wallSelectedCampaignIds);
+
+    return campaignsState.flatMap((campaign) => {
+      if (!wallIncludeAllCampaigns && !selectedCampaignSet.has(campaign.id)) {
+        return [];
+      }
+
+      return campaign.submissions
+        .filter((submission) => normalizeSubmissionStatus(submission.status) === "APPROVED")
+        .map((submission) => ({
+          id: submission.id,
+          campaignId: campaign.id,
+          campaignName: campaign.name,
+          reviewerName: submission.reviewerName,
+          reviewerEmail: submission.reviewerEmail,
+          reviewerRating: submission.reviewerRating,
+          createdAt: submission.createdAt,
+        }));
+    });
+  }, [campaignsState, wallIncludeAllCampaigns, wallSelectedCampaignIds]);
+
+  const wallPublicPath = wallConfig ? `/wall/${wallConfig.slug}` : null;
 
   async function handleSubmissionAction(
     campaignId: string,
@@ -621,6 +760,72 @@ export default function DashboardShell({
     }
   }
 
+  function toggleWallCampaignSelection(campaignId: string) {
+    setWallSelectedCampaignIds((current) =>
+      current.includes(campaignId)
+        ? current.filter((entry) => entry !== campaignId)
+        : [...current, campaignId]
+    );
+  }
+
+  function toggleWallSubmissionSelection(submissionId: string) {
+    setWallSelectedSubmissionIds((current) =>
+      current.includes(submissionId)
+        ? current.filter((entry) => entry !== submissionId)
+        : [...current, submissionId]
+    );
+  }
+
+  async function handleSaveWallSettings(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setWallSaving(true);
+    setWallError(null);
+    setWallNotice(null);
+
+    try {
+      const response = await fetch("/api/wall-of-love", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: wallTitle,
+          subtitle: wallSubtitle,
+          isPublished: wallPublished,
+          includeAllCampaigns: wallIncludeAllCampaigns,
+          selectedCampaignIds: wallSelectedCampaignIds,
+          includeAllApprovedSubmissions: wallIncludeAllSubmissions,
+          selectedSubmissionIds: wallSelectedSubmissionIds,
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to save Wall of Love settings.");
+      }
+
+      const nextConfig = data.wall as WallOfLoveConfig;
+      setWallConfig(nextConfig);
+      setWallTitle(nextConfig.title || "Real people. Real results.");
+      setWallSubtitle(
+        nextConfig.subtitle ||
+          "These are our customers speaking — unscripted, unedited, unrehearsed."
+      );
+      setWallPublished(Boolean(nextConfig.isPublished));
+      setWallIncludeAllCampaigns(nextConfig.includeAllCampaigns !== false);
+      setWallSelectedCampaignIds(nextConfig.selectedCampaignIds || []);
+      setWallIncludeAllSubmissions(nextConfig.includeAllApprovedSubmissions !== false);
+      setWallSelectedSubmissionIds(nextConfig.selectedSubmissionIds || []);
+      setWallNotice("Wall of Love settings saved.");
+    } catch (error) {
+      setWallError(
+        error instanceof Error ? error.message : "Failed to save Wall of Love settings."
+      );
+    } finally {
+      setWallSaving(false);
+    }
+  }
+
   function scrollDashboardToTop() {
     window.scrollTo({
       top: 0,
@@ -637,6 +842,13 @@ export default function DashboardShell({
 
   function openSettingsSection() {
     setActiveSection("settings");
+    setShowBuilder(false);
+    setSelectedCampaignId(null);
+    scrollDashboardToTop();
+  }
+
+  function openWallSection() {
+    setActiveSection("wall");
     setShowBuilder(false);
     setSelectedCampaignId(null);
     scrollDashboardToTop();
@@ -685,6 +897,17 @@ export default function DashboardShell({
           <button
             type="button"
             className={`dashboard-nav-item ${
+              activeSection === "wall" ? "dashboard-nav-item-active" : "dashboard-nav-item-muted"
+            }`}
+            onClick={openWallSection}
+          >
+            <span className="dashboard-nav-icon">🧱</span>
+            <span>Wall of Love</span>
+          </button>
+
+          <button
+            type="button"
+            className={`dashboard-nav-item ${
               activeSection === "settings" ? "dashboard-nav-item-active" : "dashboard-nav-item-muted"
             }`}
             onClick={openSettingsSection}
@@ -700,6 +923,8 @@ export default function DashboardShell({
           <p className="dashboard-topbar-title">
             {activeSection === "settings"
               ? "Settings"
+              : activeSection === "wall"
+              ? "Wall of Love"
               : showBuilder
               ? "New Campaign"
               : selectedCampaign
@@ -1117,6 +1342,241 @@ export default function DashboardShell({
                     })}
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {activeSection === "wall" && (
+            <div className="dashboard-settings-shell">
+              <div className="dashboard-settings-card">
+                <div className="dashboard-settings-head">
+                  <div>
+                    <p className="dashboard-eyebrow">Wall of Love</p>
+                    <h2 className="dashboard-settings-title">Publish social proof wall</h2>
+                    <p className="dashboard-settings-copy">
+                      Build a public page with your best approved video reviews. Choose which
+                      campaigns and submissions are visible.
+                    </p>
+                  </div>
+                  <span className="dashboard-settings-pill">
+                    {wallPublished ? "Published" : "Draft"}
+                  </span>
+                </div>
+
+                {wallError && (
+                  <div className="dashboard-settings-alert dashboard-settings-alert-error">
+                    {wallError}
+                  </div>
+                )}
+
+                {wallNotice && (
+                  <div className="dashboard-settings-alert dashboard-settings-alert-success">
+                    {wallNotice}
+                  </div>
+                )}
+
+                <form className="dashboard-webhook-form" onSubmit={handleSaveWallSettings}>
+                  {wallLoading && (
+                    <div className="dashboard-settings-alert dashboard-settings-alert-neutral">
+                      {wallConfig
+                        ? "Refreshing Wall of Love settings..."
+                        : "Loading Wall of Love settings... You can already edit the draft."}
+                    </div>
+                  )}
+
+                  <div className="dashboard-webhook-form-grid">
+                    <label className="dashboard-webhook-field">
+                      <span className="dashboard-settings-label">Wall title</span>
+                      <input
+                        type="text"
+                        className="dashboard-webhook-input"
+                        value={wallTitle}
+                        onChange={(event) => {
+                          setWallTitle(event.target.value);
+                        }}
+                        maxLength={120}
+                        required
+                      />
+                    </label>
+                    <label className="dashboard-webhook-field">
+                      <span className="dashboard-settings-label">Wall subtitle</span>
+                      <input
+                        type="text"
+                        className="dashboard-webhook-input"
+                        value={wallSubtitle}
+                        onChange={(event) => {
+                          setWallSubtitle(event.target.value);
+                        }}
+                        maxLength={240}
+                      />
+                    </label>
+                  </div>
+
+                  <div className="dashboard-wall-toggle-grid">
+                    <label className="dashboard-webhook-event-option">
+                      <input
+                        type="checkbox"
+                        checked={wallPublished}
+                        onChange={(event) => {
+                          setWallPublished(event.target.checked);
+                        }}
+                      />
+                      <span>
+                        <strong>Publish Wall of Love</strong>
+                        <small>
+                          Make your wall public at {wallPublicPath ? `tellr.me${wallPublicPath}` : "..."}.
+                        </small>
+                      </span>
+                    </label>
+
+                    <label className="dashboard-webhook-event-option">
+                      <input
+                        type="checkbox"
+                        checked={wallIncludeAllCampaigns}
+                        onChange={(event) => {
+                          const checked = event.target.checked;
+                          setWallIncludeAllCampaigns(checked);
+                          if (checked) {
+                            setWallSelectedCampaignIds([]);
+                          }
+                        }}
+                      />
+                      <span>
+                        <strong>Include all campaigns</strong>
+                        <small>Disable to select specific campaigns.</small>
+                      </span>
+                    </label>
+
+                    <label className="dashboard-webhook-event-option">
+                      <input
+                        type="checkbox"
+                        checked={wallIncludeAllSubmissions}
+                        onChange={(event) => {
+                          const checked = event.target.checked;
+                          setWallIncludeAllSubmissions(checked);
+                          if (checked) {
+                            setWallSelectedSubmissionIds([]);
+                          }
+                        }}
+                      />
+                      <span>
+                        <strong>Include all approved submissions</strong>
+                        <small>Disable to manually choose which reviews are visible.</small>
+                      </span>
+                    </label>
+                  </div>
+
+                  <div className="dashboard-wall-selection-card">
+                    <p className="dashboard-settings-label">Wall preview data</p>
+                    {approvedSubmissionsForWall.length === 0 ? (
+                      <p className="dashboard-settings-copy">
+                        No approved submissions yet. Once you approve reviews, they will appear here
+                        and can be published on your wall.
+                      </p>
+                    ) : (
+                      <div className="dashboard-wall-preview-list">
+                        {approvedSubmissionsForWall.slice(0, 3).map((submission) => (
+                          <div key={submission.id} className="dashboard-wall-preview-item">
+                            <p>{submission.reviewerName}</p>
+                            <small>
+                              {submission.campaignName} ·{" "}
+                              {submission.reviewerRating ? `${submission.reviewerRating}★` : "No rating"}
+                            </small>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {!wallIncludeAllCampaigns && (
+                    <div className="dashboard-wall-selection-card">
+                      <p className="dashboard-settings-label">Visible campaigns</p>
+                      {campaignsState.length === 0 ? (
+                        <p className="dashboard-settings-copy">No campaigns available.</p>
+                      ) : (
+                        <div className="dashboard-wall-list">
+                          {campaignsState.map((campaign) => (
+                            <label key={campaign.id} className="dashboard-webhook-event-option">
+                              <input
+                                type="checkbox"
+                                checked={wallSelectedCampaignIds.includes(campaign.id)}
+                                onChange={() => {
+                                  toggleWallCampaignSelection(campaign.id);
+                                }}
+                              />
+                              <span>
+                                <strong>{campaign.name}</strong>
+                                <small>{campaign.submissions.length} submissions</small>
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {!wallIncludeAllSubmissions && (
+                    <div className="dashboard-wall-selection-card">
+                      <p className="dashboard-settings-label">Visible reviews</p>
+                      {approvedSubmissionsForWall.length === 0 ? (
+                        <p className="dashboard-settings-copy">
+                          No approved submissions available for the selected campaigns.
+                        </p>
+                      ) : (
+                        <div className="dashboard-wall-list">
+                          {approvedSubmissionsForWall.map((submission) => (
+                            <label key={submission.id} className="dashboard-webhook-event-option">
+                              <input
+                                type="checkbox"
+                                checked={wallSelectedSubmissionIds.includes(submission.id)}
+                                onChange={() => {
+                                  toggleWallSubmissionSelection(submission.id);
+                                }}
+                              />
+                              <span>
+                                <strong>{submission.reviewerName}</strong>
+                                <small>
+                                  {submission.campaignName} ·{" "}
+                                  {submission.reviewerRating
+                                    ? `${submission.reviewerRating}★`
+                                    : "No rating"}
+                                </small>
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="dashboard-webhook-actions">
+                    <button type="submit" className="dashboard-action-btn" disabled={wallSaving}>
+                      {wallSaving ? "Saving..." : "Save Wall settings"}
+                    </button>
+
+                    {wallPublicPath && (
+                      <>
+                        <button
+                          type="button"
+                          className="dashboard-action-btn dashboard-secondary-action"
+                          onClick={() => {
+                            copyText(`tellr.me${wallPublicPath}`);
+                          }}
+                        >
+                          Copy wall link
+                        </button>
+                        <a
+                          href={wallPublicPath}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="dashboard-action-btn dashboard-secondary-action"
+                        >
+                          Open wall
+                        </a>
+                      </>
+                    )}
+                  </div>
+                </form>
               </div>
             </div>
           )}
@@ -1594,6 +2054,9 @@ const dashboardShellStyles = `
   }
 
   .dashboard-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     min-height: 50px;
     padding: 0 22px;
     border-radius: 999px;
@@ -1603,6 +2066,7 @@ const dashboardShellStyles = `
     font-family: "Figtree", sans-serif;
     font-size: 16px;
     font-weight: 800;
+    text-decoration: none;
     box-shadow: 0 10px 24px rgba(255, 92, 53, 0.2);
     cursor: pointer;
   }
@@ -1933,6 +2397,12 @@ const dashboardShellStyles = `
     color: #1e8a42;
   }
 
+  .dashboard-settings-alert-neutral {
+    border: 1px solid rgba(24, 24, 32, 0.1);
+    background: rgba(255, 255, 255, 0.9);
+    color: rgba(24, 24, 32, 0.62);
+  }
+
   .dashboard-secret-card {
     display: flex;
     align-items: center;
@@ -1993,6 +2463,54 @@ const dashboardShellStyles = `
     gap: 12px;
   }
 
+  .dashboard-wall-toggle-grid {
+    display: grid;
+    gap: 12px;
+  }
+
+  .dashboard-wall-selection-card {
+    border: 1px solid rgba(24, 24, 32, 0.08);
+    border-radius: 18px;
+    background: #ffffff;
+    padding: 14px;
+    display: grid;
+    gap: 12px;
+  }
+
+  .dashboard-wall-list {
+    display: grid;
+    gap: 10px;
+    max-height: 280px;
+    overflow: auto;
+    padding-right: 4px;
+  }
+
+  .dashboard-wall-preview-list {
+    display: grid;
+    gap: 10px;
+  }
+
+  .dashboard-wall-preview-item {
+    border: 1px solid rgba(24, 24, 32, 0.08);
+    border-radius: 14px;
+    background: #faf8f6;
+    padding: 10px 12px;
+  }
+
+  .dashboard-wall-preview-item p {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: #14141b;
+  }
+
+  .dashboard-wall-preview-item small {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: rgba(24, 24, 32, 0.5);
+  }
+
   .dashboard-webhook-event-option {
     display: flex;
     align-items: flex-start;
@@ -2001,6 +2519,7 @@ const dashboardShellStyles = `
     border-radius: 16px;
     background: #ffffff;
     padding: 12px 14px;
+    cursor: pointer;
   }
 
   .dashboard-webhook-event-option input {
