@@ -1,7 +1,7 @@
 "use client";
 
 import { UserButton } from "@clerk/nextjs";
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -99,6 +99,18 @@ type WallReviewSelection = {
   createdAt: string;
 };
 
+type BrandProfile = {
+  id: string;
+  ownerUserId: string;
+  brandName: string;
+  primaryColor: string;
+  secondaryColor: string;
+  logoUrl: string | null;
+  websiteUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 const WEBHOOK_EVENT_OPTIONS = [
   {
     value: "submission.created",
@@ -110,6 +122,17 @@ const WEBHOOK_EVENT_OPTIONS = [
     label: "Submission approved",
     helper: "Fire when you approve a submission in the dashboard.",
   },
+] as const;
+
+const BRAND_COLOR_PRESETS = [
+  "#ff5c35",
+  "#111318",
+  "#0ea5e9",
+  "#16a34a",
+  "#9333ea",
+  "#e11d48",
+  "#f59e0b",
+  "#0f766e",
 ] as const;
 
 function getCampaignState(hasNoEndDate: boolean, endsAt: string | null) {
@@ -152,6 +175,14 @@ function getSubmissionExcerpt(
   return `"${firstAnswer.answer.trim()}"`;
 }
 
+function normalizeHexInput(value: string, fallback: string) {
+  const trimmed = value.trim().toLowerCase();
+  if (/^#[0-9a-f]{6}$/.test(trimmed)) {
+    return trimmed;
+  }
+  return fallback;
+}
+
 export default function DashboardShell({
   viewerName,
   workspaceName,
@@ -160,7 +191,7 @@ export default function DashboardShell({
 }: DashboardShellProps) {
   const router = useRouter();
   const [campaignsState, setCampaignsState] = useState(campaigns);
-  const [activeSection, setActiveSection] = useState<"campaigns" | "wall" | "settings">(
+  const [activeSection, setActiveSection] = useState<"campaigns" | "wall" | "brand" | "settings">(
     "campaigns"
   );
   const [showBuilder, setShowBuilder] = useState(false);
@@ -208,6 +239,20 @@ export default function DashboardShell({
   const [wallSelectedCampaignIds, setWallSelectedCampaignIds] = useState<string[]>([]);
   const [wallIncludeAllSubmissions, setWallIncludeAllSubmissions] = useState(true);
   const [wallSelectedSubmissionIds, setWallSelectedSubmissionIds] = useState<string[]>([]);
+  const [brandProfile, setBrandProfile] = useState<BrandProfile | null>(null);
+  const [brandLoaded, setBrandLoaded] = useState(false);
+  const [brandLoading, setBrandLoading] = useState(false);
+  const [brandSaving, setBrandSaving] = useState(false);
+  const [brandError, setBrandError] = useState<string | null>(null);
+  const [brandNotice, setBrandNotice] = useState<string | null>(null);
+  const [brandName, setBrandName] = useState("Tellr.me");
+  const [brandPrimaryColor, setBrandPrimaryColor] = useState("#ff5c35");
+  const [brandSecondaryColor, setBrandSecondaryColor] = useState("#111318");
+  const [brandLogoUrl, setBrandLogoUrl] = useState("");
+  const [brandWebsiteUrl, setBrandWebsiteUrl] = useState("");
+  const [brandLogoUploading, setBrandLogoUploading] = useState(false);
+  const [brandLogoUploadProgress, setBrandLogoUploadProgress] = useState(0);
+  const brandLogoFileInputRef = useRef<HTMLInputElement | null>(null);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
 
   useEffect(() => {
@@ -353,6 +398,60 @@ export default function DashboardShell({
       abortController.abort();
     };
   }, [activeSection, wallLoaded, wallLoading]);
+
+  useEffect(() => {
+    if (activeSection !== "brand" || brandLoaded || brandLoading) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadBrandProfile() {
+      setBrandLoading(true);
+      setBrandError(null);
+
+      try {
+        const response = await fetch("/api/brand-profile", {
+          cache: "no-store",
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to load brand settings.");
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        const profile = data.brand as BrandProfile;
+        setBrandProfile(profile);
+        setBrandName(profile.brandName || "Tellr.me");
+        setBrandPrimaryColor(profile.primaryColor || "#ff5c35");
+        setBrandSecondaryColor(profile.secondaryColor || "#111318");
+        setBrandLogoUrl(profile.logoUrl || "");
+        setBrandWebsiteUrl(profile.websiteUrl || "");
+        setBrandLoaded(true);
+      } catch (error) {
+        if (!cancelled) {
+          setBrandError(
+            error instanceof Error ? error.message : "Failed to load brand settings."
+          );
+          setBrandLoaded(true);
+        }
+      } finally {
+        if (!cancelled) {
+          setBrandLoading(false);
+        }
+      }
+    }
+
+    loadBrandProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSection, brandLoaded, brandLoading]);
 
   const selectedCampaignStats = useMemo(() => {
     if (!selectedCampaign) {
@@ -826,6 +925,130 @@ export default function DashboardShell({
     }
   }
 
+  function applyBrandPrimaryPreset(color: string) {
+    setBrandPrimaryColor(color);
+  }
+
+  function applyBrandSecondaryPreset(color: string) {
+    setBrandSecondaryColor(color);
+  }
+
+  async function handleBrandLogoFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    setBrandLogoUploading(true);
+    setBrandLogoUploadProgress(0);
+    setBrandError(null);
+    setBrandNotice(null);
+
+    try {
+      const prepareRes = await fetch("/api/brand-profile/logo-upload", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contentType: file.type,
+          size: file.size,
+        }),
+      });
+      const prepareData = await prepareRes.json();
+
+      if (!prepareRes.ok) {
+        throw new Error(prepareData.error || "Failed to prepare logo upload.");
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+
+        xhr.upload.addEventListener("progress", (progressEvent) => {
+          if (progressEvent.lengthComputable) {
+            setBrandLogoUploadProgress(
+              Math.round((progressEvent.loaded / progressEvent.total) * 100)
+            );
+          }
+        });
+
+        xhr.addEventListener("load", () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve();
+            return;
+          }
+
+          reject(new Error("Logo upload failed."));
+        });
+
+        xhr.addEventListener("error", () => {
+          reject(new Error("Network error during logo upload."));
+        });
+
+        xhr.open("PUT", prepareData.uploadUrl, true);
+        xhr.setRequestHeader("Content-Type", file.type);
+        xhr.send(file);
+      });
+
+      setBrandLogoUrl(prepareData.logoUrl as string);
+      setBrandNotice("Logo uploaded. Click save to persist brand settings.");
+      setBrandLogoUploadProgress(100);
+    } catch (error) {
+      setBrandError(
+        error instanceof Error ? error.message : "Failed to upload brand logo."
+      );
+    } finally {
+      setBrandLogoUploading(false);
+      if (brandLogoFileInputRef.current) {
+        brandLogoFileInputRef.current.value = "";
+      }
+    }
+  }
+
+  async function handleSaveBrandSettings(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBrandSaving(true);
+    setBrandError(null);
+    setBrandNotice(null);
+
+    try {
+      const response = await fetch("/api/brand-profile", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          brandName,
+          primaryColor: normalizeHexInput(brandPrimaryColor, "#ff5c35"),
+          secondaryColor: normalizeHexInput(brandSecondaryColor, "#111318"),
+          logoUrl: brandLogoUrl,
+          websiteUrl: brandWebsiteUrl,
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to save brand settings.");
+      }
+
+      const profile = data.brand as BrandProfile;
+      setBrandProfile(profile);
+      setBrandName(profile.brandName || "Tellr.me");
+      setBrandPrimaryColor(profile.primaryColor || "#ff5c35");
+      setBrandSecondaryColor(profile.secondaryColor || "#111318");
+      setBrandLogoUrl(profile.logoUrl || "");
+      setBrandWebsiteUrl(profile.websiteUrl || "");
+      setBrandNotice("Brand settings saved.");
+      router.refresh();
+    } catch (error) {
+      setBrandError(
+        error instanceof Error ? error.message : "Failed to save brand settings."
+      );
+    } finally {
+      setBrandSaving(false);
+    }
+  }
+
   function scrollDashboardToTop() {
     window.scrollTo({
       top: 0,
@@ -849,6 +1072,13 @@ export default function DashboardShell({
 
   function openWallSection() {
     setActiveSection("wall");
+    setShowBuilder(false);
+    setSelectedCampaignId(null);
+    scrollDashboardToTop();
+  }
+
+  function openBrandSection() {
+    setActiveSection("brand");
     setShowBuilder(false);
     setSelectedCampaignId(null);
     scrollDashboardToTop();
@@ -908,6 +1138,17 @@ export default function DashboardShell({
           <button
             type="button"
             className={`dashboard-nav-item ${
+              activeSection === "brand" ? "dashboard-nav-item-active" : "dashboard-nav-item-muted"
+            }`}
+            onClick={openBrandSection}
+          >
+            <span className="dashboard-nav-icon">🎨</span>
+            <span>Brand</span>
+          </button>
+
+          <button
+            type="button"
+            className={`dashboard-nav-item ${
               activeSection === "settings" ? "dashboard-nav-item-active" : "dashboard-nav-item-muted"
             }`}
             onClick={openSettingsSection}
@@ -923,6 +1164,8 @@ export default function DashboardShell({
           <p className="dashboard-topbar-title">
             {activeSection === "settings"
               ? "Settings"
+              : activeSection === "brand"
+              ? "Brand"
               : activeSection === "wall"
               ? "Wall of Love"
               : showBuilder
@@ -1575,6 +1818,229 @@ export default function DashboardShell({
                         </a>
                       </>
                     )}
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {activeSection === "brand" && (
+            <div className="dashboard-settings-shell">
+              <div className="dashboard-settings-card">
+                <div className="dashboard-settings-head">
+                  <div>
+                    <p className="dashboard-eyebrow">Brand</p>
+                    <h2 className="dashboard-settings-title">Brand identity</h2>
+                    <p className="dashboard-settings-copy">
+                      Configure your brand details for campaigns and public pages.
+                    </p>
+                  </div>
+                  <span className="dashboard-settings-pill">
+                    {brandProfile ? "Configured" : "Draft"}
+                  </span>
+                </div>
+
+                {brandError && (
+                  <div className="dashboard-settings-alert dashboard-settings-alert-error">
+                    {brandError}
+                  </div>
+                )}
+
+                {brandNotice && (
+                  <div className="dashboard-settings-alert dashboard-settings-alert-success">
+                    {brandNotice}
+                  </div>
+                )}
+
+                <form className="dashboard-webhook-form" onSubmit={handleSaveBrandSettings}>
+                  {brandLoading && (
+                    <div className="dashboard-settings-alert dashboard-settings-alert-neutral">
+                      Loading brand settings...
+                    </div>
+                  )}
+
+                  <div className="dashboard-webhook-form-grid">
+                    <label className="dashboard-webhook-field">
+                      <span className="dashboard-settings-label">Brand name</span>
+                      <input
+                        type="text"
+                        className="dashboard-webhook-input"
+                        value={brandName}
+                        onChange={(event) => {
+                          setBrandName(event.target.value);
+                        }}
+                        maxLength={80}
+                        required
+                      />
+                    </label>
+
+                    <label className="dashboard-webhook-field">
+                      <span className="dashboard-settings-label">Website URL</span>
+                      <input
+                        type="url"
+                        className="dashboard-webhook-input"
+                        value={brandWebsiteUrl}
+                        onChange={(event) => {
+                          setBrandWebsiteUrl(event.target.value);
+                        }}
+                        placeholder="https://yourcompany.com"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="dashboard-webhook-form-grid">
+                    <label className="dashboard-webhook-field">
+                      <span className="dashboard-settings-label">Primary color</span>
+                      <div className="dashboard-brand-color-field">
+                        <input
+                          type="color"
+                          className="dashboard-brand-color-picker"
+                          value={normalizeHexInput(brandPrimaryColor, "#ff5c35")}
+                          onChange={(event) => {
+                            setBrandPrimaryColor(event.target.value);
+                          }}
+                        />
+                        <input
+                          type="text"
+                          className="dashboard-webhook-input"
+                          value={brandPrimaryColor}
+                          onChange={(event) => {
+                            setBrandPrimaryColor(event.target.value);
+                          }}
+                          onBlur={() => {
+                            setBrandPrimaryColor((current) =>
+                              normalizeHexInput(current, "#ff5c35")
+                            );
+                          }}
+                          placeholder="#ff5c35"
+                        />
+                      </div>
+                      <div className="dashboard-brand-color-preset-row">
+                        {BRAND_COLOR_PRESETS.map((color) => (
+                          <button
+                            key={`primary-${color}`}
+                            type="button"
+                            className={`dashboard-brand-swatch ${
+                              normalizeHexInput(brandPrimaryColor, "#ff5c35") === color
+                                ? "is-active"
+                                : ""
+                            }`}
+                            style={{ background: color }}
+                            onClick={() => applyBrandPrimaryPreset(color)}
+                            aria-label={`Set primary color ${color}`}
+                          />
+                        ))}
+                      </div>
+                    </label>
+
+                    <label className="dashboard-webhook-field">
+                      <span className="dashboard-settings-label">Secondary color</span>
+                      <div className="dashboard-brand-color-field">
+                        <input
+                          type="color"
+                          className="dashboard-brand-color-picker"
+                          value={normalizeHexInput(brandSecondaryColor, "#111318")}
+                          onChange={(event) => {
+                            setBrandSecondaryColor(event.target.value);
+                          }}
+                        />
+                        <input
+                          type="text"
+                          className="dashboard-webhook-input"
+                          value={brandSecondaryColor}
+                          onChange={(event) => {
+                            setBrandSecondaryColor(event.target.value);
+                          }}
+                          onBlur={() => {
+                            setBrandSecondaryColor((current) =>
+                              normalizeHexInput(current, "#111318")
+                            );
+                          }}
+                          placeholder="#111318"
+                        />
+                      </div>
+                      <div className="dashboard-brand-color-preset-row">
+                        {BRAND_COLOR_PRESETS.map((color) => (
+                          <button
+                            key={`secondary-${color}`}
+                            type="button"
+                            className={`dashboard-brand-swatch ${
+                              normalizeHexInput(brandSecondaryColor, "#111318") === color
+                                ? "is-active"
+                                : ""
+                            }`}
+                            style={{ background: color }}
+                            onClick={() => applyBrandSecondaryPreset(color)}
+                            aria-label={`Set secondary color ${color}`}
+                          />
+                        ))}
+                      </div>
+                    </label>
+                  </div>
+
+                  <label className="dashboard-webhook-field">
+                    <span className="dashboard-settings-label">Logo (link or upload)</span>
+                    <div className="dashboard-brand-logo-row">
+                      <input
+                        type="url"
+                        className="dashboard-webhook-input"
+                        value={brandLogoUrl}
+                        onChange={(event) => {
+                          setBrandLogoUrl(event.target.value);
+                        }}
+                        placeholder="https://yourcompany.com/logo.png"
+                      />
+                      <input
+                        ref={brandLogoFileInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/avif"
+                        className="dashboard-brand-logo-input"
+                        onChange={handleBrandLogoFileChange}
+                      />
+                      <button
+                        type="button"
+                        className="dashboard-secondary-btn"
+                        onClick={() => brandLogoFileInputRef.current?.click()}
+                        disabled={brandLogoUploading}
+                      >
+                        {brandLogoUploading ? "Uploading..." : "Upload image"}
+                      </button>
+                    </div>
+                    {brandLogoUploading && (
+                      <div className="dashboard-brand-upload-progress">
+                        <div
+                          className="dashboard-brand-upload-fill"
+                          style={{ width: `${brandLogoUploadProgress}%` }}
+                        />
+                      </div>
+                    )}
+                  </label>
+
+                  <div className="dashboard-brand-preview">
+                    <div className="dashboard-brand-preview-logo">
+                      {brandLogoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={brandLogoUrl} alt={`${brandName || "Brand"} logo`} />
+                      ) : (
+                        <span>{(brandName || "B").slice(0, 2).toUpperCase()}</span>
+                      )}
+                    </div>
+                    <div>
+                      <p className="dashboard-brand-preview-name">{brandName || "Your brand"}</p>
+                      <p className="dashboard-brand-preview-url">
+                        {brandWebsiteUrl || "No website set"}
+                      </p>
+                    </div>
+                    <div className="dashboard-brand-preview-colors">
+                      <span style={{ background: normalizeHexInput(brandPrimaryColor, "#ff5c35") }} />
+                      <span style={{ background: normalizeHexInput(brandSecondaryColor, "#111318") }} />
+                    </div>
+                  </div>
+
+                  <div className="dashboard-webhook-actions">
+                    <button type="submit" className="dashboard-action-btn" disabled={brandSaving}>
+                      {brandSaving ? "Saving..." : "Save brand settings"}
+                    </button>
                   </div>
                 </form>
               </div>
@@ -2440,6 +2906,136 @@ const dashboardShellStyles = `
     gap: 8px;
   }
 
+  .dashboard-brand-color-field {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+  }
+
+  .dashboard-brand-color-picker {
+    width: 48px;
+    height: 48px;
+    padding: 4px;
+    border: 1px solid rgba(24, 24, 32, 0.1);
+    border-radius: 12px;
+    background: #fff;
+    cursor: pointer;
+  }
+
+  .dashboard-brand-color-preset-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .dashboard-brand-swatch {
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    border: 1.5px solid rgba(24, 24, 32, 0.14);
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  .dashboard-brand-swatch:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 14px rgba(0, 0, 0, 0.16);
+  }
+
+  .dashboard-brand-swatch.is-active {
+    box-shadow: 0 0 0 3px rgba(255, 92, 53, 0.28);
+    border-color: #ffffff;
+  }
+
+  .dashboard-brand-logo-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .dashboard-brand-logo-input {
+    display: none;
+  }
+
+  .dashboard-brand-upload-progress {
+    width: 100%;
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(24, 24, 32, 0.08);
+    overflow: hidden;
+    border: 1px solid rgba(24, 24, 32, 0.08);
+  }
+
+  .dashboard-brand-upload-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff5c35, #ff8b52);
+    transition: width 0.2s ease;
+  }
+
+  .dashboard-brand-preview {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border: 1px solid rgba(24, 24, 32, 0.08);
+    border-radius: 18px;
+    background: #ffffff;
+    padding: 12px 14px;
+  }
+
+  .dashboard-brand-preview-logo {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    border: 1px solid rgba(24, 24, 32, 0.12);
+    background: #f6f4ef;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .dashboard-brand-preview-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .dashboard-brand-preview-logo span {
+    font-size: 14px;
+    font-weight: 800;
+    color: rgba(24, 24, 32, 0.6);
+  }
+
+  .dashboard-brand-preview-name {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 800;
+    color: #14141b;
+  }
+
+  .dashboard-brand-preview-url {
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: rgba(24, 24, 32, 0.5);
+    word-break: break-word;
+  }
+
+  .dashboard-brand-preview-colors {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dashboard-brand-preview-colors span {
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    border: 1px solid rgba(24, 24, 32, 0.1);
+  }
+
   .dashboard-webhook-input {
     width: 100%;
     min-height: 48px;
@@ -3137,6 +3733,19 @@ const dashboardShellStyles = `
     .dashboard-webhook-form-grid,
     .dashboard-webhook-events {
       grid-template-columns: 1fr;
+    }
+
+    .dashboard-brand-logo-row {
+      grid-template-columns: 1fr;
+    }
+
+    .dashboard-brand-preview {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .dashboard-brand-preview-colors {
+      margin-left: 0;
     }
 
     .dashboard-webhook-card-actions {

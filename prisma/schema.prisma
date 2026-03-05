@@ -80,6 +80,20 @@ model Waitlist {
   createdAt DateTime @default(now())
 }
 
+model BrandProfile {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @unique
+  brandName      String   @default("Tellr.me")
+  primaryColor   String   @default("#ff5c35")
+  secondaryColor String   @default("#111318")
+  logoUrl        String?
+  websiteUrl     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([ownerUserId])
+}
+
 model WallOfLove {
   id                           String   @id @default(cuid())
   ownerUserId                  String   @unique

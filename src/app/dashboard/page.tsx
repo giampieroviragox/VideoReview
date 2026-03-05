@@ -1,5 +1,5 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
-import { getCampaignDelegate } from "@/lib/db";
+import { getCampaignDelegate, prisma } from "@/lib/db";
 import { buildCampaignPublicPath } from "@/lib/campaigns";
 import { DEFAULT_WORKSPACE } from "@/lib/workspace";
 import DashboardShell from "@/components/dashboard/DashboardShell";
@@ -81,6 +81,19 @@ export default async function DashboardPage() {
     | CampaignDashboardRuntimeDelegate
     | undefined;
 
+  let workspaceName = DEFAULT_WORKSPACE.brandName;
+  try {
+    const profile = await prisma.brandProfile.findUnique({
+      where: { ownerUserId: userId },
+      select: { brandName: true },
+    });
+    if (profile?.brandName) {
+      workspaceName = profile.brandName;
+    }
+  } catch (error) {
+    console.error("Dashboard brand profile query failed:", error);
+  }
+
   let campaignQueryFailed = false;
   let campaigns: RuntimeCampaign[] = [];
 
@@ -160,7 +173,7 @@ export default async function DashboardPage() {
   return (
     <DashboardShell
       viewerName={viewerName}
-      workspaceName={DEFAULT_WORKSPACE.brandName}
+      workspaceName={workspaceName}
       campaignRuntimeReady={Boolean(campaignDelegate) && !campaignQueryFailed}
       campaigns={campaignRows}
     />

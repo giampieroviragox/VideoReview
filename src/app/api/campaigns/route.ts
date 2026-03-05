@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import { getCampaignDelegate } from "@/lib/db";
+import { getCampaignDelegate, prisma } from "@/lib/db";
 import {
   buildCampaignInviteMessage,
   buildCampaignPublicPath,
@@ -78,12 +78,21 @@ export async function POST(request: NextRequest) {
         : []
     );
 
+    const brandProfile = await prisma.brandProfile.findUnique({
+      where: { ownerUserId: userId },
+      select: {
+        brandName: true,
+        logoUrl: true,
+      },
+    });
+
     const campaign = await campaignDelegate.create({
       data: {
         ownerUserId: userId,
-        brandName: DEFAULT_WORKSPACE.brandName,
+        brandName: brandProfile?.brandName || DEFAULT_WORKSPACE.brandName,
         brandSlug: DEFAULT_WORKSPACE.brandSlug,
-        brandLogoUrl: DEFAULT_WORKSPACE.brandLogoUrl,
+        brandLogoUrl:
+          typeof brandProfile?.logoUrl === "string" ? brandProfile.logoUrl : DEFAULT_WORKSPACE.brandLogoUrl,
         name: name.trim(),
         description: description?.trim() || null,
         rewardText: rewardEnabled ? rewardText.trim() : "",
