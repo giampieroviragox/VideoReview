@@ -155,12 +155,36 @@ export default function VideoRecorder({
         }
 
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    facingMode: { ideal: "user" },
+            const cameraAttempts: MediaStreamConstraints[] = [
+                {
+                    video: {
+                        facingMode: { ideal: "user" },
+                        resizeMode: "none",
+                    },
+                    audio: true,
                 },
-                audio: true,
-            });
+                {
+                    video: {
+                        facingMode: { ideal: "user" },
+                    },
+                    audio: true,
+                },
+            ];
+
+            let stream: MediaStream | null = null;
+            for (const constraints of cameraAttempts) {
+                try {
+                    stream =
+                        await navigator.mediaDevices.getUserMedia(constraints);
+                    break;
+                } catch {
+                    // Try next constraint profile.
+                }
+            }
+
+            if (!stream) {
+                throw new Error("Unable to open camera stream.");
+            }
 
             streamRef.current = stream;
             const videoTrack = stream.getVideoTracks()[0];
