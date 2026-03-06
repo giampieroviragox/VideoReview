@@ -605,8 +605,8 @@ const campaignCardStyles = `
     width: 92px;
     height: 58px;
     border-radius: 10px;
-    object-fit: cover;
-    background: #ece7e2;
+    object-fit: contain;
+    background: #09090c;
   }
 
   .campaign-card-video-empty {

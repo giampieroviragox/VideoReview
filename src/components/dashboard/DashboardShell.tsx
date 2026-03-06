@@ -3680,7 +3680,7 @@ const dashboardShellStyles = `
     display: block;
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     background: #09090c;
   }
 
