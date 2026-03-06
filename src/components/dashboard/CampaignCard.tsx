@@ -605,7 +605,7 @@ const campaignCardStyles = `
     width: 92px;
     height: 58px;
     border-radius: 10px;
-    object-fit: contain;
+    object-fit: cover;
     background: #09090c;
   }
 

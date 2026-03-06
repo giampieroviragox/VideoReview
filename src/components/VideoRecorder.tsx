@@ -141,6 +141,15 @@ export default function VideoRecorder({
                 {
                     video: {
                         facingMode: { ideal: "user" },
+                        width: { ideal: 1080 },
+                        height: { ideal: 1350 },
+                        aspectRatio: { ideal: 4 / 5 },
+                    },
+                    audio: true,
+                },
+                {
+                    video: {
+                        facingMode: { ideal: "user" },
                         width: { ideal: 960 },
                         height: { ideal: 1280 },
                         aspectRatio: { ideal: 3 / 4 },
@@ -446,7 +455,7 @@ export default function VideoRecorder({
                             style={{
                                 width: "100%",
                                 height: "100%",
-                                objectFit: "contain",
+                                objectFit: isImmersive ? "cover" : "contain",
                                 display: state === "idle" ? "none" : "block",
                                 transform: "scaleX(-1)",
                             }}
@@ -608,7 +617,7 @@ export default function VideoRecorder({
                             display: "block",
                             width: "100%",
                             height: "100%",
-                            objectFit: "contain",
+                            objectFit: isImmersive ? "cover" : "contain",
                         }}
                     />
 
