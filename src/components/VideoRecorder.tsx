@@ -185,7 +185,9 @@ export default function VideoRecorder({
                         : 1;
                 try {
                     await videoTrack.applyConstraints({
-                        advanced: [{ zoom: minZoom }],
+                        advanced: [
+                            { zoom: minZoom } as unknown as MediaTrackConstraintSet,
+                        ],
                     });
                 } catch {
                     // Ignore unsupported zoom constraints on some browsers/devices.
