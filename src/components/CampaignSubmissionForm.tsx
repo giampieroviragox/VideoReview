@@ -23,6 +23,7 @@ type CampaignSubmissionFormProps = {
     questionDisplayMode: string;
     questions: Question[];
   };
+  embedMode?: boolean;
 };
 
 const ratingCopy: Record<number, string> = {
@@ -75,7 +76,10 @@ function CompactStarRating({
   );
 }
 
-export default function CampaignSubmissionForm({ campaign }: CampaignSubmissionFormProps) {
+export default function CampaignSubmissionForm({
+  campaign,
+  embedMode = false,
+}: CampaignSubmissionFormProps) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [rating, setRating] = useState(0);
@@ -218,7 +222,7 @@ export default function CampaignSubmissionForm({ campaign }: CampaignSubmissionF
   };
 
   return (
-    <div className="invite-review-page">
+    <div className={`invite-review-page ${embedMode ? "is-embedded" : ""}`}>
       <div className="invite-review-stripe" />
 
       <div className="invite-review-wrap">
@@ -466,6 +470,25 @@ const publicReviewStyles = `
     flex-direction: column;
     align-items: center;
     padding: 32px 24px 56px;
+  }
+
+  .invite-review-page.is-embedded {
+    min-height: auto;
+    background: transparent;
+    padding: 0;
+  }
+
+  .invite-review-page.is-embedded .invite-review-stripe {
+    display: none;
+  }
+
+  .invite-review-page.is-embedded .invite-review-wrap {
+    max-width: none;
+  }
+
+  .invite-review-page.is-embedded .invite-review-card {
+    border-radius: 20px;
+    box-shadow: none;
   }
 
   .invite-review-stripe {

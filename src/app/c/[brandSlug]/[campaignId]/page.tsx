@@ -32,6 +32,7 @@ type CampaignPublicRuntimeDelegate = {
 
 interface PageProps {
   params: Promise<{ brandSlug: string; campaignId: string }>;
+  searchParams?: Promise<{ embed?: string | string[] }>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -66,8 +67,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export default async function CampaignPublicPage({ params }: PageProps) {
+export default async function CampaignPublicPage({ params, searchParams }: PageProps) {
   const { brandSlug, campaignId } = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const embedParam = Array.isArray(resolvedSearchParams.embed)
+    ? resolvedSearchParams.embed[0]
+    : resolvedSearchParams.embed;
+  const embedMode = embedParam === "1" || embedParam === "true";
   const campaignDelegate = getCampaignDelegate() as unknown as
     | CampaignPublicRuntimeDelegate
     | undefined;
@@ -93,8 +99,14 @@ export default async function CampaignPublicPage({ params }: PageProps) {
   }
 
   return (
-    <main style={{ minHeight: "100vh", background: "#f3efeb" }}>
+    <main
+      style={{
+        minHeight: embedMode ? "auto" : "100vh",
+        background: embedMode ? "transparent" : "#f3efeb",
+      }}
+    >
       <CampaignSubmissionForm
+        embedMode={embedMode}
         campaign={{
           id: campaign.id,
           brandName: campaign.brandName,

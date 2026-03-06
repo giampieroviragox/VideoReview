@@ -339,6 +339,7 @@ export default function DashboardShell({
   const [brandSecondaryColor, setBrandSecondaryColor] = useState("#111318");
   const [brandLogoUrl, setBrandLogoUrl] = useState("");
   const [brandWebsiteUrl, setBrandWebsiteUrl] = useState("");
+  const [siteOrigin, setSiteOrigin] = useState("https://tellr.me");
   const [brandLogoUploading, setBrandLogoUploading] = useState(false);
   const [brandLogoUploadProgress, setBrandLogoUploadProgress] = useState(0);
   const brandLogoFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -391,6 +392,20 @@ export default function DashboardShell({
 
   const selectedCampaign =
     campaignsState.find((campaign) => campaign.id === selectedCampaignId) || null;
+
+  useEffect(() => {
+    setSiteOrigin(window.location.origin);
+  }, []);
+
+  const selectedCampaignPublicUrl = selectedCampaign
+    ? `${siteOrigin}${selectedCampaign.publicPath}`
+    : "";
+  const selectedCampaignEmbedUrl = selectedCampaignPublicUrl
+    ? `${selectedCampaignPublicUrl}?embed=1`
+    : "";
+  const selectedCampaignEmbedSnippet = selectedCampaignEmbedUrl
+    ? `<iframe src="${selectedCampaignEmbedUrl}" width="100%" height="900" style="border:0;border-radius:20px;max-width:1040px;" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="camera; microphone; autoplay"></iframe>`
+    : "";
 
   useEffect(() => {
     if (!selectedCampaign) {
@@ -1406,17 +1421,59 @@ export default function DashboardShell({
                   <p className="dashboard-eyebrow">Submissions</p>
                   <h2 className="dashboard-submissions-title">{selectedCampaign.name}</h2>
                   <p className="dashboard-submissions-link">
-                    tellr.me{selectedCampaign.publicPath}
+                    {selectedCampaignPublicUrl}
                   </p>
                 </div>
 
                 <button
                   type="button"
                   className="dashboard-secondary-btn dashboard-copy-btn"
-                  onClick={() => copyText(`tellr.me${selectedCampaign.publicPath}`)}
+                  onClick={() => copyText(selectedCampaignPublicUrl)}
                 >
                   📋 Copy link
                 </button>
+              </div>
+
+              <div className="dashboard-campaign-embed-card">
+                <div className="dashboard-campaign-webhook-head">
+                  <div>
+                    <p className="dashboard-eyebrow">Embed</p>
+                    <h3 className="dashboard-campaign-webhook-title">Embed this campaign</h3>
+                    <p className="dashboard-campaign-webhook-copy">
+                      Add this campaign directly inside your website with an iframe.
+                    </p>
+                  </div>
+                  <span className="dashboard-settings-pill">iframe</span>
+                </div>
+
+                <div className="dashboard-embed-block">
+                  <p className="dashboard-settings-label">Embed URL</p>
+                  <div className="dashboard-inline-code">{selectedCampaignEmbedUrl}</div>
+                  <button
+                    type="button"
+                    className="dashboard-secondary-btn dashboard-copy-btn"
+                    onClick={() => copyText(selectedCampaignEmbedUrl)}
+                  >
+                    Copy URL
+                  </button>
+                </div>
+
+                <div className="dashboard-embed-block">
+                  <p className="dashboard-settings-label">Embed snippet</p>
+                  <textarea
+                    readOnly
+                    rows={4}
+                    className="dashboard-embed-textarea"
+                    value={selectedCampaignEmbedSnippet}
+                  />
+                  <button
+                    type="button"
+                    className="dashboard-secondary-btn dashboard-copy-btn"
+                    onClick={() => copyText(selectedCampaignEmbedSnippet)}
+                  >
+                    Copy snippet
+                  </button>
+                </div>
               </div>
 
               <div className="dashboard-campaign-webhook-card">
@@ -2951,6 +3008,43 @@ const dashboardShellStyles = `
     gap: 14px;
   }
 
+  .dashboard-campaign-embed-card {
+    border: 1px solid rgba(24, 24, 32, 0.08);
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04), 0 12px 28px rgba(0, 0, 0, 0.03);
+    padding: 22px;
+    display: grid;
+    gap: 14px;
+  }
+
+  .dashboard-embed-block {
+    display: grid;
+    gap: 8px;
+  }
+
+  .dashboard-inline-code,
+  .dashboard-embed-textarea {
+    width: 100%;
+    border: 1px solid rgba(24, 24, 32, 0.14);
+    border-radius: 14px;
+    background: #f8f6f3;
+    color: rgba(24, 24, 32, 0.76);
+    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 11px;
+    line-height: 1.5;
+    padding: 12px;
+  }
+
+  .dashboard-inline-code {
+    word-break: break-all;
+  }
+
+  .dashboard-embed-textarea {
+    resize: vertical;
+    min-height: 96px;
+  }
+
   .dashboard-campaign-webhook-head {
     display: flex;
     align-items: flex-start;
@@ -4065,7 +4159,8 @@ const dashboardShellStyles = `
       align-items: flex-start;
     }
 
-    .dashboard-campaign-webhook-card {
+    .dashboard-campaign-webhook-card,
+    .dashboard-campaign-embed-card {
       padding: 18px;
     }
 
