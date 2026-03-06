@@ -157,15 +157,34 @@ export default function VideoRecorder({
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: {
-                    facingMode: "user",
-                    width: { ideal: 720 },
-                    height: { ideal: 1280 },
-                    aspectRatio: { ideal: 9 / 16 },
+                    facingMode: { ideal: "user" },
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
                 },
                 audio: true,
             });
 
             streamRef.current = stream;
+            const videoTrack = stream.getVideoTracks()[0];
+            const capabilities = (
+                videoTrack?.getCapabilities?.() as MediaTrackCapabilities & {
+                    zoom?: { min?: number; max?: number };
+                }
+            ) ?? { zoom: undefined };
+
+            if (videoTrack && capabilities.zoom) {
+                const minZoom =
+                    typeof capabilities.zoom.min === "number"
+                        ? capabilities.zoom.min
+                        : 1;
+                try {
+                    await videoTrack.applyConstraints({
+                        advanced: [{ zoom: minZoom }],
+                    });
+                } catch {
+                    // Ignore unsupported zoom constraints on some browsers/devices.
+                }
+            }
 
             if (videoPreviewRef.current) {
                 videoPreviewRef.current.srcObject = stream;
@@ -207,42 +226,16 @@ export default function VideoRecorder({
         const settings = sourceTrack?.getSettings();
         const sourceWidth = settings.width ?? previewVideo.videoWidth ?? 720;
         const sourceHeight = settings.height ?? previewVideo.videoHeight ?? 1280;
-        const targetAspect =
-            previewVideo.clientWidth > 0 && previewVideo.clientHeight > 0
-                ? previewVideo.clientWidth / previewVideo.clientHeight
-                : 9 / 16;
-
-        let targetWidth = sourceWidth;
-        let targetHeight = Math.round(targetWidth / targetAspect);
-        if (targetHeight > sourceHeight) {
-            targetHeight = sourceHeight;
-            targetWidth = Math.round(targetHeight * targetAspect);
-        }
 
         const canvas = document.createElement("canvas");
-        canvas.width = Math.max(2, targetWidth);
-        canvas.height = Math.max(2, targetHeight);
+        canvas.width = Math.max(2, sourceWidth);
+        canvas.height = Math.max(2, sourceHeight);
 
         const ctx = canvas.getContext("2d");
         if (!ctx) {
             setError("Unable to start recording in this browser.");
             setState("previewing");
             return;
-        }
-
-        const sourceAspect = sourceWidth / sourceHeight;
-        const canvasAspect = canvas.width / canvas.height;
-        let cropWidth = sourceWidth;
-        let cropHeight = sourceHeight;
-        let cropX = 0;
-        let cropY = 0;
-
-        if (sourceAspect > canvasAspect) {
-            cropWidth = sourceHeight * canvasAspect;
-            cropX = (sourceWidth - cropWidth) / 2;
-        } else if (sourceAspect < canvasAspect) {
-            cropHeight = sourceWidth / canvasAspect;
-            cropY = (sourceHeight - cropHeight) / 2;
         }
 
         const drawMirroredFrame = () => {
@@ -252,10 +245,6 @@ export default function VideoRecorder({
             ctx.scale(-1, 1);
             ctx.drawImage(
                 previewVideo,
-                cropX,
-                cropY,
-                cropWidth,
-                cropHeight,
                 0,
                 0,
                 canvas.width,
@@ -499,7 +488,7 @@ export default function VideoRecorder({
                             style={{
                                 width: "100%",
                                 height: "100%",
-                                objectFit: "cover",
+                                objectFit: isImmersive ? "contain" : "cover",
                                 display: state === "idle" ? "none" : "block",
                                 transform: "scaleX(-1)",
                             }}
@@ -661,7 +650,7 @@ export default function VideoRecorder({
                             display: "block",
                             width: "100%",
                             height: "100%",
-                            objectFit: "cover",
+                            objectFit: isImmersive ? "contain" : "cover",
                         }}
                     />
 

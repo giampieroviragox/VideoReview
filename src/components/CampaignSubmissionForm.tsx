@@ -709,7 +709,8 @@ const publicReviewStyles = `
   .invite-recorder-shell .video-element {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    background: #05060b;
   }
 
   .invite-recorder-shell .video-placeholder {
