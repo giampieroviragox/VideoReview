@@ -158,8 +158,6 @@ export default function VideoRecorder({
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: {
                     facingMode: { ideal: "user" },
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 },
                 },
                 audio: true,
             });
@@ -488,7 +486,7 @@ export default function VideoRecorder({
                             style={{
                                 width: "100%",
                                 height: "100%",
-                                objectFit: isImmersive ? "contain" : "cover",
+                                objectFit: "contain",
                                 display: state === "idle" ? "none" : "block",
                                 transform: "scaleX(-1)",
                             }}
@@ -650,7 +648,7 @@ export default function VideoRecorder({
                             display: "block",
                             width: "100%",
                             height: "100%",
-                            objectFit: isImmersive ? "contain" : "cover",
+                            objectFit: "contain",
                         }}
                     />
 
