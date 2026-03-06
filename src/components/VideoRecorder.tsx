@@ -40,9 +40,6 @@ export default function VideoRecorder({
     const videoPlaybackRef = useRef<HTMLVideoElement>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
-    const mirroredStreamRef = useRef<MediaStream | null>(null);
-    const mirrorCanvasRef = useRef<HTMLCanvasElement | null>(null);
-    const mirrorFrameRef = useRef<number | null>(null);
     const chunksRef = useRef<Blob[]>([]);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const startTimeRef = useRef<number>(0);
@@ -57,20 +54,6 @@ export default function VideoRecorder({
         }
     }, []);
 
-    const stopMirroredStream = useCallback(() => {
-        if (mirrorFrameRef.current) {
-            cancelAnimationFrame(mirrorFrameRef.current);
-            mirrorFrameRef.current = null;
-        }
-
-        if (mirroredStreamRef.current) {
-            mirroredStreamRef.current.getTracks().forEach((track) => track.stop());
-            mirroredStreamRef.current = null;
-        }
-
-        mirrorCanvasRef.current = null;
-    }, []);
-
     const clearTimer = useCallback(() => {
         if (timerRef.current) {
             clearInterval(timerRef.current);
@@ -81,10 +64,9 @@ export default function VideoRecorder({
     useEffect(() => {
         return () => {
             stopStream();
-            stopMirroredStream();
             clearTimer();
         };
-    }, [stopStream, stopMirroredStream, clearTimer]);
+    }, [stopStream, clearTimer]);
 
     useEffect(() => {
         return () => {
@@ -159,7 +141,9 @@ export default function VideoRecorder({
                 {
                     video: {
                         facingMode: { ideal: "user" },
-                        resizeMode: "none",
+                        width: { ideal: 960 },
+                        height: { ideal: 1280 },
+                        aspectRatio: { ideal: 3 / 4 },
                     },
                     audio: true,
                 },
@@ -226,9 +210,7 @@ export default function VideoRecorder({
 
     const startRecording = useCallback(() => {
         const stream = streamRef.current;
-        const previewVideo = videoPreviewRef.current;
-
-        if (!stream || !previewVideo) {
+        if (!stream) {
             return;
         }
 
@@ -242,52 +224,7 @@ export default function VideoRecorder({
               ? "video/webm;codecs=vp8,opus"
               : "video/webm";
 
-        stopMirroredStream();
-
-        const sourceTrack = stream.getVideoTracks()[0];
-        const settings = sourceTrack?.getSettings();
-        const sourceWidth = settings.width ?? previewVideo.videoWidth ?? 720;
-        const sourceHeight = settings.height ?? previewVideo.videoHeight ?? 1280;
-
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.max(2, sourceWidth);
-        canvas.height = Math.max(2, sourceHeight);
-
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-            setError("Unable to start recording in this browser.");
-            setState("previewing");
-            return;
-        }
-
-        const drawMirroredFrame = () => {
-            ctx.save();
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.translate(canvas.width, 0);
-            ctx.scale(-1, 1);
-            ctx.drawImage(
-                previewVideo,
-                0,
-                0,
-                canvas.width,
-                canvas.height
-            );
-            ctx.restore();
-            mirrorFrameRef.current = requestAnimationFrame(drawMirroredFrame);
-        };
-
-        drawMirroredFrame();
-
-        const canvasStream = canvas.captureStream(30);
-        const mergedStream = new MediaStream(canvasStream.getVideoTracks());
-        stream.getAudioTracks().forEach((track) => {
-            mergedStream.addTrack(track.clone());
-        });
-
-        mirrorCanvasRef.current = canvas;
-        mirroredStreamRef.current = mergedStream;
-
-        const recorder = new MediaRecorder(mergedStream, {
+        const recorder = new MediaRecorder(stream, {
             mimeType,
             videoBitsPerSecond: 2_500_000,
         });
@@ -300,7 +237,6 @@ export default function VideoRecorder({
 
         recorder.onstop = () => {
             clearTimer();
-            stopMirroredStream();
             stopStream();
 
             const blob = new Blob(chunksRef.current, {
@@ -349,7 +285,6 @@ export default function VideoRecorder({
         clearTimer,
         effectiveMaxDuration,
         onRecordingComplete,
-        stopMirroredStream,
         stopStream,
     ]);
 
@@ -367,7 +302,6 @@ export default function VideoRecorder({
 
     const reRecord = useCallback(async () => {
         clearTimer();
-        stopMirroredStream();
         stopStream();
 
         if (videoPlaybackRef.current) {
@@ -388,7 +322,7 @@ export default function VideoRecorder({
         durationRef.current = 0;
         setState("idle");
         await startCamera();
-    }, [clearTimer, recordedVideoUrl, startCamera, stopMirroredStream, stopStream]);
+    }, [clearTimer, recordedVideoUrl, startCamera, stopStream]);
 
     const togglePlayback = useCallback(async () => {
         const video = videoPlaybackRef.current;
