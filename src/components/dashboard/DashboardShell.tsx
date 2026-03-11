@@ -2319,15 +2319,23 @@ export default function DashboardShell({
             <div className="dashboard-settings-shell">
               <div className="dashboard-settings-card">
                 <p className="dashboard-eyebrow">Settings</p>
-                <h2 className="dashboard-settings-title">Workspace access</h2>
+                <h2 className="dashboard-settings-title">Workspace profile</h2>
                 <p className="dashboard-settings-copy">
-                  This is the private workspace currently linked to your Clerk account.
+                  Keep only the essential details for this workspace and the current user.
                 </p>
 
                 <div className="dashboard-settings-grid">
-                  <div className="dashboard-settings-item">
-                    <p className="dashboard-settings-label">Account</p>
-                    <p className="dashboard-settings-value">{viewerName}</p>
+                  <div className="dashboard-settings-item dashboard-settings-profile-item">
+                    <p className="dashboard-settings-label">Profile</p>
+                    <div className="dashboard-settings-profile-row">
+                      <div className="dashboard-avatar">
+                        <UserButton afterSignOutUrl="/" />
+                      </div>
+                      <div>
+                        <p className="dashboard-settings-value">{viewerName}</p>
+                        <p className="dashboard-settings-subvalue">Current user</p>
+                      </div>
+                    </div>
                   </div>
                   <div className="dashboard-settings-item">
                     <p className="dashboard-settings-label">Workspace</p>
@@ -2335,11 +2343,9 @@ export default function DashboardShell({
                   </div>
                   <div className="dashboard-settings-item">
                     <p className="dashboard-settings-label">Campaigns</p>
-                    <p className="dashboard-settings-value">{campaignsState.length}</p>
-                  </div>
-                  <div className="dashboard-settings-item">
-                    <p className="dashboard-settings-label">Authentication</p>
-                    <p className="dashboard-settings-value">Managed by Clerk</p>
+                    <p className="dashboard-settings-value">
+                      {campaignsState.length} {campaignsState.length === 1 ? "campaign" : "campaigns"}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -3130,6 +3136,16 @@ const dashboardShellStyles = `
     padding: 16px 18px;
   }
 
+  .dashboard-settings-profile-item {
+    grid-column: span 2;
+  }
+
+  .dashboard-settings-profile-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
   .dashboard-settings-label {
     font-size: 11px;
     font-weight: 700;
@@ -3146,6 +3162,12 @@ const dashboardShellStyles = `
     color: #14141b;
     letter-spacing: -0.02em;
     margin: 0;
+  }
+
+  .dashboard-settings-subvalue {
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: rgba(24, 24, 32, 0.42);
   }
 
   .dashboard-settings-alert {

@@ -359,6 +359,7 @@ export default function DemoModal({ onClose }: DemoModalProps) {
                       onRecordingComplete={handleRecordingComplete}
                       maxDurationSeconds={60}
                       variant="immersive"
+                      mirrorPlayback
                       labels={{
                         idlePrompt: "Click to enable your camera and start recording",
                         enableCamera: "Enable camera",

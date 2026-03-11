@@ -6,6 +6,8 @@ interface VideoRecorderProps {
     onRecordingComplete: (blob: Blob, durationSeconds: number) => void;
     maxDurationSeconds?: number | null;
     variant?: "default" | "immersive";
+    mirrorPreview?: boolean;
+    mirrorPlayback?: boolean;
     labels?: {
         idlePrompt?: string;
         enableCamera?: string;
@@ -22,6 +24,8 @@ export default function VideoRecorder({
     onRecordingComplete,
     maxDurationSeconds = 90,
     variant = "default",
+    mirrorPreview = true,
+    mirrorPlayback = false,
     labels,
 }: VideoRecorderProps) {
     const [state, setState] = useState<RecorderState>("idle");
@@ -457,7 +461,7 @@ export default function VideoRecorder({
                                 height: "100%",
                                 objectFit: isImmersive ? "cover" : "contain",
                                 display: state === "idle" ? "none" : "block",
-                                transform: "scaleX(-1)",
+                                transform: mirrorPreview ? "scaleX(-1)" : undefined,
                             }}
                         />
 
@@ -618,6 +622,7 @@ export default function VideoRecorder({
                             width: "100%",
                             height: "100%",
                             objectFit: isImmersive ? "cover" : "contain",
+                            transform: mirrorPlayback ? "scaleX(-1)" : undefined,
                         }}
                     />
 
