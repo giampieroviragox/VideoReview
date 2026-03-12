@@ -42,36 +42,51 @@ model Campaign {
 }
 
 model CampaignQuestion {
-  id        String   @id @default(cuid())
+  id         String   @id @default(cuid())
   campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   campaignId String
-  text      String
-  required  Boolean  @default(false)
-  sortOrder Int
-  createdAt DateTime @default(now())
+  text       String
+  required   Boolean  @default(false)
+  sortOrder  Int
+  createdAt  DateTime @default(now())
 
   @@index([campaignId, sortOrder])
 }
 
 model Submission {
-  id               String          @id @default(cuid())
-  collectionPage   CollectionPage? @relation(fields: [collectionPageId], references: [id])
-  collectionPageId String?
-  campaign         Campaign?       @relation(fields: [campaignId], references: [id])
-  campaignId       String?
-  reviewerName     String
-  reviewerEmail    String
-  reviewerRating   Int?
-  answers          Json?
-  videoKey         String
-  durationSeconds  Int?
-  status           String          @default("pending")
-  rewardPending    Boolean         @default(false)
-  createdAt        DateTime        @default(now())
+  id                String             @id @default(cuid())
+  collectionPage    CollectionPage?    @relation(fields: [collectionPageId], references: [id])
+  collectionPageId  String?
+  campaign          Campaign?          @relation(fields: [campaignId], references: [id])
+  campaignId        String?
+  reviewerName      String
+  reviewerEmail     String
+  reviewerRating    Int?
+  answers           Json?
+  videoKey          String
+  durationSeconds   Int?
+  status            String             @default("pending")
+  rewardPending     Boolean            @default(false)
+  aiStatus          SubmissionAiStatus @default(NOT_REQUESTED)
+  aiTranscript      String?
+  aiGeneratedReview String?
+  aiError           String?
+  aiModel           String?
+  aiProcessedAt     DateTime?
+  createdAt         DateTime           @default(now())
 
   @@index([collectionPageId])
   @@index([campaignId])
   @@index([status])
+  @@index([aiStatus])
+}
+
+enum SubmissionAiStatus {
+  NOT_REQUESTED
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
 }
 
 model Waitlist {
@@ -95,18 +110,18 @@ model BrandProfile {
 }
 
 model WallOfLove {
-  id                           String   @id @default(cuid())
-  ownerUserId                  String   @unique
-  slug                         String   @unique
-  title                        String   @default("Real people. Real results.")
-  subtitle                     String?  @default("These are our customers speaking — unscripted, unedited, unrehearsed.")
-  isPublished                  Boolean  @default(false)
-  includeAllCampaigns          Boolean  @default(true)
-  selectedCampaignIds          String[] @default([])
-  includeAllApprovedSubmissions Boolean @default(true)
-  selectedSubmissionIds        String[] @default([])
-  createdAt                    DateTime @default(now())
-  updatedAt                    DateTime @updatedAt
+  id                            String   @id @default(cuid())
+  ownerUserId                   String   @unique
+  slug                          String   @unique
+  title                         String   @default("Real people. Real results.")
+  subtitle                      String?  @default("These are our customers speaking — unscripted, unedited, unrehearsed.")
+  isPublished                   Boolean  @default(false)
+  includeAllCampaigns           Boolean  @default(true)
+  selectedCampaignIds           String[] @default([])
+  includeAllApprovedSubmissions Boolean  @default(true)
+  selectedSubmissionIds         String[] @default([])
+  createdAt                     DateTime @default(now())
+  updatedAt                     DateTime @updatedAt
 
   @@index([ownerUserId, isPublished])
 }
@@ -125,10 +140,10 @@ model WebhookEndpoint {
   deliveries       WebhookDelivery[]
   campaign         Campaign?         @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 
+  @@unique([ownerUserId, url])
   @@index([ownerUserId, createdAt])
   @@index([ownerUserId, isActive])
   @@index([ownerUserId, campaignId])
-  @@unique([ownerUserId, url])
 }
 
 model WebhookEvent {

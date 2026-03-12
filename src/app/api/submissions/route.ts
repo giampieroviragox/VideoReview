@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { objectExists } from "@/lib/s3";
+import { isOpenRouterConfigured } from "@/lib/ai/openrouter";
+import { triggerSubmissionAiAfterResponse } from "@/lib/ai/trigger";
 
 const MAX_DURATION_SECONDS = 90;
 
@@ -59,6 +61,8 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        const aiEnabled = isOpenRouterConfigured();
+
         // Create submission
         const submission = await prisma.submission.create({
             data: {
@@ -70,8 +74,11 @@ export async function POST(request: NextRequest) {
                     ? Math.round(durationSeconds)
                     : null,
                 status: "pending",
+                aiStatus: aiEnabled ? "PENDING" : "NOT_REQUESTED",
             },
         });
+
+        triggerSubmissionAiAfterResponse(submission.id);
 
         return NextResponse.json({ submission }, { status: 201 });
     } catch (error) {

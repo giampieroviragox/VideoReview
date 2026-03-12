@@ -23,3 +23,12 @@ jobs:
             -X POST \
             -H "Authorization: Bearer $TELLR_CRON_SECRET" \
             https://tellr.me/api/internal/webhooks/dispatch
+
+      - name: Trigger AI submission processing
+        env:
+          TELLR_CRON_SECRET: ${{ secrets.TELLR_CRON_SECRET }}
+        run: |
+          curl --fail --silent --show-error \
+            -X POST \
+            -H "Authorization: Bearer $TELLR_CRON_SECRET" \
+            "https://tellr.me/api/internal/ai/submissions/process?batch=5&includeFailed=true"

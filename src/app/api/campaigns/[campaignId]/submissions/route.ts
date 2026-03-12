@@ -4,6 +4,8 @@ import { objectExists } from "@/lib/s3";
 import { queueWebhookEvent } from "@/lib/webhooks/emit";
 import { buildSubmissionWebhookPayload } from "@/lib/webhooks/payloads";
 import { triggerWebhookDispatchAfterResponse } from "@/lib/webhooks/trigger";
+import { isOpenRouterConfigured } from "@/lib/ai/openrouter";
+import { triggerSubmissionAiAfterResponse } from "@/lib/ai/trigger";
 
 export const dynamic = "force-dynamic";
 
@@ -121,6 +123,7 @@ export async function POST(
       );
     }
 
+    const aiEnabled = isOpenRouterConfigured();
     const createdSubmission = await prisma.submission.create({
       data: {
         campaignId: campaign.id,
@@ -132,6 +135,7 @@ export async function POST(
         durationSeconds: durationSeconds ? Math.round(durationSeconds) : null,
         status: "PENDING",
         rewardPending: false,
+        aiStatus: aiEnabled ? "PENDING" : "NOT_REQUESTED",
       },
     });
 
@@ -164,6 +168,8 @@ export async function POST(
     } catch (error) {
       console.error("Webhook enqueue failed for submission.created:", error);
     }
+
+    triggerSubmissionAiAfterResponse(createdSubmission.id);
 
     return NextResponse.json({ submission: createdSubmission }, { status: 201 });
   } catch (error) {

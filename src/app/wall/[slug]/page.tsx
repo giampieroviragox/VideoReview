@@ -111,6 +111,7 @@ export default async function WallRoute({ params }: PageProps) {
           reviewerName: true,
           reviewerEmail: true,
           reviewerRating: true,
+          aiGeneratedReview: true,
           answers: true,
           durationSeconds: true,
           createdAt: true,
@@ -135,6 +136,10 @@ export default async function WallRoute({ params }: PageProps) {
             ? submission.reviewerRating
             : 5,
         quote:
+          (typeof submission.aiGeneratedReview === "string" &&
+          submission.aiGeneratedReview.trim().length > 0
+            ? submission.aiGeneratedReview.trim()
+            : null) ||
           getSubmissionQuote(submission.answers) ||
           `Tellr helped us collect better social proof for ${campaign.name}.`,
         durationSeconds: submission.durationSeconds,

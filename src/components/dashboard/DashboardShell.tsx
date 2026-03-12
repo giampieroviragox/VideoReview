@@ -34,6 +34,10 @@ type DashboardShellProps = {
       status: string;
       videoKey: string;
       durationSeconds: number | null;
+      aiStatus: string;
+      aiGeneratedReview: string | null;
+      aiTranscript: string | null;
+      aiProcessedAt: string | null;
       answers: Array<{
         questionId: string;
         questionText: string;
@@ -148,6 +152,7 @@ function formatSubmissionDuration(durationSeconds: number | null) {
 }
 
 function getSubmissionExcerpt(
+  aiGeneratedReview: string | null,
   answers: Array<{
     questionId: string;
     questionText: string;
@@ -155,6 +160,11 @@ function getSubmissionExcerpt(
     required: boolean;
   }>
 ) {
+  const generated = typeof aiGeneratedReview === "string" ? aiGeneratedReview.trim() : "";
+  if (generated.length > 0) {
+    return `"${generated}"`;
+  }
+
   const firstAnswer = answers.find((entry) => entry.answer.trim().length > 0);
 
   if (!firstAnswer) {
@@ -1634,7 +1644,10 @@ export default function DashboardShell({
                       const isApproved = normalizedStatus === "APPROVED";
                       const isPending = normalizedStatus === "PENDING";
                       const durationLabel = formatSubmissionDuration(submission.durationSeconds);
-                      const excerpt = getSubmissionExcerpt(submission.answers);
+                      const excerpt = getSubmissionExcerpt(
+                        submission.aiGeneratedReview,
+                        submission.answers
+                      );
                       const approveActionKey = `${submission.id}:APPROVED`;
                       const rejectActionKey = `${submission.id}:REJECTED`;
 

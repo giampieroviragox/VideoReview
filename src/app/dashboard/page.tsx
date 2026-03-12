@@ -28,6 +28,10 @@ type RuntimeCampaign = {
     status: string;
     videoKey: string;
     durationSeconds: number | null;
+    aiStatus: string;
+    aiGeneratedReview: string | null;
+    aiTranscript: string | null;
+    aiProcessedAt: Date | null;
     answers: unknown;
     createdAt: Date;
   }>;
@@ -128,6 +132,10 @@ export default async function DashboardPage() {
               status: true,
               videoKey: true,
               durationSeconds: true,
+              aiStatus: true,
+              aiGeneratedReview: true,
+              aiTranscript: true,
+              aiProcessedAt: true,
               answers: true,
               createdAt: true,
             },
@@ -165,6 +173,12 @@ export default async function DashboardPage() {
       status: submission.status,
       videoKey: submission.videoKey,
       durationSeconds: submission.durationSeconds,
+      aiStatus: submission.aiStatus,
+      aiGeneratedReview: submission.aiGeneratedReview,
+      aiTranscript: submission.aiTranscript,
+      aiProcessedAt: submission.aiProcessedAt
+        ? submission.aiProcessedAt.toISOString()
+        : null,
       answers: parseSubmissionAnswers(submission.answers),
       createdAt: submission.createdAt.toISOString(),
     })),
