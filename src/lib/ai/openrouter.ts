@@ -70,12 +70,18 @@ export function isOpenRouterConfigured() {
 
 export function getOpenRouterModel() {
   const selected = process.env.OPENROUTER_MODEL?.trim() || DEFAULT_OPENROUTER_MODEL;
+  if (requiresFreeModelOnly() && !isFreeModelId(selected)) {
+    return DEFAULT_OPENROUTER_MODEL;
+  }
   validateModelPolicy(selected);
   return selected;
 }
 
 function getOpenRouterRewriteModel() {
   const selected = process.env.OPENROUTER_REWRITE_MODEL?.trim() || getOpenRouterModel();
+  if (requiresFreeModelOnly() && !isFreeModelId(selected)) {
+    return getOpenRouterModel();
+  }
   validateModelPolicy(selected);
   return selected;
 }
@@ -258,8 +264,12 @@ async function resolveTranscriptionModel() {
     DEFAULT_TRANSCRIPTION_MODEL;
 
   if (explicit) {
-    validateModelPolicy(explicit);
-    return explicit;
+    if (requiresFreeModelOnly() && !isFreeModelId(explicit)) {
+      // Ignore explicit non-free model when free-only mode is enabled.
+    } else {
+      validateModelPolicy(explicit);
+      return explicit;
+    }
   }
 
   const models = await listOpenRouterModels();
