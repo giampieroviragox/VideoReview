@@ -30,6 +30,7 @@ type RuntimeCampaign = {
     durationSeconds: number | null;
     aiStatus: string;
     aiGeneratedReview: string | null;
+    aiKeyPhrase: string | null;
     aiTranscript: string | null;
     aiProcessedAt: Date | null;
     answers: unknown;
@@ -134,6 +135,7 @@ export default async function DashboardPage() {
               durationSeconds: true,
               aiStatus: true,
               aiGeneratedReview: true,
+              aiKeyPhrase: true,
               aiTranscript: true,
               aiProcessedAt: true,
               answers: true,
@@ -175,6 +177,7 @@ export default async function DashboardPage() {
       durationSeconds: submission.durationSeconds,
       aiStatus: submission.aiStatus,
       aiGeneratedReview: submission.aiGeneratedReview,
+      aiKeyPhrase: submission.aiKeyPhrase,
       aiTranscript: submission.aiTranscript,
       aiProcessedAt: submission.aiProcessedAt
         ? submission.aiProcessedAt.toISOString()

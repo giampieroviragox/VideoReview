@@ -111,6 +111,7 @@ export default async function WallRoute({ params }: PageProps) {
           reviewerName: true,
           reviewerEmail: true,
           reviewerRating: true,
+          aiKeyPhrase: true,
           aiGeneratedReview: true,
           answers: true,
           durationSeconds: true,
@@ -136,6 +137,10 @@ export default async function WallRoute({ params }: PageProps) {
             ? submission.reviewerRating
             : 5,
         quote:
+          (typeof submission.aiKeyPhrase === "string" &&
+          submission.aiKeyPhrase.trim().length > 0
+            ? submission.aiKeyPhrase.trim()
+            : null) ||
           (typeof submission.aiGeneratedReview === "string" &&
           submission.aiGeneratedReview.trim().length > 0
             ? submission.aiGeneratedReview.trim()

@@ -25,7 +25,7 @@ export default function VideoRecorder({
     maxDurationSeconds = 90,
     variant = "default",
     mirrorPreview = true,
-    mirrorPlayback = false,
+    mirrorPlayback = mirrorPreview,
     labels,
 }: VideoRecorderProps) {
     const [state, setState] = useState<RecorderState>("idle");

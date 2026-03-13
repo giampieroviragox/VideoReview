@@ -114,6 +114,7 @@ export async function processSubmissionAiEnrichment({
         aiStatus: "COMPLETED",
         aiTranscript: extracted.transcript,
         aiGeneratedReview: extracted.generatedReview,
+        aiKeyPhrase: extracted.keyPhrase,
         aiModel: extracted.model,
         aiError: null,
         aiProcessedAt: new Date(),

@@ -23,6 +23,7 @@ type OpenRouterResponse = {
 type OpenRouterSubmissionExtraction = {
   transcript: string | null;
   generatedReview: string | null;
+  keyPhrase: string | null;
   model: string;
 };
 
@@ -155,6 +156,22 @@ function deriveReviewFromTranscript(transcript: string | null) {
 
   const compact = sentence.replace(/\s+/g, " ").trim();
   return compact.slice(0, 260);
+}
+
+function deriveKeyPhrase(
+  generatedReview: string | null,
+  transcript: string | null
+) {
+  const source = generatedReview || transcript;
+  if (!source) {
+    return null;
+  }
+
+  const sentence =
+    source.split(/(?<=[.!?])\s+/).find((part) => part.trim().length >= 18) ||
+    source;
+  const compact = sentence.replace(/\s+/g, " ").trim().replace(/^"|"$/g, "");
+  return compact.slice(0, 180);
 }
 
 async function callOpenRouterWithModel({
@@ -324,7 +341,7 @@ export async function rewriteTranscriptWithOpenRouter(transcript: string) {
     {
       role: "user",
       content:
-        "Rewrite the following transcript into a clean first-person written review (max 3 short sentences, no markdown). Return JSON with key generatedReview only.\n\nTranscript:\n" +
+        "Rewrite the following transcript into a clean first-person written review (max 3 short sentences, no markdown). Also return one short key phrase (max 12 words) useful as highlight. Return JSON with keys generatedReview and keyPhrase.\n\nTranscript:\n" +
         transcript,
     },
   ];
@@ -336,9 +353,16 @@ export async function rewriteTranscriptWithOpenRouter(transcript: string) {
     parsed?.generatedReview ?? parsed?.review ?? completion.content,
     1200
   );
+  const keyPhrase = sanitizeText(
+    parsed?.keyPhrase ?? parsed?.highlight ?? null,
+    180
+  );
+
+  const fallbackReview = generatedReview ?? deriveReviewFromTranscript(transcript);
 
   return {
-    generatedReview: generatedReview ?? deriveReviewFromTranscript(transcript),
+    generatedReview: fallbackReview,
+    keyPhrase: keyPhrase ?? deriveKeyPhrase(fallbackReview, transcript),
     model: completion.model,
   };
 }
@@ -361,6 +385,7 @@ export async function extractSubmissionInsightsFromAudio({
   return {
     transcript: transcription.transcript,
     generatedReview: rewritten.generatedReview,
+    keyPhrase: rewritten.keyPhrase,
     model: `${transcription.model} -> ${rewritten.model}`,
   };
 }

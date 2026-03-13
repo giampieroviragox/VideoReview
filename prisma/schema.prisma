@@ -70,6 +70,7 @@ model Submission {
   aiStatus          SubmissionAiStatus @default(NOT_REQUESTED)
   aiTranscript      String?
   aiGeneratedReview String?
+  aiKeyPhrase       String?
   aiError           String?
   aiModel           String?
   aiProcessedAt     DateTime?

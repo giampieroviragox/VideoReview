@@ -36,6 +36,7 @@ type DashboardShellProps = {
       durationSeconds: number | null;
       aiStatus: string;
       aiGeneratedReview: string | null;
+      aiKeyPhrase: string | null;
       aiTranscript: string | null;
       aiProcessedAt: string | null;
       answers: Array<{
@@ -152,6 +153,7 @@ function formatSubmissionDuration(durationSeconds: number | null) {
 }
 
 function getSubmissionExcerpt(
+  aiKeyPhrase: string | null,
   aiGeneratedReview: string | null,
   answers: Array<{
     questionId: string;
@@ -160,6 +162,11 @@ function getSubmissionExcerpt(
     required: boolean;
   }>
 ) {
+  const keyPhrase = typeof aiKeyPhrase === "string" ? aiKeyPhrase.trim() : "";
+  if (keyPhrase.length > 0) {
+    return `"${keyPhrase}"`;
+  }
+
   const generated = typeof aiGeneratedReview === "string" ? aiGeneratedReview.trim() : "";
   if (generated.length > 0) {
     return `"${generated}"`;
@@ -295,6 +302,10 @@ export default function DashboardShell({
   );
   const [showBuilder, setShowBuilder] = useState(false);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
+  const [selectedSubmissionRef, setSelectedSubmissionRef] = useState<{
+    campaignId: string;
+    submissionId: string;
+  } | null>(null);
   const [submissionActionId, setSubmissionActionId] = useState<string | null>(null);
   const [playingSubmissionId, setPlayingSubmissionId] = useState<string | null>(null);
   const [webhookEndpoints, setWebhookEndpoints] = useState<DashboardWebhookEndpoint[]>([]);
@@ -403,6 +414,31 @@ export default function DashboardShell({
   const selectedCampaign =
     campaignsState.find((campaign) => campaign.id === selectedCampaignId) || null;
 
+  const selectedSubmissionDetail = useMemo(() => {
+    if (!selectedSubmissionRef) {
+      return null;
+    }
+
+    const campaign = campaignsState.find(
+      (entry) => entry.id === selectedSubmissionRef.campaignId
+    );
+    if (!campaign) {
+      return null;
+    }
+
+    const submission = campaign.submissions.find(
+      (entry) => entry.id === selectedSubmissionRef.submissionId
+    );
+    if (!submission) {
+      return null;
+    }
+
+    return {
+      campaign,
+      submission,
+    };
+  }, [campaignsState, selectedSubmissionRef]);
+
   useEffect(() => {
     setSiteOrigin(window.location.origin);
   }, []);
@@ -439,6 +475,12 @@ export default function DashboardShell({
     setCampaignWebhookNotice(null);
     setLatestCampaignWebhookSecret(null);
   }, [selectedCampaignId, selectedCampaign]);
+
+  useEffect(() => {
+    if (activeSection !== "campaigns") {
+      setSelectedSubmissionRef(null);
+    }
+  }, [activeSection]);
 
   useEffect(() => {
     if (activeSection !== "wall" || wallLoaded || wallLoading) {
@@ -1645,6 +1687,7 @@ export default function DashboardShell({
                       const isPending = normalizedStatus === "PENDING";
                       const durationLabel = formatSubmissionDuration(submission.durationSeconds);
                       const excerpt = getSubmissionExcerpt(
+                        submission.aiKeyPhrase,
                         submission.aiGeneratedReview,
                         submission.answers
                       );
@@ -1729,6 +1772,18 @@ export default function DashboardShell({
                                   type="button"
                                   className="dashboard-secondary-btn dashboard-inline-action"
                                   onClick={() => {
+                                    setSelectedSubmissionRef({
+                                      campaignId: selectedCampaign.id,
+                                      submissionId: submission.id,
+                                    });
+                                  }}
+                                >
+                                  Details
+                                </button>
+                                <button
+                                  type="button"
+                                  className="dashboard-secondary-btn dashboard-inline-action"
+                                  onClick={() => {
                                     handleSubmissionAction(
                                       selectedCampaign.id,
                                       submission.id,
@@ -1741,20 +1796,34 @@ export default function DashboardShell({
                                 </button>
                               </>
                             ) : (
-                              <button
-                                type="button"
-                                className="dashboard-action-btn dashboard-inline-action"
-                                onClick={() => {
-                                  handleSubmissionAction(
-                                    selectedCampaign.id,
-                                    submission.id,
-                                    "APPROVED"
-                                  );
-                                }}
-                                disabled={submissionActionId === approveActionKey}
-                              >
-                                {submissionActionId === approveActionKey ? "Saving..." : "Approve"}
-                              </button>
+                              <>
+                                <button
+                                  type="button"
+                                  className="dashboard-action-btn dashboard-inline-action"
+                                  onClick={() => {
+                                    handleSubmissionAction(
+                                      selectedCampaign.id,
+                                      submission.id,
+                                      "APPROVED"
+                                    );
+                                  }}
+                                  disabled={submissionActionId === approveActionKey}
+                                >
+                                  {submissionActionId === approveActionKey ? "Saving..." : "Approve"}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="dashboard-secondary-btn dashboard-inline-action"
+                                  onClick={() => {
+                                    setSelectedSubmissionRef({
+                                      campaignId: selectedCampaign.id,
+                                      submissionId: submission.id,
+                                    });
+                                  }}
+                                >
+                                  Details
+                                </button>
+                              </>
                             )}
                           </div>
                         </article>
@@ -1762,6 +1831,115 @@ export default function DashboardShell({
                     })}
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {selectedSubmissionDetail && (
+            <div
+              className="dashboard-video-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Submission details"
+              onClick={() => {
+                setSelectedSubmissionRef(null);
+              }}
+            >
+              <div
+                className="dashboard-video-modal-card"
+                onClick={(event) => {
+                  event.stopPropagation();
+                }}
+              >
+                <div className="dashboard-video-modal-head">
+                  <div>
+                    <p className="dashboard-eyebrow">Submission details</p>
+                    <h3 className="dashboard-video-modal-title">
+                      {selectedSubmissionDetail.submission.reviewerName}
+                    </h3>
+                  </div>
+                  <button
+                    type="button"
+                    className="dashboard-icon-link"
+                    aria-label="Close details"
+                    onClick={() => {
+                      setSelectedSubmissionRef(null);
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="dashboard-video-modal-frame">
+                  <video
+                    controls
+                    playsInline
+                    preload="metadata"
+                    src={`/api/campaigns/${selectedSubmissionDetail.campaign.id}/submissions/${selectedSubmissionDetail.submission.id}/view`}
+                  />
+
+                  <div className="dashboard-submission-detail-grid">
+                    <div className="dashboard-submission-detail-item">
+                      <strong>Status</strong>
+                      <p>{selectedSubmissionDetail.submission.status}</p>
+                    </div>
+                    <div className="dashboard-submission-detail-item">
+                      <strong>Rating</strong>
+                      <p>
+                        {typeof selectedSubmissionDetail.submission.reviewerRating === "number"
+                          ? `${selectedSubmissionDetail.submission.reviewerRating} / 5`
+                          : "N/A"}
+                      </p>
+                    </div>
+                    <div className="dashboard-submission-detail-item">
+                      <strong>Email</strong>
+                      <p>{selectedSubmissionDetail.submission.reviewerEmail}</p>
+                    </div>
+                    <div className="dashboard-submission-detail-item">
+                      <strong>Campaign</strong>
+                      <p>{selectedSubmissionDetail.campaign.name}</p>
+                    </div>
+                    <div className="dashboard-submission-detail-item">
+                      <strong>Submitted</strong>
+                      <p>
+                        {new Date(
+                          selectedSubmissionDetail.submission.createdAt
+                        ).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="dashboard-submission-detail-item">
+                      <strong>AI status</strong>
+                      <p>{selectedSubmissionDetail.submission.aiStatus}</p>
+                    </div>
+                  </div>
+
+                  {(selectedSubmissionDetail.submission.aiKeyPhrase ||
+                    selectedSubmissionDetail.submission.aiGeneratedReview) && (
+                    <div className="dashboard-submission-ai-block">
+                      <p className="dashboard-settings-label">Key phrase</p>
+                      <p className="dashboard-submission-ai-copy">
+                        {selectedSubmissionDetail.submission.aiKeyPhrase ||
+                          selectedSubmissionDetail.submission.aiGeneratedReview}
+                      </p>
+                    </div>
+                  )}
+
+                  {selectedSubmissionDetail.submission.aiGeneratedReview && (
+                    <div className="dashboard-submission-ai-block">
+                      <p className="dashboard-settings-label">AI written review</p>
+                      <p className="dashboard-submission-ai-copy">
+                        {selectedSubmissionDetail.submission.aiGeneratedReview}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="dashboard-submission-ai-block">
+                    <p className="dashboard-settings-label">Transcript</p>
+                    <p className="dashboard-submission-ai-copy">
+                      {selectedSubmissionDetail.submission.aiTranscript ||
+                        "Transcript not available yet."}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -4067,6 +4245,56 @@ const dashboardShellStyles = `
     background: #09090c;
   }
 
+  .dashboard-submission-detail-grid {
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .dashboard-submission-detail-item {
+    border: 1px solid rgba(24, 24, 32, 0.1);
+    border-radius: 12px;
+    background: #fff;
+    padding: 10px 12px;
+  }
+
+  .dashboard-submission-detail-item strong {
+    display: block;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.11em;
+    color: rgba(24, 24, 32, 0.42);
+    margin-bottom: 4px;
+    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  .dashboard-submission-detail-item p {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #14141b;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+
+  .dashboard-submission-ai-block {
+    margin-top: 12px;
+    border: 1px solid rgba(24, 24, 32, 0.1);
+    border-radius: 12px;
+    background: #fff;
+    padding: 10px 12px;
+  }
+
+  .dashboard-submission-ai-copy {
+    margin-top: 6px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: rgba(24, 24, 32, 0.76);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
   @media (max-width: 1100px) {
     .dashboard-sidebar {
       position: static;
@@ -4211,6 +4439,10 @@ const dashboardShellStyles = `
     .dashboard-video-modal-head,
     .dashboard-video-modal-frame {
       padding: 14px;
+    }
+
+    .dashboard-submission-detail-grid {
+      grid-template-columns: 1fr;
     }
 
     .dashboard-review-grid {
