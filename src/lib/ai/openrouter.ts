@@ -34,7 +34,7 @@ type OpenRouterModelCatalogEntry = {
   };
 };
 
-export type AudioInputFormat = "wav" | "mp3";
+export type AudioInputFormat = "wav" | "mp3" | "webm" | "mp4";
 
 function getOpenRouterApiKey() {
   return process.env.OPENROUTER_API_KEY?.trim() || "";
@@ -299,7 +299,7 @@ export async function transcribeAudioWithOpenRouter({
         {
           type: "text",
           text:
-            "Transcribe this customer testimonial audio. Return only JSON: {\"transcript\":\"...\"}. If unclear, do your best and keep language of the speaker.",
+            "Transcribe this customer testimonial audio/video. Return only JSON: {\"transcript\":\"...\"}. If unclear, do your best and keep language of the speaker.",
         },
         {
           type: "input_audio",
