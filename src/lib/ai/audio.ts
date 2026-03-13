@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { constants } from "node:fs";
-import { mkdtemp, readFile, rm, stat, writeFile, access } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, writeFile, access, chmod } from "node:fs/promises";
 import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
@@ -17,7 +17,7 @@ async function canExecute(binaryPath: string) {
   }
 
   try {
-    await access(binaryPath, constants.X_OK);
+    await access(binaryPath, constants.F_OK);
     return true;
   } catch {
     return false;
@@ -92,6 +92,14 @@ async function runFfmpeg(args: string[]) {
 
   for (const binaryPath of binaries) {
     try {
+      if (binaryPath !== "ffmpeg") {
+        try {
+          await chmod(binaryPath, 0o755);
+        } catch {
+          // Continue; spawn will fail if the binary remains not executable.
+        }
+      }
+
       await runFfmpegWithBinary(binaryPath, args);
       return;
     } catch (error) {

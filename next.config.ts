@@ -6,7 +6,9 @@ const nextConfig: NextConfig = {
     "/api/campaigns/[campaignId]/submissions": [
       "./node_modules/ffmpeg-static/**",
     ],
-    "/api/internal/ai/submissions/process": ["./node_modules/ffmpeg-static/**"],
+    "/api/internal/ai/submissions/process": [
+      "./node_modules/ffmpeg-static/**",
+    ],
   },
 };
 
