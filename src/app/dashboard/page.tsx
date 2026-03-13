@@ -29,6 +29,7 @@ type RuntimeCampaign = {
     videoKey: string;
     durationSeconds: number | null;
     aiStatus: string;
+    aiError: string | null;
     aiGeneratedReview: string | null;
     aiKeyPhrase: string | null;
     aiTranscript: string | null;
@@ -134,6 +135,7 @@ export default async function DashboardPage() {
               videoKey: true,
               durationSeconds: true,
               aiStatus: true,
+              aiError: true,
               aiGeneratedReview: true,
               aiKeyPhrase: true,
               aiTranscript: true,
@@ -176,6 +178,7 @@ export default async function DashboardPage() {
       videoKey: submission.videoKey,
       durationSeconds: submission.durationSeconds,
       aiStatus: submission.aiStatus,
+      aiError: submission.aiError,
       aiGeneratedReview: submission.aiGeneratedReview,
       aiKeyPhrase: submission.aiKeyPhrase,
       aiTranscript: submission.aiTranscript,

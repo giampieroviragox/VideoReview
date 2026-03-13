@@ -35,6 +35,7 @@ type DashboardShellProps = {
       videoKey: string;
       durationSeconds: number | null;
       aiStatus: string;
+      aiError: string | null;
       aiGeneratedReview: string | null;
       aiKeyPhrase: string | null;
       aiTranscript: string | null;
@@ -1234,6 +1235,7 @@ export default function DashboardShell({
     setActiveSection("campaigns");
     setShowBuilder(false);
     setSelectedCampaignId(null);
+    setSelectedSubmissionRef(null);
     scrollDashboardToTop();
   }
 
@@ -1241,6 +1243,7 @@ export default function DashboardShell({
     setActiveSection("settings");
     setShowBuilder(false);
     setSelectedCampaignId(null);
+    setSelectedSubmissionRef(null);
     scrollDashboardToTop();
   }
 
@@ -1248,6 +1251,7 @@ export default function DashboardShell({
     setActiveSection("wall");
     setShowBuilder(false);
     setSelectedCampaignId(null);
+    setSelectedSubmissionRef(null);
     scrollDashboardToTop();
   }
 
@@ -1255,6 +1259,20 @@ export default function DashboardShell({
     setActiveSection("brand");
     setShowBuilder(false);
     setSelectedCampaignId(null);
+    setSelectedSubmissionRef(null);
+    scrollDashboardToTop();
+  }
+
+  function openSubmissionDetails(campaignId: string, submissionId: string) {
+    setSelectedSubmissionRef({
+      campaignId,
+      submissionId,
+    });
+    scrollDashboardToTop();
+  }
+
+  function closeSubmissionDetails() {
+    setSelectedSubmissionRef(null);
     scrollDashboardToTop();
   }
 
@@ -1456,7 +1474,7 @@ export default function DashboardShell({
             </div>
           )}
 
-          {activeSection === "campaigns" && selectedCampaign && (
+          {activeSection === "campaigns" && selectedCampaign && !selectedSubmissionDetail && (
             <div className="dashboard-submissions-card">
               <div className="dashboard-builder-toolbar dashboard-sub-toolbar">
                 <button
@@ -1772,10 +1790,7 @@ export default function DashboardShell({
                                   type="button"
                                   className="dashboard-secondary-btn dashboard-inline-action"
                                   onClick={() => {
-                                    setSelectedSubmissionRef({
-                                      campaignId: selectedCampaign.id,
-                                      submissionId: submission.id,
-                                    });
+                                    openSubmissionDetails(selectedCampaign.id, submission.id);
                                   }}
                                 >
                                   Details
@@ -1815,10 +1830,7 @@ export default function DashboardShell({
                                   type="button"
                                   className="dashboard-secondary-btn dashboard-inline-action"
                                   onClick={() => {
-                                    setSelectedSubmissionRef({
-                                      campaignId: selectedCampaign.id,
-                                      submissionId: submission.id,
-                                    });
+                                    openSubmissionDetails(selectedCampaign.id, submission.id);
                                   }}
                                 >
                                   Details
@@ -1835,110 +1847,99 @@ export default function DashboardShell({
             </div>
           )}
 
-          {selectedSubmissionDetail && (
-            <div
-              className="dashboard-video-modal"
-              role="dialog"
-              aria-modal="true"
-              aria-label="Submission details"
-              onClick={() => {
-                setSelectedSubmissionRef(null);
-              }}
-            >
-              <div
-                className="dashboard-video-modal-card"
-                onClick={(event) => {
-                  event.stopPropagation();
-                }}
-              >
-                <div className="dashboard-video-modal-head">
-                  <div>
-                    <p className="dashboard-eyebrow">Submission details</p>
-                    <h3 className="dashboard-video-modal-title">
-                      {selectedSubmissionDetail.submission.reviewerName}
-                    </h3>
-                  </div>
-                  <button
-                    type="button"
-                    className="dashboard-icon-link"
-                    aria-label="Close details"
-                    onClick={() => {
-                      setSelectedSubmissionRef(null);
-                    }}
-                  >
-                    ✕
-                  </button>
+          {activeSection === "campaigns" && selectedCampaign && selectedSubmissionDetail && (
+            <div className="dashboard-submissions-card dashboard-submission-detail-page">
+              <div className="dashboard-builder-toolbar dashboard-sub-toolbar">
+                <button
+                  type="button"
+                  className="dashboard-secondary-btn dashboard-back-btn"
+                  onClick={closeSubmissionDetails}
+                >
+                  ← Back to submissions
+                </button>
+              </div>
+
+              <div className="dashboard-submission-page-head">
+                <div>
+                  <p className="dashboard-eyebrow">Submission details</p>
+                  <h2 className="dashboard-submissions-title">
+                    {selectedSubmissionDetail.submission.reviewerName}
+                  </h2>
+                  <p className="dashboard-submissions-link">{selectedSubmissionDetail.campaign.name}</p>
                 </div>
-                <div className="dashboard-video-modal-frame">
-                  <video
-                    controls
-                    playsInline
-                    preload="metadata"
-                    src={`/api/campaigns/${selectedSubmissionDetail.campaign.id}/submissions/${selectedSubmissionDetail.submission.id}/view`}
-                  />
+              </div>
 
-                  <div className="dashboard-submission-detail-grid">
-                    <div className="dashboard-submission-detail-item">
-                      <strong>Status</strong>
-                      <p>{selectedSubmissionDetail.submission.status}</p>
-                    </div>
-                    <div className="dashboard-submission-detail-item">
-                      <strong>Rating</strong>
-                      <p>
-                        {typeof selectedSubmissionDetail.submission.reviewerRating === "number"
-                          ? `${selectedSubmissionDetail.submission.reviewerRating} / 5`
-                          : "N/A"}
-                      </p>
-                    </div>
-                    <div className="dashboard-submission-detail-item">
-                      <strong>Email</strong>
-                      <p>{selectedSubmissionDetail.submission.reviewerEmail}</p>
-                    </div>
-                    <div className="dashboard-submission-detail-item">
-                      <strong>Campaign</strong>
-                      <p>{selectedSubmissionDetail.campaign.name}</p>
-                    </div>
-                    <div className="dashboard-submission-detail-item">
-                      <strong>Submitted</strong>
-                      <p>
-                        {new Date(
-                          selectedSubmissionDetail.submission.createdAt
-                        ).toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="dashboard-submission-detail-item">
-                      <strong>AI status</strong>
-                      <p>{selectedSubmissionDetail.submission.aiStatus}</p>
-                    </div>
+              <div className="dashboard-submission-detail-frame">
+                <video
+                  controls
+                  playsInline
+                  preload="metadata"
+                  src={`/api/campaigns/${selectedSubmissionDetail.campaign.id}/submissions/${selectedSubmissionDetail.submission.id}/view`}
+                />
+
+                <div className="dashboard-submission-detail-grid">
+                  <div className="dashboard-submission-detail-item">
+                    <strong>Status</strong>
+                    <p>{selectedSubmissionDetail.submission.status}</p>
                   </div>
-
-                  {(selectedSubmissionDetail.submission.aiKeyPhrase ||
-                    selectedSubmissionDetail.submission.aiGeneratedReview) && (
-                    <div className="dashboard-submission-ai-block">
-                      <p className="dashboard-settings-label">Key phrase</p>
-                      <p className="dashboard-submission-ai-copy">
-                        {selectedSubmissionDetail.submission.aiKeyPhrase ||
-                          selectedSubmissionDetail.submission.aiGeneratedReview}
-                      </p>
-                    </div>
-                  )}
-
-                  {selectedSubmissionDetail.submission.aiGeneratedReview && (
-                    <div className="dashboard-submission-ai-block">
-                      <p className="dashboard-settings-label">AI written review</p>
-                      <p className="dashboard-submission-ai-copy">
-                        {selectedSubmissionDetail.submission.aiGeneratedReview}
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="dashboard-submission-ai-block">
-                    <p className="dashboard-settings-label">Transcript</p>
-                    <p className="dashboard-submission-ai-copy">
-                      {selectedSubmissionDetail.submission.aiTranscript ||
-                        "Transcript not available yet."}
+                  <div className="dashboard-submission-detail-item">
+                    <strong>Rating</strong>
+                    <p>
+                      {typeof selectedSubmissionDetail.submission.reviewerRating === "number"
+                        ? `${selectedSubmissionDetail.submission.reviewerRating} / 5`
+                        : "N/A"}
                     </p>
                   </div>
+                  <div className="dashboard-submission-detail-item">
+                    <strong>Email</strong>
+                    <p>{selectedSubmissionDetail.submission.reviewerEmail}</p>
+                  </div>
+                  <div className="dashboard-submission-detail-item">
+                    <strong>Campaign</strong>
+                    <p>{selectedSubmissionDetail.campaign.name}</p>
+                  </div>
+                  <div className="dashboard-submission-detail-item">
+                    <strong>Submitted</strong>
+                    <p>{new Date(selectedSubmissionDetail.submission.createdAt).toLocaleString()}</p>
+                  </div>
+                  <div className="dashboard-submission-detail-item">
+                    <strong>AI status</strong>
+                    <p>{selectedSubmissionDetail.submission.aiStatus}</p>
+                  </div>
+                </div>
+
+                {selectedSubmissionDetail.submission.aiError && (
+                  <div className="dashboard-settings-alert dashboard-settings-alert-error">
+                    AI processing failed: {selectedSubmissionDetail.submission.aiError}
+                  </div>
+                )}
+
+                {(selectedSubmissionDetail.submission.aiKeyPhrase ||
+                  selectedSubmissionDetail.submission.aiGeneratedReview) && (
+                  <div className="dashboard-submission-ai-block">
+                    <p className="dashboard-settings-label">Key phrase</p>
+                    <p className="dashboard-submission-ai-copy">
+                      {selectedSubmissionDetail.submission.aiKeyPhrase ||
+                        selectedSubmissionDetail.submission.aiGeneratedReview}
+                    </p>
+                  </div>
+                )}
+
+                {selectedSubmissionDetail.submission.aiGeneratedReview && (
+                  <div className="dashboard-submission-ai-block">
+                    <p className="dashboard-settings-label">AI written review</p>
+                    <p className="dashboard-submission-ai-copy">
+                      {selectedSubmissionDetail.submission.aiGeneratedReview}
+                    </p>
+                  </div>
+                )}
+
+                <div className="dashboard-submission-ai-block">
+                  <p className="dashboard-settings-label">Transcript</p>
+                  <p className="dashboard-submission-ai-copy">
+                    {selectedSubmissionDetail.submission.aiTranscript ||
+                      "Transcript not available yet."}
+                  </p>
                 </div>
               </div>
             </div>
@@ -4196,51 +4197,25 @@ const dashboardShellStyles = `
     font-size: 12px;
   }
 
-  .dashboard-video-modal {
-    position: fixed;
-    inset: 0;
-    z-index: 160;
-    display: grid;
-    place-items: center;
-    padding: 24px;
-    background: rgba(18, 18, 24, 0.42);
-    backdrop-filter: blur(8px);
+  .dashboard-submission-detail-page {
+    gap: 16px;
   }
 
-  .dashboard-video-modal-card {
-    width: min(760px, 100%);
-    border-radius: 22px;
+  .dashboard-submission-page-head {
+    padding: 0 2px;
+  }
+
+  .dashboard-submission-detail-frame {
+    padding: 18px;
+    border-radius: 18px;
     border: 1px solid rgba(24, 24, 32, 0.08);
-    background: rgba(255, 255, 255, 0.98);
-    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.18);
-    overflow: hidden;
-  }
-
-  .dashboard-video-modal-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 16px 18px;
-    border-bottom: 1px solid rgba(24, 24, 32, 0.08);
-  }
-
-  .dashboard-video-modal-title {
-    font-size: 15px;
-    font-weight: 800;
-    letter-spacing: -0.03em;
-    color: #14141b;
-  }
-
-  .dashboard-video-modal-frame {
-    padding: 16px;
     background: #f7f4ef;
   }
 
-  .dashboard-video-modal-frame video {
+  .dashboard-submission-detail-frame video {
     display: block;
     width: 100%;
-    max-height: min(72vh, 760px);
+    max-height: min(70vh, 760px);
     border-radius: 18px;
     background: #09090c;
   }
@@ -4432,12 +4407,7 @@ const dashboardShellStyles = `
       grid-template-columns: 1fr;
     }
 
-    .dashboard-video-modal {
-      padding: 14px;
-    }
-
-    .dashboard-video-modal-head,
-    .dashboard-video-modal-frame {
+    .dashboard-submission-detail-frame {
       padding: 14px;
     }
 
