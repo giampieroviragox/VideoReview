@@ -281,9 +281,7 @@ async function resolveTranscriptionModel() {
   });
 
   if (!audioFreeModel?.id) {
-    throw new Error(
-      "No free audio-capable model found on OpenRouter. Set OPENROUTER_TRANSCRIPTION_MODEL to a free audio model (ending with :free)."
-    );
+    return DEFAULT_OPENROUTER_MODEL;
   }
 
   return audioFreeModel.id;
