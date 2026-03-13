@@ -1870,12 +1870,14 @@ export default function DashboardShell({
               </div>
 
               <div className="dashboard-submission-detail-frame">
-                <video
-                  controls
-                  playsInline
-                  preload="metadata"
-                  src={`/api/campaigns/${selectedSubmissionDetail.campaign.id}/submissions/${selectedSubmissionDetail.submission.id}/view`}
-                />
+                <div className="dashboard-submission-detail-player">
+                  <video
+                    controls
+                    playsInline
+                    preload="metadata"
+                    src={`/api/campaigns/${selectedSubmissionDetail.campaign.id}/submissions/${selectedSubmissionDetail.submission.id}/view`}
+                  />
+                </div>
 
                 <div className="dashboard-submission-detail-grid">
                   <div className="dashboard-submission-detail-item">
@@ -4212,11 +4214,20 @@ const dashboardShellStyles = `
     background: #f7f4ef;
   }
 
+  .dashboard-submission-detail-player {
+    width: min(430px, 100%);
+    margin: 0 auto;
+    border-radius: 18px;
+    overflow: hidden;
+    background: #09090c;
+    aspect-ratio: 4 / 5;
+  }
+
   .dashboard-submission-detail-frame video {
     display: block;
     width: 100%;
-    max-height: min(70vh, 760px);
-    border-radius: 18px;
+    height: 100%;
+    object-fit: cover;
     background: #09090c;
   }
 
