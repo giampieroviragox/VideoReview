@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import { getCampaignDelegate, prisma } from "@/lib/db";
+import { getCampaignDelegate } from "@/lib/db";
 import {
   buildCampaignInviteMessage,
   buildCampaignPublicPath,
@@ -72,26 +72,6 @@ export async function PATCH(
 
     if (action !== "unpublish" && action !== "publish") {
       return NextResponse.json({ error: "Unsupported campaign action." }, { status: 400 });
-    }
-
-    if (action === "unpublish") {
-      const wall = await prisma.wallOfLove.findFirst({
-        where: {
-          ownerUserId: userId,
-          isPublished: true,
-        },
-        select: { slug: true },
-      });
-
-      if (!wall) {
-        return NextResponse.json(
-          {
-            error:
-              "Publish your Wall of Love before unpublishing a campaign, so visitors can be redirected automatically.",
-          },
-          { status: 400 }
-        );
-      }
     }
 
     const updatedCampaign = await campaignDelegate.update({

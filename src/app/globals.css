@@ -2,7 +2,7 @@
    VR DESIGN SYSTEM · v2
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,700;1,900&family=DM+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700;800&family=Figtree:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,700;1,900&family=DM+Mono:wght@400;500&display=swap');
 
 :root {
   /* Legacy dark surfaces used by modal/demo sections */

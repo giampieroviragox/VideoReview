@@ -260,105 +260,120 @@ export default function WallOfLovePage({ wall, reviews }: WallOfLovePageProps) {
 
 const wallStyles = `
   .wol-shell {
+    --brand: #ff4820;
+    --wol-bg: #ffffff;
+    --wol-bg-subtle: #f7f7f7;
+    --wol-border: #e8e8e8;
+    --wol-border-strong: #d0d0d0;
+    --wol-text: #0a0a0a;
+    --wol-text-secondary: #5c5c5c;
+    --wol-text-tertiary: #9a9a9a;
+    --wol-font: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     min-height: 100vh;
-    background: #f7f6f4;
-    color: #0f0f0f;
+    background: var(--wol-bg);
+    color: var(--wol-text);
     padding-top: 60px;
+    font-family: var(--wol-font);
   }
 
   .wol-hero {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 64px 24px 32px;
-    text-align: center;
+    max-width: none;
+    margin: 0;
+    padding: 40px 32px 22px;
     display: grid;
-    gap: 12px;
-    justify-items: center;
+    gap: 10px;
   }
 
   .wol-eyebrow {
     display: inline-flex;
     align-items: center;
-    padding: 5px 14px;
+    padding: 0;
     border-radius: 999px;
-    border: 1px solid rgba(255,92,53,.3);
-    background: #fff0ec;
+    border: none;
+    background: transparent;
     color: var(--brand);
     font-size: 11px;
-    font-weight: 800;
-    letter-spacing: .12em;
+    font-weight: 600;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   }
 
   .wol-title {
-    max-width: 760px;
-    font-size: clamp(34px, 6vw, 58px);
-    line-height: 1;
-    letter-spacing: -0.05em;
-    font-weight: 900;
+    max-width: 780px;
+    font-size: clamp(34px, 5vw, 52px);
+    line-height: 1.05;
+    letter-spacing: -0.04em;
+    font-weight: 600;
   }
 
   .wol-subtitle {
-    max-width: 620px;
-    font-size: 17px;
-    color: #6b6b6b;
+    max-width: 640px;
+    font-size: 15px;
+    color: var(--wol-text-secondary);
     line-height: 1.65;
   }
 
   .wol-metrics {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 22px;
+    justify-content: flex-start;
+    gap: 10px;
     flex-wrap: wrap;
-    margin-top: 4px;
+    margin-top: 6px;
   }
 
   .wol-metric {
-    display: grid;
-    justify-items: center;
-    gap: 2px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    border: 1px solid var(--wol-border);
+    border-radius: 8px;
+    background: var(--wol-bg-subtle);
+    padding: 8px 10px;
   }
 
   .wol-metric-value {
-    font-size: 28px;
-    font-weight: 900;
+    font-size: 20px;
+    font-weight: 600;
     line-height: 1;
-    letter-spacing: -0.04em;
+    letter-spacing: -0.02em;
   }
 
   .wol-metric-label {
     font-size: 11px;
-    color: #a0a0a0;
-    font-weight: 600;
-    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    color: var(--wol-text-secondary);
+    font-weight: 500;
   }
 
   .wol-metric-sep {
-    width: 1px;
-    height: 34px;
-    background: rgba(0,0,0,.14);
+    display: none;
   }
 
   .wol-filters {
-    max-width: 1100px;
-    margin: 0 auto 18px;
-    padding: 0 24px;
+    max-width: none;
+    margin: 0 0 14px;
+    padding: 0 32px;
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
   }
 
   .wol-filter {
-    border: 1px solid rgba(0,0,0,.18);
-    background: #fff;
-    color: #3a3a3a;
-    border-radius: 999px;
-    padding: 8px 14px;
-    font-size: 12px;
-    font-weight: 700;
+    border: 1px solid var(--wol-border);
+    background: var(--wol-bg);
+    color: var(--wol-text-secondary);
+    border-radius: 6px;
+    min-height: 30px;
+    padding: 0 12px;
+    font-size: 13px;
+    font-weight: 500;
     cursor: pointer;
+  }
+
+  .wol-filter:hover {
+    border-color: var(--wol-border-strong);
+    color: var(--wol-text);
+    background: var(--wol-bg-subtle);
   }
 
   .wol-filter.active {
@@ -368,28 +383,31 @@ const wallStyles = `
   }
 
   .wol-grid {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 0 24px 64px;
-    column-count: 3;
-    column-gap: 16px;
+    max-width: none;
+    margin: 0;
+    padding: 0 32px 56px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
   }
 
   .wol-card {
-    break-inside: avoid;
-    margin-bottom: 16px;
-    border-radius: 26px;
-    border: 1px solid rgba(0,0,0,.08);
-    background: #fff;
+    border-radius: 10px;
+    border: 1px solid var(--wol-border);
+    background: var(--wol-bg);
     overflow: hidden;
-    box-shadow: 0 1px 4px rgba(0,0,0,.04), 0 8px 22px rgba(0,0,0,.05);
     cursor: pointer;
+    transition: border-color 160ms ease;
+  }
+
+  .wol-card:hover {
+    border-color: var(--wol-border-strong);
   }
 
   .wol-card-video {
     position: relative;
     aspect-ratio: 4 / 5;
-    background: #0f0f0f;
+    background: #0a0a0a;
   }
 
   .wol-card-video video {
@@ -402,7 +420,7 @@ const wallStyles = `
   .wol-card-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(to bottom, transparent 35%, rgba(0,0,0,.75));
+    background: linear-gradient(to bottom, transparent 55%, rgba(0,0,0,.62));
   }
 
   .wol-card-play {
@@ -410,21 +428,21 @@ const wallStyles = `
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 52px;
-    height: 52px;
+    width: 38px;
+    height: 38px;
     border-radius: 999px;
     display: grid;
     place-items: center;
     color: #fff;
-    background: rgba(255,255,255,.14);
-    border: 2px solid rgba(255,255,255,.3);
+    background: rgba(255,255,255,.2);
+    border: 1px solid rgba(255,255,255,.34);
   }
 
   .wol-card-stars {
     position: absolute;
-    top: 10px;
-    left: 10px;
-    font-size: 13px;
+    top: 8px;
+    left: 8px;
+    font-size: 12px;
     color: #ffb020;
   }
 
@@ -434,42 +452,41 @@ const wallStyles = `
 
   .wol-featured-badge {
     position: absolute;
-    top: 10px;
-    right: 10px;
-    background: var(--brand);
-    color: #fff;
+    top: 8px;
+    right: 8px;
+    background: #fff3f0;
+    border: 1px solid #ffccc4;
+    color: var(--brand);
     font-size: 10px;
-    font-weight: 800;
+    font-weight: 600;
     border-radius: 999px;
-    padding: 4px 9px;
-    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    letter-spacing: .08em;
+    padding: 3px 8px;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
   }
 
   .wol-duration {
     position: absolute;
-    right: 10px;
-    bottom: 10px;
+    right: 8px;
+    bottom: 8px;
     border-radius: 999px;
     padding: 2px 8px;
-    background: rgba(0,0,0,.65);
+    background: rgba(0,0,0,.58);
     color: #fff;
     font-size: 10px;
-    font-weight: 700;
-    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-weight: 500;
   }
 
   .wol-card-body {
-    padding: 16px;
+    padding: 12px;
     display: grid;
-    gap: 12px;
+    gap: 10px;
   }
 
   .wol-quote {
-    font-size: 14px;
-    line-height: 1.5;
-    font-weight: 700;
+    font-size: 13px;
+    line-height: 1.55;
+    font-weight: 500;
     letter-spacing: -0.01em;
   }
 
@@ -480,87 +497,89 @@ const wallStyles = `
   }
 
   .wol-avatar {
-    width: 34px;
-    height: 34px;
+    width: 30px;
+    height: 30px;
     border-radius: 999px;
-    border: 1px solid rgba(0,0,0,.14);
-    background: #efede9;
+    border: 1px solid var(--wol-border);
+    background: var(--wol-bg-subtle);
     display: grid;
     place-items: center;
-    font-size: 12px;
-    font-weight: 800;
+    font-size: 11px;
+    font-weight: 600;
   }
 
   .wol-name {
     font-size: 13px;
-    font-weight: 800;
+    font-weight: 600;
     letter-spacing: -0.01em;
   }
 
   .wol-role {
     font-size: 11px;
-    color: #a0a0a0;
-    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    color: var(--wol-text-secondary);
   }
 
   .wol-empty {
-    column-span: all;
-    padding: 26px;
+    grid-column: 1 / -1;
+    padding: 18px;
     text-align: center;
-    border: 1px dashed rgba(0,0,0,.16);
-    border-radius: 18px;
-    color: #6b6b6b;
-    background: rgba(255,255,255,.84);
+    border: 1px dashed var(--wol-border-strong);
+    border-radius: 10px;
+    color: var(--wol-text-secondary);
+    background: var(--wol-bg-subtle);
   }
 
   .wol-footer {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 0 24px 24px;
-    text-align: center;
+    max-width: none;
+    margin: 6px 0 0;
+    padding: 16px 32px 24px;
+    text-align: left;
     display: grid;
-    justify-items: center;
-    gap: 10px;
+    justify-items: flex-start;
+    gap: 8px;
+    border-top: 1px solid var(--wol-border);
   }
 
   .wol-footer h2 {
-    font-size: clamp(24px, 4vw, 38px);
-    font-weight: 900;
-    letter-spacing: -0.04em;
+    font-size: clamp(24px, 4vw, 32px);
+    font-weight: 600;
+    letter-spacing: -0.03em;
     line-height: 1.1;
   }
 
   .wol-footer p {
-    color: #6b6b6b;
-    font-size: 15px;
+    color: var(--wol-text-secondary);
+    font-size: 14px;
     max-width: 420px;
   }
 
   .wol-footer-cta {
-    margin-top: 6px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 50px;
-    border-radius: 999px;
-    padding: 0 28px;
+    min-height: 32px;
+    border-radius: 6px;
+    padding: 0 12px;
     text-decoration: none;
-    font-size: 16px;
-    font-weight: 800;
+    font-size: 13px;
+    font-weight: 500;
     color: #fff;
     background: var(--brand);
   }
 
+  .wol-footer-cta:hover {
+    filter: brightness(0.98);
+  }
+
   .wol-signature {
-    padding: 0 24px 52px;
-    text-align: center;
+    padding: 0 32px 40px;
+    text-align: left;
     font-size: 11px;
-    color: #d0d0d0;
+    color: var(--wol-text-tertiary);
     display: flex;
     gap: 6px;
     align-items: center;
-    justify-content: center;
-    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    justify-content: flex-start;
   }
 
   .wol-signature-mark {
@@ -572,40 +591,41 @@ const wallStyles = `
     position: fixed;
     inset: 0;
     z-index: 90;
-    background: rgba(0,0,0,.68);
-    backdrop-filter: blur(10px);
+    background: rgba(10,10,10,.56);
+    backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 24px;
+    padding: 20px;
   }
 
   .wol-lightbox-close {
     position: absolute;
-    top: 20px;
-    right: 20px;
-    width: 42px;
-    height: 42px;
+    top: 12px;
+    right: 12px;
+    width: 34px;
+    height: 34px;
     border-radius: 999px;
-    border: 1px solid rgba(255,255,255,.32);
+    border: 1px solid rgba(255,255,255,.28);
     background: rgba(255,255,255,.1);
     color: #fff;
-    font-size: 26px;
+    font-size: 22px;
     cursor: pointer;
   }
 
   .wol-lightbox-card {
-    max-width: 880px;
+    max-width: 920px;
     width: 100%;
     display: grid;
-    grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
-    gap: 20px;
+    grid-template-columns: minmax(220px, 360px) minmax(0, 1fr);
+    gap: 14px;
   }
 
   .wol-lightbox-video {
-    border-radius: 24px;
+    border-radius: 10px;
     overflow: hidden;
     background: #000;
+    border: 1px solid var(--wol-border);
     aspect-ratio: 4 / 5;
   }
 
@@ -616,35 +636,40 @@ const wallStyles = `
   }
 
   .wol-lightbox-copy {
-    border-radius: 24px;
-    border: 1px solid rgba(0,0,0,.1);
-    background: #fff;
-    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid var(--wol-border);
+    background: var(--wol-bg);
+    padding: 14px;
     display: grid;
-    gap: 16px;
+    gap: 12px;
     align-content: start;
   }
 
   .wol-lightbox-stars {
     color: #ffb020;
-    font-size: 20px;
+    font-size: 16px;
     line-height: 1;
   }
 
   .wol-lightbox-stars span {
-    color: #e5e3de;
+    color: #d0d0d0;
   }
 
   .wol-lightbox-quote {
-    font-size: 20px;
+    font-size: 18px;
     line-height: 1.4;
-    font-weight: 900;
+    font-weight: 600;
     letter-spacing: -0.03em;
   }
 
   @media (max-width: 960px) {
-    .wol-grid {
-      column-count: 2;
+    .wol-hero,
+    .wol-filters,
+    .wol-grid,
+    .wol-footer,
+    .wol-signature {
+      padding-left: 20px;
+      padding-right: 20px;
     }
   }
 
@@ -659,8 +684,8 @@ const wallStyles = `
     }
 
     .wol-grid {
-      column-count: 1;
-      padding-bottom: 42px;
+      grid-template-columns: 1fr;
+      padding-bottom: 36px;
     }
 
     .wol-lightbox {

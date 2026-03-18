@@ -1,6 +1,6 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getCampaignDelegate, prisma } from "@/lib/db";
+import { getCampaignDelegate } from "@/lib/db";
 import CampaignSubmissionForm from "@/components/CampaignSubmissionForm";
 
 type CampaignMetadataRuntimeDelegate = {
@@ -115,18 +115,6 @@ export default async function CampaignPublicPage({ params, searchParams }: PageP
   const isPublished = campaign.hasNoEndDate || !campaign.endsAt;
 
   if (!isPublished) {
-    const wall = await prisma.wallOfLove.findFirst({
-      where: {
-        ownerUserId: campaign.ownerUserId,
-        isPublished: true,
-      },
-      select: { slug: true },
-    });
-
-    if (wall) {
-      redirect(`/wall/${wall.slug}`);
-    }
-
     notFound();
   }
 
@@ -134,7 +122,7 @@ export default async function CampaignPublicPage({ params, searchParams }: PageP
     <main
       style={{
         minHeight: embedMode ? "auto" : "100vh",
-        background: embedMode ? "transparent" : "#f3efeb",
+        background: embedMode ? "transparent" : "#ffffff",
       }}
     >
       <CampaignSubmissionForm

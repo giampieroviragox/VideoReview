@@ -298,6 +298,7 @@ export default function CampaignSubmissionForm({
                             onRecordingComplete={handleRecordingComplete}
                             maxDurationSeconds={60}
                             variant="immersive"
+                            immersivePreset="flat"
                             labels={{
                               idlePrompt: "Click to enable your camera and start recording",
                               enableCamera: "Enable camera",
@@ -462,10 +463,20 @@ export default function CampaignSubmissionForm({
 
 const publicReviewStyles = `
   .invite-review-page {
+    --brand: #ff4820;
+    --invite-bg: #ffffff;
+    --invite-bg-subtle: #f7f7f7;
+    --invite-bg-muted: #f0f0f0;
+    --invite-border: #e8e8e8;
+    --invite-border-strong: #d0d0d0;
+    --invite-text: #0a0a0a;
+    --invite-text-secondary: #5c5c5c;
+    --invite-text-tertiary: #9a9a9a;
+    --invite-font: "Geist", "Inter", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     min-height: 100svh;
-    background: #f7f6f4;
-    color: #0f0f0f;
-    font-family: "Figtree", sans-serif;
+    background: var(--invite-bg);
+    color: var(--invite-text);
+    font-family: var(--invite-font);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -487,16 +498,16 @@ const publicReviewStyles = `
   }
 
   .invite-review-page.is-embedded .invite-review-card {
-    border-radius: 20px;
+    border-radius: 10px;
     box-shadow: none;
   }
 
   .invite-review-stripe {
     width: min(1040px, 100%);
-    height: 5px;
-    border-radius: 999px;
+    height: 3px;
+    border-radius: 6px;
     background: var(--brand);
-    margin-bottom: 24px;
+    margin-bottom: 20px;
   }
 
   .invite-review-wrap {
@@ -505,16 +516,16 @@ const publicReviewStyles = `
   }
 
   .invite-review-card {
-    background: #fff;
-    border: 1.5px solid rgba(0,0,0,.08);
-    border-radius: 28px;
-    box-shadow: 0 24px 64px rgba(0,0,0,.12), 0 4px 16px rgba(0,0,0,.06);
+    background: var(--invite-bg);
+    border: 1px solid var(--invite-border);
+    border-radius: 10px;
+    box-shadow: none;
     overflow: hidden;
   }
 
   .invite-review-head {
     padding: 16px 24px;
-    border-bottom: 1px solid rgba(0,0,0,.08);
+    border-bottom: 1px solid var(--invite-border);
     display: flex;
     align-items: center;
     gap: 12px;
@@ -532,8 +543,8 @@ const publicReviewStyles = `
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 92, 53, .08);
-    border: 1.5px solid rgba(255, 92, 53, .16);
+    background: #fff3f0;
+    border: 1px solid #ffccc4;
     font-size: 15px;
     font-weight: 900;
     letter-spacing: -0.02em;
@@ -547,14 +558,14 @@ const publicReviewStyles = `
   .invite-reward-eyebrow,
   .invite-contact-label {
     font-size: 10px;
-    font-weight: 800;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: .1em;
-    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    letter-spacing: .05em;
+    font-family: var(--invite-font);
   }
 
   .invite-review-eyebrow {
-    color: #a0a0a0;
+    color: var(--invite-text-tertiary);
     margin: 0 0 4px;
   }
 
@@ -562,16 +573,16 @@ const publicReviewStyles = `
     margin: 0;
     font-size: 18px;
     line-height: 1.1;
-    font-weight: 900;
-    letter-spacing: -0.04em;
-    color: #0f0f0f;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--invite-text);
   }
 
   .invite-review-sub {
     margin: 2px 0 0;
     font-size: 11px;
     font-weight: 600;
-    color: #a0a0a0;
+    color: var(--invite-text-secondary);
   }
 
   .invite-review-body,
@@ -616,7 +627,7 @@ const publicReviewStyles = `
     height: 3px;
     flex: 1;
     border-radius: 999px;
-    background: #efede9;
+    background: var(--invite-bg-muted);
     transition: background 180ms ease, flex 180ms ease;
   }
 
@@ -631,13 +642,13 @@ const publicReviewStyles = `
   }
 
   .review-step-label {
-    color: #a0a0a0;
+    color: var(--invite-text-tertiary);
     white-space: nowrap;
   }
 
   .invite-review-overline {
     display: block;
-    color: #a0a0a0;
+    color: var(--invite-text-tertiary);
     margin-bottom: 8px;
   }
 
@@ -649,9 +660,9 @@ const publicReviewStyles = `
   .review-star-tile {
     flex: 1;
     aspect-ratio: 1;
-    border-radius: 16px;
-    border: 1.5px solid rgba(0,0,0,.14);
-    background: #f7f6f4;
+    border-radius: 6px;
+    border: 1px solid var(--invite-border);
+    background: var(--invite-bg-subtle);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -659,23 +670,23 @@ const publicReviewStyles = `
     cursor: pointer;
     transition: transform 180ms ease, background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, filter 180ms ease;
     user-select: none;
-    filter: grayscale(1) opacity(.45);
+    filter: grayscale(1) opacity(.55);
   }
 
   .review-star-tile:hover,
   .review-star-tile.lit {
     filter: none;
-    background: #fffbeb;
-    border-color: #fcd34d;
-    transform: scale(1.04);
+    background: #fff3f0;
+    border-color: #ffccc4;
+    transform: none;
   }
 
   .review-star-tile.sel {
     filter: none;
-    background: #fef3c7;
-    border-color: #f59e0b;
-    box-shadow: 0 2px 10px rgba(245,158,11,.2);
-    transform: scale(1.04);
+    background: #fff3f0;
+    border-color: var(--brand);
+    box-shadow: none;
+    transform: none;
   }
 
   .invite-review-star-feedback {
@@ -683,30 +694,30 @@ const publicReviewStyles = `
     margin: 8px 0 0;
     font-size: 13px;
     font-weight: 500;
-    color: #6b6b6b;
+    color: var(--invite-text-secondary);
     letter-spacing: -0.01em;
   }
 
   .invite-question-box {
-    background: #fff0ec;
-    border: 1.5px solid #ffd5c8;
-    border-radius: 20px;
-    padding: 16px;
+    background: var(--invite-bg-subtle);
+    border: 1px solid var(--invite-border);
+    border-radius: 8px;
+    padding: 14px;
   }
 
   .invite-question-label {
     display: block;
     margin-bottom: 6px;
-    color: rgba(255,92,53,.65);
+    color: var(--invite-text-secondary);
   }
 
   .invite-question-text {
     margin: 0;
-    font-size: 17px;
-    font-weight: 800;
-    line-height: 1.35;
-    letter-spacing: -0.03em;
-    color: #0f0f0f;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.45;
+    letter-spacing: -0.02em;
+    color: var(--invite-text);
   }
 
   .invite-recorder-shell {
@@ -723,7 +734,7 @@ const publicReviewStyles = `
   .invite-recorder-shell .video-container {
     width: 100%;
     aspect-ratio: 4 / 5;
-    border-radius: 20px;
+    border-radius: 10px;
     overflow: hidden;
     background: #0f0f0f;
     border: 1px solid rgba(255,255,255,.08);
@@ -767,16 +778,16 @@ const publicReviewStyles = `
   }
 
   .invite-recorder-shell .control-bar {
-    border-radius: 16px;
-    border: 1px solid rgba(0,0,0,.08);
-    background: #f7f6f4;
+    border-radius: 8px;
+    border: 1px solid var(--invite-border);
+    background: var(--invite-bg-subtle);
     padding: 10px 12px;
   }
 
   .invite-recorder-shell .control-info {
     font-size: 11px;
-    color: #6b6b6b;
-    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    color: var(--invite-text-secondary);
+    font-family: var(--invite-font);
   }
 
   .invite-recorder-shell .record-button,
@@ -785,32 +796,32 @@ const publicReviewStyles = `
   }
 
   .invite-recorder-shell .record-button {
-    width: 54px;
-    height: 54px;
+    width: 44px;
+    height: 44px;
   }
 
   .invite-recorder-shell .record-button .record-button-inner {
-    width: 24px;
-    height: 24px;
+    width: 18px;
+    height: 18px;
   }
 
   .invite-review-hint {
     margin-top: 12px;
     padding: 10px 12px;
-    border-radius: 16px;
-    background: #f7f6f4;
-    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 8px;
+    background: var(--invite-bg-subtle);
+    border: 1px solid var(--invite-border);
     font-size: 12px;
     line-height: 1.5;
     font-weight: 500;
-    color: #6b6b6b;
+    color: var(--invite-text-secondary);
   }
 
   .invite-reward-card {
-    background: linear-gradient(135deg, #fffbf0 0%, #fff6e8 60%, #fff0ec 100%);
-    border: 1.5px solid rgba(245,158,11,.22);
-    border-radius: 20px;
-    padding: 16px;
+    background: var(--invite-bg-subtle);
+    border: 1px solid var(--invite-border);
+    border-radius: 8px;
+    padding: 14px;
     display: flex;
     align-items: center;
     gap: 16px;
@@ -825,9 +836,9 @@ const publicReviewStyles = `
     width: 48px;
     height: 48px;
     flex-shrink: 0;
-    background: rgba(245,158,11,.1);
-    border: 1.5px solid rgba(245,158,11,.22);
-    border-radius: 16px;
+    background: #fff3f0;
+    border: 1px solid #ffccc4;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -836,16 +847,16 @@ const publicReviewStyles = `
 
   .invite-reward-eyebrow {
     margin: 0 0 4px;
-    color: rgba(146,64,14,.55);
+    color: var(--invite-text-tertiary);
   }
 
   .invite-reward-title {
     margin: 0 0 2px;
-    font-size: 16px;
-    font-weight: 900;
+    font-size: 15px;
+    font-weight: 600;
     line-height: 1.2;
-    letter-spacing: -0.03em;
-    color: #92400e;
+    letter-spacing: -0.02em;
+    color: var(--invite-text);
   }
 
   .invite-reward-sub {
@@ -853,18 +864,18 @@ const publicReviewStyles = `
     font-size: 12px;
     font-weight: 500;
     line-height: 1.4;
-    color: rgba(146,64,14,.55);
+    color: var(--invite-text-secondary);
   }
 
   .invite-submit-btn {
     width: 100%;
-    padding: 15px 24px;
-    border-radius: 999px;
+    padding: 11px 16px;
+    border-radius: 6px;
     border: none;
     background: var(--brand);
     color: #fff;
-    font-size: 16px;
-    font-weight: 800;
+    font-size: 14px;
+    font-weight: 500;
     letter-spacing: -0.02em;
     display: inline-flex;
     align-items: center;
@@ -876,9 +887,9 @@ const publicReviewStyles = `
   }
 
   .invite-submit-btn:not(:disabled):hover {
-    filter: brightness(1.08);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 28px rgba(255,92,53,.35);
+    filter: brightness(0.98);
+    transform: none;
+    box-shadow: none;
   }
 
   .invite-submit-btn:disabled {
@@ -918,23 +929,23 @@ const publicReviewStyles = `
     align-items: center;
     gap: 5px;
     font-size: 13px;
-    font-weight: 700;
-    color: #a0a0a0;
+    font-weight: 500;
+    color: var(--invite-text-secondary);
     cursor: pointer;
     transition: color 180ms ease;
   }
 
   .invite-back-btn:hover {
-    color: #0f0f0f;
+    color: var(--invite-text);
   }
 
   .invite-contact-title {
     margin: 0 0 6px;
-    font-size: 22px;
+    font-size: 24px;
     line-height: 1.1;
-    letter-spacing: -0.04em;
-    font-weight: 900;
-    color: #0f0f0f;
+    letter-spacing: -0.025em;
+    font-weight: 600;
+    color: var(--invite-text);
   }
 
   .invite-contact-sub,
@@ -946,14 +957,14 @@ const publicReviewStyles = `
     font-size: 14px;
     font-weight: 500;
     line-height: 1.55;
-    color: #6b6b6b;
+    color: var(--invite-text-secondary);
   }
 
   .invite-privacy-box {
-    background: #fff0ec;
-    border: 1.5px solid #ffd5c8;
-    border-radius: 20px;
-    padding: 16px;
+    background: var(--invite-bg-subtle);
+    border: 1px solid var(--invite-border);
+    border-radius: 8px;
+    padding: 14px;
     display: flex;
     align-items: flex-start;
     gap: 12px;
@@ -968,9 +979,9 @@ const publicReviewStyles = `
   .invite-privacy-title {
     margin: 0 0 4px;
     font-size: 14px;
-    font-weight: 800;
+    font-weight: 600;
     letter-spacing: -0.02em;
-    color: #0f0f0f;
+    color: var(--invite-text);
   }
 
   .invite-privacy-body strong {
@@ -990,25 +1001,25 @@ const publicReviewStyles = `
   }
 
   .invite-contact-label {
-    color: #0f0f0f;
+    color: var(--invite-text);
   }
 
   .invite-contact-input {
     width: 100%;
     padding: 10px 14px;
-    border-radius: 16px;
-    border: 1.5px solid rgba(0,0,0,.14);
-    background: #fff;
-    color: #0f0f0f;
-    font-size: 14px;
-    font-family: "Figtree", sans-serif;
+    border-radius: 6px;
+    border: 1px solid var(--invite-border);
+    background: var(--invite-bg);
+    color: var(--invite-text);
+    font-size: 13px;
+    font-family: var(--invite-font);
     outline: none;
     transition: border-color 180ms ease, box-shadow 180ms ease;
   }
 
   .invite-contact-input:focus {
-    border-color: var(--brand);
-    box-shadow: 0 0 0 3px #fff0ec;
+    border-color: var(--invite-text);
+    box-shadow: 0 0 0 3px rgba(10,10,10,0.07);
   }
 
   .invite-contact-input.err {
@@ -1021,13 +1032,13 @@ const publicReviewStyles = `
 
   .invite-contact-hint {
     font-size: 12px;
-    color: #a0a0a0;
+    color: var(--invite-text-tertiary);
   }
 
   .invite-upload-box {
-    border: 1px solid rgba(0,0,0,.08);
-    border-radius: 18px;
-    background: rgba(255,255,255,.86);
+    border: 1px solid var(--invite-border);
+    border-radius: 10px;
+    background: var(--invite-bg-subtle);
     padding: 14px;
   }
 
@@ -1036,13 +1047,13 @@ const publicReviewStyles = `
     height: 8px;
     border-radius: 999px;
     overflow: hidden;
-    background: #efede9;
+    background: var(--invite-bg-muted);
   }
 
   .invite-upload-fill {
     height: 100%;
     border-radius: inherit;
-    background: linear-gradient(90deg, var(--brand), #ff7a57);
+    background: var(--brand);
     transition: width 140ms ease;
   }
 
@@ -1063,18 +1074,18 @@ const publicReviewStyles = `
     align-items: center;
     justify-content: center;
     background: #f0fdf4;
-    border: 2px solid rgba(22,163,74,.2);
+    border: 1px solid #bbf7d0;
     font-size: 28px;
     color: #16a34a;
   }
 
   .invite-success-title {
     margin: 0;
-    font-size: 28px;
+    font-size: 34px;
     line-height: 1.1;
-    letter-spacing: -0.04em;
-    font-weight: 900;
-    color: #0f0f0f;
+    letter-spacing: -0.03em;
+    font-weight: 600;
+    color: var(--invite-text);
   }
 
   .invite-powered {
@@ -1085,8 +1096,8 @@ const publicReviewStyles = `
     gap: 6px;
     font-size: 11px;
     font-weight: 500;
-    color: #d0d0d0;
-    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    color: var(--invite-text-tertiary);
+    font-family: var(--invite-font);
     letter-spacing: .04em;
   }
 

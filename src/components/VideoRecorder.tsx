@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, type CSSProperties } from "react";
 
 interface VideoRecorderProps {
     onRecordingComplete: (blob: Blob, durationSeconds: number) => void;
     maxDurationSeconds?: number | null;
     variant?: "default" | "immersive";
+    immersivePreset?: "classic" | "flat";
     mirrorPreview?: boolean;
     mirrorPlayback?: boolean;
     labels?: {
@@ -24,6 +25,7 @@ export default function VideoRecorder({
     onRecordingComplete,
     maxDurationSeconds = 90,
     variant = "default",
+    immersivePreset = "classic",
     mirrorPreview = true,
     mirrorPlayback = mirrorPreview,
     labels,
@@ -50,6 +52,7 @@ export default function VideoRecorder({
     const durationRef = useRef<number>(0);
     const effectiveMaxDuration = maxDurationSeconds ?? null;
     const isImmersive = variant === "immersive";
+    const useFlatImmersive = isImmersive && immersivePreset === "flat";
 
     const stopStream = useCallback(() => {
         if (streamRef.current) {
@@ -413,6 +416,254 @@ export default function VideoRecorder({
         ? (elapsedSeconds / effectiveMaxDuration) * 100
         : 0;
 
+    const immersiveFrameStyle: CSSProperties | undefined = isImmersive
+        ? useFlatImmersive
+            ? {
+                  width: "100%",
+                  border: "1px solid #e8e8e8",
+                  borderRadius: "10px",
+                  background: "#ffffff",
+                  overflow: "hidden",
+              }
+            : {
+                  width: "100%",
+                  border: "1px dashed rgba(17, 17, 17, 0.14)",
+                  borderRadius: "28px",
+                  padding: "10px",
+                  background: "rgba(255,255,255,0.92)",
+              }
+        : undefined;
+
+    const immersiveVideoContainerStyle: CSSProperties = isImmersive
+        ? useFlatImmersive
+            ? {
+                  aspectRatio: "4 / 5",
+                  borderRadius: "10px 10px 0 0",
+                  overflow: "hidden",
+                  background: "#05060b",
+              }
+            : {
+                  aspectRatio: "4 / 5",
+                  borderRadius: "24px 24px 0 0",
+                  overflow: "hidden",
+                  background: "#05060b",
+              }
+        : {};
+
+    const immersivePlaceholderStyle: CSSProperties | undefined = isImmersive
+        ? useFlatImmersive
+            ? {
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "12px",
+                  textAlign: "center",
+                  padding: "24px",
+              }
+            : {
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "18px",
+                  textAlign: "center",
+                  padding: "28px",
+              }
+        : undefined;
+
+    const immersiveControlBarStyle: CSSProperties = useFlatImmersive
+        ? {
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "12px",
+              padding: "10px 14px",
+              borderTop: "1px solid #e8e8e8",
+              background: "#f7f7f7",
+              color: "#5c5c5c",
+              fontFamily:
+                  '"Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+              fontSize: "11px",
+              fontWeight: 500,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+          }
+        : {
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "12px",
+              padding: "14px 18px",
+              borderRadius: "0 0 24px 24px",
+              background: "rgba(244, 239, 239, 0.95)",
+              color: "rgba(17,17,17,.42)",
+              fontFamily:
+                  '"DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+              fontSize: "12px",
+              fontWeight: 500,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+          };
+
+    const immersivePrimaryActionStyle: CSSProperties = useFlatImmersive
+        ? {
+              border: "none",
+              background: "#ff4820",
+              width: "44px",
+              height: "44px",
+              borderRadius: "999px",
+              display: "grid",
+              placeItems: "center",
+              cursor: "pointer",
+              color: "#fff",
+              fontSize: "18px",
+          }
+        : {
+              border: "none",
+              background: "#ff5c35",
+              width: "54px",
+              height: "54px",
+              borderRadius: "999px",
+              display: "grid",
+              placeItems: "center",
+              cursor: "pointer",
+              boxShadow: "0 10px 24px rgba(255, 92, 53, 0.26)",
+              color: "#fff",
+              fontSize: "20px",
+          };
+
+    const immersiveStopActionStyle: CSSProperties = useFlatImmersive
+        ? {
+              border: "none",
+              background: "#0a0a0a",
+              width: "44px",
+              height: "44px",
+              borderRadius: "999px",
+              display: "grid",
+              placeItems: "center",
+              cursor: "pointer",
+              color: "#fff",
+              fontSize: "16px",
+          }
+        : {
+              border: "none",
+              background: "#111111",
+              width: "54px",
+              height: "54px",
+              borderRadius: "999px",
+              display: "grid",
+              placeItems: "center",
+              cursor: "pointer",
+              color: "#fff",
+              fontSize: "18px",
+          };
+
+    const recordedContainerStyle: CSSProperties = useFlatImmersive
+        ? {
+              position: "relative",
+              width: "100%",
+              border: "1px solid #e8e8e8",
+              borderRadius: "10px",
+              overflow: "hidden",
+              background: "#0a0a0a",
+          }
+        : { position: "relative", width: "100%" };
+
+    const recordedControlsStyle: CSSProperties = useFlatImmersive
+        ? {
+              position: "absolute",
+              left: "10px",
+              right: "10px",
+              bottom: "10px",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "8px 10px",
+              borderRadius: "8px",
+              background: "rgba(255,255,255,0.9)",
+              border: "1px solid #e8e8e8",
+          }
+        : {
+              position: "absolute",
+              left: "12px",
+              right: "12px",
+              bottom: "12px",
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              padding: "10px 12px",
+              borderRadius: "16px",
+              background:
+                  "linear-gradient(180deg, rgba(15,15,15,.18), rgba(15,15,15,.72))",
+              backdropFilter: "blur(8px)",
+          };
+
+    const recordedControlButtonStyle: CSSProperties = useFlatImmersive
+        ? {
+              flexShrink: 0,
+              border: "1px solid #e8e8e8",
+              background: "#ffffff",
+              color: "#0a0a0a",
+              width: "34px",
+              height: "34px",
+              borderRadius: "999px",
+              display: "grid",
+              placeItems: "center",
+              cursor: "pointer",
+          }
+        : {
+              flexShrink: 0,
+              border: "none",
+              background: "rgba(255,255,255,.14)",
+              width: "40px",
+              height: "40px",
+              borderRadius: "999px",
+              display: "grid",
+              placeItems: "center",
+              cursor: "pointer",
+          };
+
+    const recordedProgressTrackStyle: CSSProperties = useFlatImmersive
+        ? {
+              flex: 1,
+              height: "6px",
+              borderRadius: "999px",
+              background: "#e8e8e8",
+              cursor: "pointer",
+              overflow: "hidden",
+          }
+        : {
+              flex: 1,
+              height: "6px",
+              borderRadius: "999px",
+              background: "rgba(255,255,255,.26)",
+              cursor: "pointer",
+              overflow: "hidden",
+          };
+
+    const recordedTimeStyle: CSSProperties = useFlatImmersive
+        ? {
+              flexShrink: 0,
+              minWidth: "72px",
+              textAlign: "right",
+              color: "#5c5c5c",
+              fontFamily:
+                  '"Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+              fontSize: "10px",
+              fontWeight: 500,
+          }
+        : {
+              flexShrink: 0,
+              minWidth: "72px",
+              textAlign: "right",
+              color: "rgba(255,255,255,.88)",
+              fontFamily:
+                  '"DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+              fontSize: "10px",
+              fontWeight: 500,
+          };
+
     return (
         <div className="video-recorder">
             {error && (
@@ -423,32 +674,13 @@ export default function VideoRecorder({
             )}
 
             {state !== "recorded" && (
-                <div
-                    style={
-                        isImmersive
-                            ? {
-                                  width: "100%",
-                                  border: "1px dashed rgba(17, 17, 17, 0.14)",
-                                  borderRadius: "28px",
-                                  padding: "10px",
-                                  background: "rgba(255,255,255,0.92)",
-                              }
-                            : undefined
-                    }
-                >
+                <div style={immersiveFrameStyle}>
                     <div
                         className="video-container"
                         style={{
                             position: "relative",
                             width: "100%",
-                            ...(isImmersive
-                                ? {
-                                      aspectRatio: "4 / 5",
-                                      borderRadius: "24px 24px 0 0",
-                                      overflow: "hidden",
-                                      background: "#05060b",
-                                  }
-                                : {}),
+                            ...immersiveVideoContainerStyle,
                         }}
                     >
                         <video
@@ -469,19 +701,7 @@ export default function VideoRecorder({
                             <div
                                 className="video-placeholder"
                                 onClick={!isImmersive ? startCamera : undefined}
-                                style={
-                                    isImmersive
-                                        ? {
-                                              display: "flex",
-                                              flexDirection: "column",
-                                              alignItems: "center",
-                                              justifyContent: "center",
-                                              gap: "18px",
-                                              textAlign: "center",
-                                              padding: "28px",
-                                          }
-                                        : undefined
-                                }
+                                style={immersivePlaceholderStyle}
                             >
                                 {!isImmersive && (
                                     <div className="placeholder-icon">📹</div>
@@ -528,24 +748,7 @@ export default function VideoRecorder({
                     </div>
 
                     {isImmersive && (
-                        <div
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                                gap: "12px",
-                                padding: "14px 18px",
-                                borderRadius: "0 0 24px 24px",
-                                background: "rgba(244, 239, 239, 0.95)",
-                                color: "rgba(17,17,17,.42)",
-                                fontFamily:
-                                    '"DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                                fontSize: "12px",
-                                fontWeight: 500,
-                                letterSpacing: "0.08em",
-                                textTransform: "uppercase",
-                            }}
-                        >
+                        <div style={immersiveControlBarStyle}>
                             <span>
                                 {state === "recording"
                                     ? effectiveMaxDuration
@@ -561,19 +764,7 @@ export default function VideoRecorder({
                                     type="button"
                                     onClick={startRecording}
                                     aria-label={labels?.startRecording || "Start recording"}
-                                    style={{
-                                        border: "none",
-                                        background: "#ff5c35",
-                                        width: "54px",
-                                        height: "54px",
-                                        borderRadius: "999px",
-                                        display: "grid",
-                                        placeItems: "center",
-                                        cursor: "pointer",
-                                        boxShadow: "0 10px 24px rgba(255, 92, 53, 0.26)",
-                                        color: "#fff",
-                                        fontSize: "20px",
-                                    }}
+                                    style={immersivePrimaryActionStyle}
                                 >
                                     ●
                                 </button>
@@ -584,18 +775,7 @@ export default function VideoRecorder({
                                     type="button"
                                     onClick={stopRecording}
                                     aria-label={labels?.stopRecording || "Stop recording"}
-                                    style={{
-                                        border: "none",
-                                        background: "#111111",
-                                        width: "54px",
-                                        height: "54px",
-                                        borderRadius: "999px",
-                                        display: "grid",
-                                        placeItems: "center",
-                                        cursor: "pointer",
-                                        color: "#fff",
-                                        fontSize: "18px",
-                                    }}
+                                    style={immersiveStopActionStyle}
                                 >
                                     ⏹
                                 </button>
@@ -606,10 +786,7 @@ export default function VideoRecorder({
             )}
 
             {state === "recorded" && (
-                <div
-                    className="video-container"
-                    style={{ position: "relative", width: "100%" }}
-                >
+                <div className="video-container" style={recordedContainerStyle}>
                     <video
                         ref={videoPlaybackRef}
                         className="video-element"
@@ -626,22 +803,7 @@ export default function VideoRecorder({
                         }}
                     />
 
-                    <div
-                        style={{
-                            position: "absolute",
-                            left: "12px",
-                            right: "12px",
-                            bottom: "12px",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "10px",
-                            padding: "10px 12px",
-                            borderRadius: "16px",
-                            background:
-                                "linear-gradient(180deg, rgba(15,15,15,.18), rgba(15,15,15,.72))",
-                            backdropFilter: "blur(8px)",
-                        }}
-                    >
+                    <div style={recordedControlsStyle}>
                         <button
                             type="button"
                             onClick={togglePlayback}
@@ -650,17 +812,7 @@ export default function VideoRecorder({
                                     ? "Pause recorded video"
                                     : "Play recorded video"
                             }
-                            style={{
-                                flexShrink: 0,
-                                border: "none",
-                                background: "rgba(255,255,255,.14)",
-                                width: "40px",
-                                height: "40px",
-                                borderRadius: "999px",
-                                display: "grid",
-                                placeItems: "center",
-                                cursor: "pointer",
-                            }}
+                            style={recordedControlButtonStyle}
                         >
                             {isPlaybackPlaying ? "⏸️" : "▶️"}
                         </button>
@@ -672,14 +824,7 @@ export default function VideoRecorder({
                             aria-valuemin={0}
                             aria-valuemax={100}
                             aria-valuenow={Math.round(playbackProgress)}
-                            style={{
-                                flex: 1,
-                                height: "6px",
-                                borderRadius: "999px",
-                                background: "rgba(255,255,255,.26)",
-                                cursor: "pointer",
-                                overflow: "hidden",
-                            }}
+                            style={recordedProgressTrackStyle}
                         >
                             <span
                                 style={{
@@ -693,16 +838,7 @@ export default function VideoRecorder({
                         </div>
 
                         <span
-                            style={{
-                                flexShrink: 0,
-                                minWidth: "72px",
-                                textAlign: "right",
-                                color: "rgba(255,255,255,.88)",
-                                fontFamily:
-                                    '"DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                                fontSize: "10px",
-                                fontWeight: 500,
-                            }}
+                            style={recordedTimeStyle}
                         >
                             {formatTime(Math.floor(playbackCurrentTime))} /{" "}
                             {formatTime(Math.floor(playbackDuration))}
@@ -716,17 +852,7 @@ export default function VideoRecorder({
                                     ? "Unmute recorded video"
                                     : "Mute recorded video"
                             }
-                            style={{
-                                flexShrink: 0,
-                                border: "none",
-                                background: "rgba(255,255,255,.14)",
-                                width: "40px",
-                                height: "40px",
-                                borderRadius: "999px",
-                                display: "grid",
-                                placeItems: "center",
-                                cursor: "pointer",
-                            }}
+                            style={recordedControlButtonStyle}
                         >
                             {isPlaybackMuted ? "🔇" : "🔊"}
                         </button>

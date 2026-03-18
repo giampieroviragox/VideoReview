@@ -6,15 +6,21 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import CampaignBuilder from "@/components/dashboard/CampaignBuilder";
+import DashboardSettings from "@/components/dashboard/DashboardSettings";
+import type { SettingsPanelId } from "@/components/dashboard/DashboardSettings";
 
 type DashboardShellProps = {
   viewerName: string;
+  viewerEmail?: string;
   workspaceName: string;
   campaignRuntimeReady: boolean;
+  initialSection?: "campaigns" | "settings";
+  initialSettingsPanel?: SettingsPanelId;
   campaigns: Array<{
     id: string;
     name: string;
     description: string | null;
+    createdAt?: string;
     rewardText: string;
     rewardValue: string | null;
     hasNoEndDate: boolean;
@@ -89,31 +95,6 @@ type DashboardWebhookEndpoint = {
   }>;
 };
 
-type WallOfLoveConfig = {
-  id: string;
-  ownerUserId: string;
-  slug: string;
-  title: string;
-  subtitle: string | null;
-  isPublished: boolean;
-  includeAllCampaigns: boolean;
-  selectedCampaignIds: string[];
-  includeAllApprovedSubmissions: boolean;
-  selectedSubmissionIds: string[];
-  createdAt: string;
-  updatedAt: string;
-};
-
-type WallReviewSelection = {
-  id: string;
-  campaignId: string;
-  campaignName: string;
-  reviewerName: string;
-  reviewerEmail: string;
-  reviewerRating: number | null;
-  createdAt: string;
-};
-
 type BrandProfile = {
   id: string;
   ownerUserId: string;
@@ -162,6 +143,73 @@ function formatSubmissionDuration(durationSeconds: number | null) {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
+function formatShortDate(value?: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+  }).format(date);
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function getReviewerInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("");
+}
+
+function getSubmissionState(status: string) {
+  const normalized = normalizeSubmissionStatus(status);
+
+  if (normalized === "APPROVED") {
+    return {
+      label: "Published",
+      badgeClassName: "is-active",
+    } as const;
+  }
+
+  if (normalized === "REJECTED") {
+    return {
+      label: "Rejected",
+      badgeClassName: "is-rejected",
+    } as const;
+  }
+
+  return {
+    label: "Pending",
+    badgeClassName: "is-pending",
+  } as const;
+}
+
 function getSubmissionExcerpt(
   aiKeyPhrase: string | null,
   aiGeneratedReview: string | null,
@@ -199,121 +247,34 @@ function normalizeHexInput(value: string, fallback: string) {
   return fallback;
 }
 
-function hexToRgb(hex: string) {
-  const safe = normalizeHexInput(hex, "#000000").slice(1);
-  return {
-    r: Number.parseInt(safe.slice(0, 2), 16),
-    g: Number.parseInt(safe.slice(2, 4), 16),
-    b: Number.parseInt(safe.slice(4, 6), 16),
-  };
-}
-
-function rgbToHex(r: number, g: number, b: number) {
-  const toHex = (value: number) =>
-    Math.max(0, Math.min(255, Math.round(value))).toString(16).padStart(2, "0");
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-}
-
-function rgbToHsl(r: number, g: number, b: number) {
-  const nr = r / 255;
-  const ng = g / 255;
-  const nb = b / 255;
-
-  const max = Math.max(nr, ng, nb);
-  const min = Math.min(nr, ng, nb);
-  const delta = max - min;
-  const lightness = (max + min) / 2;
-
-  let hue = 0;
-  if (delta !== 0) {
-    if (max === nr) {
-      hue = ((ng - nb) / delta) % 6;
-    } else if (max === ng) {
-      hue = (nb - nr) / delta + 2;
-    } else {
-      hue = (nr - ng) / delta + 4;
-    }
-    hue *= 60;
-    if (hue < 0) {
-      hue += 360;
-    }
+function parseBudgetValue(value: string | null) {
+  if (!value) {
+    return 0;
   }
 
-  const saturation =
-    delta === 0 ? 0 : delta / (1 - Math.abs(2 * lightness - 1));
-
-  return {
-    h: Math.round(hue),
-    s: Math.round(saturation * 100),
-    l: Math.round(lightness * 100),
-  };
-}
-
-function hslToRgb(h: number, s: number, l: number) {
-  const hue = ((h % 360) + 360) % 360;
-  const saturation = Math.max(0, Math.min(100, s)) / 100;
-  const lightness = Math.max(0, Math.min(100, l)) / 100;
-
-  if (saturation === 0) {
-    const gray = Math.round(lightness * 255);
-    return { r: gray, g: gray, b: gray };
-  }
-
-  const chroma = (1 - Math.abs(2 * lightness - 1)) * saturation;
-  const x = chroma * (1 - Math.abs(((hue / 60) % 2) - 1));
-  const m = lightness - chroma / 2;
-
-  let r1 = 0;
-  let g1 = 0;
-  let b1 = 0;
-
-  if (hue < 60) {
-    r1 = chroma;
-    g1 = x;
-  } else if (hue < 120) {
-    r1 = x;
-    g1 = chroma;
-  } else if (hue < 180) {
-    g1 = chroma;
-    b1 = x;
-  } else if (hue < 240) {
-    g1 = x;
-    b1 = chroma;
-  } else if (hue < 300) {
-    r1 = x;
-    b1 = chroma;
-  } else {
-    r1 = chroma;
-    b1 = x;
-  }
-
-  return {
-    r: Math.round((r1 + m) * 255),
-    g: Math.round((g1 + m) * 255),
-    b: Math.round((b1 + m) * 255),
-  };
-}
-
-function hslToHex(h: number, s: number, l: number) {
-  const rgb = hslToRgb(h, s, l);
-  return rgbToHex(rgb.r, rgb.g, rgb.b);
+  const normalized = value.replace(/[^0-9.,-]/g, "").replace(",", ".");
+  const parsed = Number.parseFloat(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 export default function DashboardShell({
   viewerName,
+  viewerEmail,
   workspaceName,
   campaignRuntimeReady,
+  initialSection = "campaigns",
+  initialSettingsPanel = "general",
   campaigns,
 }: DashboardShellProps) {
   const router = useRouter();
   const [campaignsState, setCampaignsState] = useState(campaigns);
-  const [activeSection, setActiveSection] = useState<"campaigns" | "wall" | "brand" | "settings">(
-    "campaigns"
-  );
-  const [settingsTab, setSettingsTab] = useState<"general" | "webhooks">("general");
+  const activeSection = initialSection;
   const [showBuilder, setShowBuilder] = useState(false);
   const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
+  const [campaignDetailTab, setCampaignDetailTab] = useState<
+    "submissions" | "embed" | "automation" | "settings"
+  >("submissions");
   const [selectedSubmissionRef, setSelectedSubmissionRef] = useState<{
     campaignId: string;
     submissionId: string;
@@ -346,36 +307,19 @@ export default function DashboardShell({
   const [latestCampaignWebhookSecret, setLatestCampaignWebhookSecret] = useState<string | null>(
     null
   );
-  const [wallConfig, setWallConfig] = useState<WallOfLoveConfig | null>(null);
-  const [wallLoading, setWallLoading] = useState(false);
-  const [wallLoaded, setWallLoaded] = useState(false);
-  const [wallSaving, setWallSaving] = useState(false);
-  const [wallError, setWallError] = useState<string | null>(null);
-  const [wallNotice, setWallNotice] = useState<string | null>(null);
-  const [wallTitle, setWallTitle] = useState("Real people. Real results.");
-  const [wallSubtitle, setWallSubtitle] = useState(
-    "These are our customers speaking — unscripted, unedited, unrehearsed."
-  );
-  const [wallPublished, setWallPublished] = useState(false);
-  const [wallIncludeAllCampaigns, setWallIncludeAllCampaigns] = useState(true);
-  const [wallSelectedCampaignIds, setWallSelectedCampaignIds] = useState<string[]>([]);
-  const [wallIncludeAllSubmissions, setWallIncludeAllSubmissions] = useState(true);
-  const [wallSelectedSubmissionIds, setWallSelectedSubmissionIds] = useState<string[]>([]);
-  const [brandProfile, setBrandProfile] = useState<BrandProfile | null>(null);
   const [brandLoaded, setBrandLoaded] = useState(false);
   const [brandLoading, setBrandLoading] = useState(false);
   const [brandSaving, setBrandSaving] = useState(false);
   const [brandError, setBrandError] = useState<string | null>(null);
   const [brandNotice, setBrandNotice] = useState<string | null>(null);
   const [brandName, setBrandName] = useState("Tellr.me");
-  const [brandPrimaryColor, setBrandPrimaryColor] = useState("#ff5c35");
+  const [brandPrimaryColor, setBrandPrimaryColor] = useState("#ff4820");
   const [brandSecondaryColor, setBrandSecondaryColor] = useState("#111318");
   const [brandLogoUrl, setBrandLogoUrl] = useState("");
   const [brandWebsiteUrl, setBrandWebsiteUrl] = useState("");
   const [siteOrigin, setSiteOrigin] = useState("https://tellr.me");
   const [brandLogoUploading, setBrandLogoUploading] = useState(false);
   const [brandLogoUploadProgress, setBrandLogoUploadProgress] = useState(0);
-  const brandLogoFileInputRef = useRef<HTMLInputElement | null>(null);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
 
   useEffect(() => {
@@ -453,6 +397,26 @@ export default function DashboardShell({
     };
   }, [campaignsState, selectedSubmissionRef]);
 
+  const selectedSubmissionStatus = selectedSubmissionDetail
+    ? normalizeSubmissionStatus(selectedSubmissionDetail.submission.status)
+    : null;
+  const selectedSubmissionState = selectedSubmissionDetail
+    ? getSubmissionState(selectedSubmissionDetail.submission.status)
+    : null;
+  const selectedSubmissionApproveActionKey = selectedSubmissionDetail
+    ? `${selectedSubmissionDetail.submission.id}:APPROVED`
+    : null;
+  const selectedSubmissionRejectActionKey = selectedSubmissionDetail
+    ? `${selectedSubmissionDetail.submission.id}:REJECTED`
+    : null;
+  const selectedSubmissionExcerpt = selectedSubmissionDetail
+    ? getSubmissionExcerpt(
+        selectedSubmissionDetail.submission.aiKeyPhrase,
+        selectedSubmissionDetail.submission.aiGeneratedReview,
+        selectedSubmissionDetail.submission.answers
+      )
+    : null;
+
   useEffect(() => {
     setSiteOrigin(window.location.origin);
   }, []);
@@ -464,7 +428,7 @@ export default function DashboardShell({
     ? `${selectedCampaignPublicUrl}?embed=1`
     : "";
   const selectedCampaignEmbedSnippet = selectedCampaignEmbedUrl
-    ? `<iframe src="${selectedCampaignEmbedUrl}" width="100%" height="900" style="border:0;border-radius:20px;max-width:1040px;" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="camera; microphone; autoplay"></iframe>`
+    ? `<iframe src="${selectedCampaignEmbedUrl}" width="100%" height="900" style="border:0;border-radius:10px;max-width:1040px;" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="camera; microphone; autoplay"></iframe>`
     : "";
 
   useEffect(() => {
@@ -491,86 +455,17 @@ export default function DashboardShell({
   }, [selectedCampaignId, selectedCampaign]);
 
   useEffect(() => {
+    setCampaignDetailTab("submissions");
+  }, [selectedCampaignId]);
+
+  useEffect(() => {
     if (activeSection !== "campaigns") {
       setSelectedSubmissionRef(null);
     }
   }, [activeSection]);
 
   useEffect(() => {
-    if (activeSection !== "wall" || wallLoaded || wallLoading) {
-      return;
-    }
-
-    let cancelled = false;
-    const abortController = new AbortController();
-    const timeoutId = window.setTimeout(() => {
-      abortController.abort();
-    }, 8000);
-
-    async function loadWallConfig() {
-      setWallLoading(true);
-      setWallError(null);
-
-      try {
-        const response = await fetch("/api/wall-of-love", {
-          cache: "no-store",
-          signal: abortController.signal,
-        });
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || "Failed to load Wall of Love settings.");
-        }
-
-        if (cancelled) {
-          return;
-        }
-
-        const config = data.wall as WallOfLoveConfig;
-        setWallConfig(config);
-        setWallTitle(config.title || "Real people. Real results.");
-        setWallSubtitle(
-          config.subtitle ||
-            "These are our customers speaking — unscripted, unedited, unrehearsed."
-        );
-        setWallPublished(Boolean(config.isPublished));
-        setWallIncludeAllCampaigns(config.includeAllCampaigns !== false);
-        setWallSelectedCampaignIds(config.selectedCampaignIds || []);
-        setWallIncludeAllSubmissions(config.includeAllApprovedSubmissions !== false);
-        setWallSelectedSubmissionIds(config.selectedSubmissionIds || []);
-        setWallLoaded(true);
-      } catch (error) {
-        if (!cancelled) {
-          const message =
-            error instanceof Error && error.name === "AbortError"
-              ? "Loading took too long. Showing local draft settings."
-              : error instanceof Error
-              ? error.message
-              : "Failed to load Wall of Love settings.";
-          setWallError(
-            message
-          );
-          setWallLoaded(true);
-        }
-      } finally {
-        window.clearTimeout(timeoutId);
-        if (!cancelled) {
-          setWallLoading(false);
-        }
-      }
-    }
-
-    loadWallConfig();
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timeoutId);
-      abortController.abort();
-    };
-  }, [activeSection, wallLoaded, wallLoading]);
-
-  useEffect(() => {
-    if (activeSection !== "brand" || brandLoaded || brandLoading) {
+    if (activeSection !== "settings" || brandLoaded || brandLoading) {
       return;
     }
 
@@ -595,9 +490,8 @@ export default function DashboardShell({
         }
 
         const profile = data.brand as BrandProfile;
-        setBrandProfile(profile);
         setBrandName(profile.brandName || "Tellr.me");
-        setBrandPrimaryColor(profile.primaryColor || "#ff5c35");
+        setBrandPrimaryColor(profile.primaryColor || "#ff4820");
         setBrandSecondaryColor(profile.secondaryColor || "#111318");
         setBrandLogoUrl(profile.logoUrl || "");
         setBrandWebsiteUrl(profile.websiteUrl || "");
@@ -648,41 +542,103 @@ export default function DashboardShell({
     };
   }, [selectedCampaign]);
 
-  const approvedSubmissionsForWall = useMemo<WallReviewSelection[]>(() => {
-    const selectedCampaignSet = new Set(wallSelectedCampaignIds);
+  const allSubmissionRows = useMemo(() => {
+    return campaignsState.flatMap((campaign) =>
+      campaign.submissions.map((submission) => ({
+        campaignId: campaign.id,
+        campaignName: campaign.name,
+        submission,
+      }))
+    );
+  }, [campaignsState]);
 
-    return campaignsState.flatMap((campaign) => {
-      if (!wallIncludeAllCampaigns && !selectedCampaignSet.has(campaign.id)) {
-        return [];
-      }
+  const reviewsStats = useMemo(() => {
+    const total = allSubmissionRows.length;
+    if (total === 0) {
+      return {
+        total: 0,
+        avgRating: 0,
+        completionRate: 0,
+        approvedCount: 0,
+        pendingCount: 0,
+      };
+    }
 
-      return campaign.submissions
-        .filter((submission) => normalizeSubmissionStatus(submission.status) === "APPROVED")
-        .map((submission) => ({
-          id: submission.id,
-          campaignId: campaign.id,
-          campaignName: campaign.name,
-          reviewerName: submission.reviewerName,
-          reviewerEmail: submission.reviewerEmail,
-          reviewerRating: submission.reviewerRating,
-          createdAt: submission.createdAt,
-        }));
-    });
-  }, [campaignsState, wallIncludeAllCampaigns, wallSelectedCampaignIds]);
+    const approvedCount = allSubmissionRows.filter(
+      ({ submission }) => normalizeSubmissionStatus(submission.status) === "APPROVED"
+    ).length;
+    const pendingCount = allSubmissionRows.filter(
+      ({ submission }) => normalizeSubmissionStatus(submission.status) === "PENDING"
+    ).length;
+    const ratings = allSubmissionRows
+      .map(({ submission }) => submission.reviewerRating)
+      .filter((value): value is number => typeof value === "number");
+    const avgRating =
+      ratings.length > 0
+        ? ratings.reduce((sum, value) => sum + value, 0) / ratings.length
+        : 0;
+    const completionRate = Math.round((approvedCount / total) * 100);
 
-  const wallPublicPath = wallConfig ? `/wall/${wallConfig.slug}` : null;
+    return {
+      total,
+      avgRating,
+      completionRate,
+      approvedCount,
+      pendingCount,
+    };
+  }, [allSubmissionRows]);
 
-  const primaryColorModel = useMemo(() => {
-    const hex = normalizeHexInput(brandPrimaryColor, "#ff5c35");
-    const rgb = hexToRgb(hex);
-    return { hex, ...rgbToHsl(rgb.r, rgb.g, rgb.b) };
-  }, [brandPrimaryColor]);
+  const campaignStats = useMemo(() => {
+    const activeCount = campaignsState.filter(
+      (campaign) => getCampaignState(campaign.hasNoEndDate, campaign.endsAt) === "Active"
+    ).length;
+    const totalResponses = campaignsState.reduce(
+      (sum, campaign) => sum + campaign.submissions.length,
+      0
+    );
+    const approvedResponses = campaignsState.reduce(
+      (sum, campaign) =>
+        sum +
+        campaign.submissions.filter(
+          (submission) => normalizeSubmissionStatus(submission.status) === "APPROVED"
+        ).length,
+      0
+    );
+    const avgCompletion =
+      totalResponses > 0 ? Math.round((approvedResponses / totalResponses) * 100) : 0;
+    const rewardBudget = campaignsState.reduce(
+      (sum, campaign) => sum + parseBudgetValue(campaign.rewardValue),
+      0
+    );
+    const submissionsThisWeek = campaignsState.reduce(
+      (sum, campaign) =>
+        sum +
+        campaign.submissions.filter((submission) => {
+          const createdAt = new Date(submission.createdAt).getTime();
+          return Number.isFinite(createdAt) && Date.now() - createdAt <= 7 * 24 * 60 * 60 * 1000;
+        }).length,
+      0
+    );
 
-  const secondaryColorModel = useMemo(() => {
-    const hex = normalizeHexInput(brandSecondaryColor, "#111318");
-    const rgb = hexToRgb(hex);
-    return { hex, ...rgbToHsl(rgb.r, rgb.g, rgb.b) };
-  }, [brandSecondaryColor]);
+    return {
+      activeCount,
+      draftCount: Math.max(campaignsState.length - activeCount, 0),
+      totalResponses,
+      avgCompletion,
+      rewardBudget,
+      submissionsThisWeek,
+    };
+  }, [campaignsState]);
+
+  const siteHost = siteOrigin.replace(/^https?:\/\//, "");
+  const viewerInitials = viewerName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("");
+  const isCampaignsWorkspaceView = activeSection === "campaigns";
+  const isSettingsView = activeSection === "settings";
 
   async function handleSubmissionAction(
     campaignId: string,
@@ -1041,86 +997,6 @@ export default function DashboardShell({
     }
   }
 
-  function toggleWallCampaignSelection(campaignId: string) {
-    setWallSelectedCampaignIds((current) =>
-      current.includes(campaignId)
-        ? current.filter((entry) => entry !== campaignId)
-        : [...current, campaignId]
-    );
-  }
-
-  function toggleWallSubmissionSelection(submissionId: string) {
-    setWallSelectedSubmissionIds((current) =>
-      current.includes(submissionId)
-        ? current.filter((entry) => entry !== submissionId)
-        : [...current, submissionId]
-    );
-  }
-
-  async function handleSaveWallSettings(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setWallSaving(true);
-    setWallError(null);
-    setWallNotice(null);
-
-    try {
-      const response = await fetch("/api/wall-of-love", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title: wallTitle,
-          subtitle: wallSubtitle,
-          isPublished: wallPublished,
-          includeAllCampaigns: wallIncludeAllCampaigns,
-          selectedCampaignIds: wallSelectedCampaignIds,
-          includeAllApprovedSubmissions: wallIncludeAllSubmissions,
-          selectedSubmissionIds: wallSelectedSubmissionIds,
-        }),
-      });
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to save Wall of Love settings.");
-      }
-
-      const nextConfig = data.wall as WallOfLoveConfig;
-      setWallConfig(nextConfig);
-      setWallTitle(nextConfig.title || "Real people. Real results.");
-      setWallSubtitle(
-        nextConfig.subtitle ||
-          "These are our customers speaking — unscripted, unedited, unrehearsed."
-      );
-      setWallPublished(Boolean(nextConfig.isPublished));
-      setWallIncludeAllCampaigns(nextConfig.includeAllCampaigns !== false);
-      setWallSelectedCampaignIds(nextConfig.selectedCampaignIds || []);
-      setWallIncludeAllSubmissions(nextConfig.includeAllApprovedSubmissions !== false);
-      setWallSelectedSubmissionIds(nextConfig.selectedSubmissionIds || []);
-      setWallNotice("Wall of Love settings saved.");
-    } catch (error) {
-      setWallError(
-        error instanceof Error ? error.message : "Failed to save Wall of Love settings."
-      );
-    } finally {
-      setWallSaving(false);
-    }
-  }
-
-  function updatePrimaryColorFromHsl(next: Partial<{ h: number; s: number; l: number }>) {
-    const h = next.h ?? primaryColorModel.h;
-    const s = next.s ?? primaryColorModel.s;
-    const l = next.l ?? primaryColorModel.l;
-    setBrandPrimaryColor(hslToHex(h, s, l));
-  }
-
-  function updateSecondaryColorFromHsl(next: Partial<{ h: number; s: number; l: number }>) {
-    const h = next.h ?? secondaryColorModel.h;
-    const s = next.s ?? secondaryColorModel.s;
-    const l = next.l ?? secondaryColorModel.l;
-    setBrandSecondaryColor(hslToHex(h, s, l));
-  }
-
   async function handleBrandLogoFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) {
@@ -1187,9 +1063,6 @@ export default function DashboardShell({
       );
     } finally {
       setBrandLogoUploading(false);
-      if (brandLogoFileInputRef.current) {
-        brandLogoFileInputRef.current.value = "";
-      }
     }
   }
 
@@ -1207,7 +1080,7 @@ export default function DashboardShell({
         },
         body: JSON.stringify({
           brandName,
-          primaryColor: normalizeHexInput(brandPrimaryColor, "#ff5c35"),
+          primaryColor: normalizeHexInput(brandPrimaryColor, "#ff4820"),
           secondaryColor: normalizeHexInput(brandSecondaryColor, "#111318"),
           logoUrl: brandLogoUrl,
           websiteUrl: brandWebsiteUrl,
@@ -1220,9 +1093,8 @@ export default function DashboardShell({
       }
 
       const profile = data.brand as BrandProfile;
-      setBrandProfile(profile);
       setBrandName(profile.brandName || "Tellr.me");
-      setBrandPrimaryColor(profile.primaryColor || "#ff5c35");
+      setBrandPrimaryColor(profile.primaryColor || "#ff4820");
       setBrandSecondaryColor(profile.secondaryColor || "#111318");
       setBrandLogoUrl(profile.logoUrl || "");
       setBrandWebsiteUrl(profile.websiteUrl || "");
@@ -1245,49 +1117,20 @@ export default function DashboardShell({
   }
 
   function openCampaignsSection() {
-    setActiveSection("campaigns");
     setShowBuilder(false);
     setEditingCampaignId(null);
     setSelectedCampaignId(null);
     setSelectedSubmissionRef(null);
+    router.push("/dashboard/campaigns");
     scrollDashboardToTop();
   }
 
   function openSettingsSection() {
-    setActiveSection("settings");
-    setSettingsTab("general");
     setShowBuilder(false);
     setEditingCampaignId(null);
     setSelectedCampaignId(null);
     setSelectedSubmissionRef(null);
-    scrollDashboardToTop();
-  }
-
-  function openSettingsSubsection(tab: "general" | "webhooks") {
-    setActiveSection("settings");
-    setSettingsTab(tab);
-    setShowBuilder(false);
-    setEditingCampaignId(null);
-    setSelectedCampaignId(null);
-    setSelectedSubmissionRef(null);
-    scrollDashboardToTop();
-  }
-
-  function openWallSection() {
-    setActiveSection("wall");
-    setShowBuilder(false);
-    setEditingCampaignId(null);
-    setSelectedCampaignId(null);
-    setSelectedSubmissionRef(null);
-    scrollDashboardToTop();
-  }
-
-  function openBrandSection() {
-    setActiveSection("brand");
-    setShowBuilder(false);
-    setEditingCampaignId(null);
-    setSelectedCampaignId(null);
-    setSelectedSubmissionRef(null);
+    router.push(`/dashboard/settings/${initialSettingsPanel}`);
     scrollDashboardToTop();
   }
 
@@ -1309,123 +1152,99 @@ export default function DashboardShell({
       <aside className="dashboard-sidebar">
         <div className="dashboard-sidebar-top">
           <Link href="/" className="dashboard-brand">
-            <Image
-              src="/tellr-logo.svg"
-              alt="Tellr.me"
-              className="dashboard-brand-image"
-              width={160}
-              height={42}
-            />
+            <span className="dashboard-brand-mark">
+              <Image src="/favicon.svg" alt="Tellr" width={20} height={20} />
+            </span>
+            <span className="dashboard-brand-copy">
+              <span className="dashboard-brand-name">Tellr</span>
+              <span className="dashboard-brand-workspace">tellr.me</span>
+            </span>
           </Link>
-
-          <div className="dashboard-profile-card">
-            <div className="dashboard-avatar">
-              <UserButton afterSignOutUrl="/" />
-            </div>
-            <div>
-              <p className="dashboard-profile-name">{viewerName}</p>
-              <p className="dashboard-profile-workspace">{workspaceName}</p>
-            </div>
-          </div>
+          <button type="button" className="dashboard-brand-menu" aria-label="Workspace menu">
+            <svg width="12" height="12" fill="none" viewBox="0 0 12 12">
+              <circle cx="6" cy="3" r=".85" fill="currentColor" />
+              <circle cx="6" cy="6" r=".85" fill="currentColor" />
+              <circle cx="6" cy="9" r=".85" fill="currentColor" />
+            </svg>
+          </button>
         </div>
 
         <div className="dashboard-sidebar-nav">
-          <p className="dashboard-nav-label">Menu</p>
+          <div className="dashboard-nav-group">
+            <p className="dashboard-nav-label">Workspace</p>
 
-          <button
-            type="button"
-            className={`dashboard-nav-item ${
-              activeSection === "campaigns" ? "dashboard-nav-item-active" : "dashboard-nav-item-muted"
-            }`}
-            onClick={openCampaignsSection}
-          >
-            <span className="dashboard-nav-icon">🎥</span>
-            <span>Campaign</span>
-            <span className="dashboard-nav-count">{campaignsState.length}</span>
-          </button>
+            <button
+              type="button"
+              className={`dashboard-nav-item ${
+                activeSection === "campaigns" ? "dashboard-nav-item-active" : "dashboard-nav-item-muted"
+              }`}
+              onClick={openCampaignsSection}
+            >
+              <span className="dashboard-nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 15 15" fill="none">
+                  <circle cx="7.5" cy="7.5" r="5.5" stroke="currentColor" strokeWidth="1.2" />
+                  <path
+                    d="M7.5 4.5v3.2l2.2 2.2"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </span>
+              <span>Campaigns</span>
+              <span className="dashboard-nav-count">{campaignsState.length}</span>
+            </button>
 
-          <button
-            type="button"
-            className={`dashboard-nav-item ${
-              activeSection === "wall" ? "dashboard-nav-item-active" : "dashboard-nav-item-muted"
-            }`}
-            onClick={openWallSection}
-          >
-            <span className="dashboard-nav-icon">🧱</span>
-            <span>Wall of Love</span>
-          </button>
+          </div>
 
-          <button
-            type="button"
-            className={`dashboard-nav-item ${
-              activeSection === "brand" ? "dashboard-nav-item-active" : "dashboard-nav-item-muted"
-            }`}
-            onClick={openBrandSection}
-          >
-            <span className="dashboard-nav-icon">🎨</span>
-            <span>Brand</span>
-          </button>
+          <div className="dashboard-nav-group">
+            <p className="dashboard-nav-label">Account</p>
 
-          <button
-            type="button"
-            className={`dashboard-nav-item ${
-              activeSection === "settings" ? "dashboard-nav-item-active" : "dashboard-nav-item-muted"
-            }`}
-            onClick={openSettingsSection}
-          >
-            <span className="dashboard-nav-icon">⚙️</span>
-            <span>Settings</span>
-            <span className={`dashboard-nav-caret ${activeSection === "settings" ? "is-open" : ""}`}>
-              ⌃
-            </span>
-          </button>
+            <button
+              type="button"
+              className={`dashboard-nav-item ${
+                activeSection === "settings" ? "dashboard-nav-item-active" : "dashboard-nav-item-muted"
+              }`}
+              onClick={openSettingsSection}
+            >
+              <span className="dashboard-nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 15 15" fill="none">
+                  <circle cx="7.5" cy="7.5" r="2.2" stroke="currentColor" strokeWidth="1.2" />
+                  <path
+                    d="M7.5 1.5v1.2M7.5 12.3v1.2M1.5 7.5h1.2M12.3 7.5h1.2M3.3 3.3l.85.85M10.85 10.85l.85.85M3.3 11.7l.85-.85M10.85 4.15l.85-.85"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </span>
+              <span>Settings</span>
+            </button>
+          </div>
+        </div>
 
-          {activeSection === "settings" && (
-            <div className="dashboard-subnav">
-              <button
-                type="button"
-                className={`dashboard-subnav-item ${settingsTab === "general" ? "is-active" : ""}`}
-                onClick={() => openSettingsSubsection("general")}
-              >
-                General
-              </button>
-              <button
-                type="button"
-                className={`dashboard-subnav-item ${settingsTab === "webhooks" ? "is-active" : ""}`}
-                onClick={() => openSettingsSubsection("webhooks")}
-              >
-                Webhooks
-              </button>
+        <div className="dashboard-sidebar-spacer" />
+
+        <div className="dashboard-sidebar-footer">
+          <div className="dashboard-profile-card">
+            <div className="dashboard-profile-avatar-shell">
+              <span className="dashboard-profile-avatar-fallback">{viewerInitials || "T"}</span>
+              <div className="dashboard-avatar">
+                <UserButton afterSignOutUrl="/" />
+              </div>
             </div>
-          )}
+            <div>
+              <p className="dashboard-profile-name">{viewerName}</p>
+              <p className="dashboard-profile-workspace">{viewerEmail || workspaceName}</p>
+            </div>
+          </div>
         </div>
       </aside>
 
       <section className="dashboard-main">
-        <div className="dashboard-content">
-          {activeSection === "campaigns" && !showBuilder && !selectedCampaign && (
-            <div className="dashboard-page-header">
-              <div className="dashboard-page-header-copy">
-                <h1 className="dashboard-title">Campaigns</h1>
-                <p className="dashboard-subtitle">
-                  Create, publish and manage your video review campaigns from one place.
-                </p>
-              </div>
-              <div className="dashboard-page-header-actions">
-                <button
-                  type="button"
-                  className="dashboard-action-btn"
-                  onClick={() => {
-                    setEditingCampaignId(null);
-                    setShowBuilder((current) => !current);
-                  }}
-                >
-                + New campaign
-              </button>
-              </div>
-            </div>
-          )}
-
+        <div
+          className={`dashboard-content ${isCampaignsWorkspaceView ? "is-campaigns-workspace" : ""} ${isSettingsView ? "is-settings-view" : ""}`}
+        >
           {activeSection === "campaigns" && !campaignRuntimeReady && (
             <div className="dashboard-alert-card">
               Campaign data is not available in the current server runtime. Restart the dev server if this message appears again.
@@ -1433,1431 +1252,1088 @@ export default function DashboardShell({
           )}
 
           {activeSection === "campaigns" && showBuilder && (
-            <div className="dashboard-builder-wrap">
-              <div className="dashboard-builder-toolbar">
+            <div className="dashboard-campaign-builder-view">
+              <div className="dashboard-section-topbar dashboard-builder-toolbar-shell">
+                <span className="dashboard-section-topbar-title">Campaign builder</span>
+                <div className="dashboard-section-topbar-spacer" />
                 <button
                   type="button"
-                  className="dashboard-secondary-btn"
+                  className="dashboard-section-btn dashboard-section-btn-secondary"
                   onClick={() => {
                     setShowBuilder(false);
                     setEditingCampaignId(null);
                   }}
                 >
-                  Close builder ×
+                  Close builder
+                  <svg
+                    className="dashboard-button-icon"
+                    viewBox="0 0 11 11"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M2 2l7 7M9 2l-7 7"
+                      stroke="currentColor"
+                      strokeWidth="1.25"
+                      strokeLinecap="round"
+                    />
+                  </svg>
                 </button>
               </div>
-              <CampaignBuilder
-                mode={editingCampaign ? "edit" : "create"}
-                initialValues={
-                  editingCampaign
-                    ? {
-                        id: editingCampaign.id,
-                        name: editingCampaign.name,
-                        description: editingCampaign.description,
-                        rewardText: editingCampaign.rewardText,
-                        rewardValue: editingCampaign.rewardValue,
-                        isPublished: editingCampaign.hasNoEndDate || !editingCampaign.endsAt,
-                        questions: editingCampaign.questions,
+              <div className="dashboard-campaign-builder-content">
+                <div className="dashboard-campaign-builder-inner">
+                  <CampaignBuilder
+                    mode={editingCampaign ? "edit" : "create"}
+                    initialValues={
+                      editingCampaign
+                        ? {
+                            id: editingCampaign.id,
+                            name: editingCampaign.name,
+                            description: editingCampaign.description,
+                            rewardText: editingCampaign.rewardText,
+                            rewardValue: editingCampaign.rewardValue,
+                            isPublished: editingCampaign.hasNoEndDate || !editingCampaign.endsAt,
+                            questions: editingCampaign.questions,
+                          }
+                        : null
+                    }
+                    onCancel={() => {
+                      setShowBuilder(false);
+                      setEditingCampaignId(null);
+                    }}
+                    onSuccess={() => {
+                      if (editingCampaign) {
+                        setShowBuilder(false);
+                        setEditingCampaignId(null);
                       }
-                    : null
-                }
-                onCancel={() => {
-                  setShowBuilder(false);
-                  setEditingCampaignId(null);
-                }}
-                onSuccess={() => {
-                  if (editingCampaign) {
-                    setShowBuilder(false);
-                    setEditingCampaignId(null);
-                  }
-                }}
-              />
+                    }}
+                  />
+                </div>
+              </div>
             </div>
           )}
 
           {activeSection === "campaigns" && !showBuilder && !selectedCampaign && (
-            <div className="dashboard-campaign-section">
-              <div className="dashboard-section-head">
-                <div>
-                  <h2 className="dashboard-section-title">Active campaigns</h2>
-                  <p className="dashboard-section-copy">
-                    Each campaign stays available from its public link and can be managed here.
-                  </p>
+            <div className="dashboard-flat-view dashboard-campaigns-view">
+              <div className="dashboard-section-topbar">
+                <span className="dashboard-section-topbar-title">Campaigns</span>
+                <div className="dashboard-section-topbar-spacer" />
+                <button
+                  type="button"
+                  className="dashboard-section-btn dashboard-section-btn-secondary"
+                >
+                  <svg
+                    className="dashboard-button-icon"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M1 2.5h10M2.5 6h7M4 9.5h4"
+                      stroke="currentColor"
+                      strokeWidth="1.2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  Filter
+                </button>
+                <button
+                  type="button"
+                  className="dashboard-section-btn dashboard-section-btn-primary"
+                  onClick={() => {
+                    setEditingCampaignId(null);
+                    setShowBuilder(true);
+                  }}
+                >
+                  <svg
+                    className="dashboard-button-icon"
+                    viewBox="0 0 11 11"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M5.5 1v9M1 5.5h9"
+                      stroke="currentColor"
+                      strokeWidth="1.35"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  New campaign
+                </button>
+              </div>
+
+              <div className="dashboard-flat-stats">
+                <div className="dashboard-flat-stat-cell">
+                  <div className="dashboard-flat-stat-label">Active</div>
+                  <div className="dashboard-flat-stat-value">{campaignStats.activeCount}</div>
+                  <div className="dashboard-flat-stat-sub">campaigns running</div>
                 </div>
-                <span className="dashboard-list-count">
-                  {campaignsState.length} {campaignsState.length === 1 ? "campaign" : "campaigns"}
+                <div className="dashboard-flat-stat-cell">
+                  <div className="dashboard-flat-stat-label">Total responses</div>
+                  <div className="dashboard-flat-stat-value">{campaignStats.totalResponses}</div>
+                  <div className="dashboard-flat-stat-sub is-up">
+                    {campaignStats.submissionsThisWeek > 0
+                      ? `↑ +${campaignStats.submissionsThisWeek} this week`
+                      : "No new submissions this week"}
+                  </div>
+                </div>
+                <div className="dashboard-flat-stat-cell">
+                  <div className="dashboard-flat-stat-label">Avg completion</div>
+                  <div className="dashboard-flat-stat-value">{campaignStats.avgCompletion}%</div>
+                  <div className="dashboard-flat-stat-sub">across campaigns</div>
+                </div>
+                <div className="dashboard-flat-stat-cell">
+                  <div className="dashboard-flat-stat-label">Rewards budget</div>
+                  <div className="dashboard-flat-stat-value">
+                    {campaignStats.rewardBudget > 0 ? `$${campaignStats.rewardBudget}` : "—"}
+                  </div>
+                  <div className="dashboard-flat-stat-sub is-down">
+                    {campaignStats.rewardBudget > 0 ? "Configured incentives" : "No rewards configured"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="dashboard-flat-section-head dashboard-campaigns-section-head">
+                <span className="dashboard-flat-section-label">All campaigns</span>
+                <span className="dashboard-flat-section-note">
+                  {campaignStats.activeCount} active · {campaignStats.draftCount} draft
                 </span>
               </div>
 
               {campaignsState.length === 0 ? (
                 <div className="dashboard-empty-state">No campaigns created yet.</div>
               ) : (
-                campaignsState.map((campaign, index) => {
-                  const state = getCampaignState(campaign.hasNoEndDate, campaign.endsAt);
-                  const submissionCount = campaign.submissions.length;
+                <div className="dashboard-flat-list">
+                  {campaignsState.map((campaign) => {
+                    const state = getCampaignState(campaign.hasNoEndDate, campaign.endsAt);
+                    const submissionCount = campaign.submissions.length;
+                    const approvedCount = campaign.submissions.filter(
+                      (submission) => normalizeSubmissionStatus(submission.status) === "APPROVED"
+                    ).length;
+                    const avgRatingValues = campaign.submissions
+                      .map((submission) => submission.reviewerRating)
+                      .filter((value): value is number => typeof value === "number");
+                    const avgRating =
+                      avgRatingValues.length > 0
+                        ? avgRatingValues.reduce((sum, value) => sum + value, 0) /
+                          avgRatingValues.length
+                        : 0;
+                    const completionRate =
+                      submissionCount > 0 ? Math.round((approvedCount / submissionCount) * 100) : 0;
+                    const createdAtLabel = formatShortDate(campaign.createdAt);
+                    const isDraft = state !== "Active";
 
-                  return (
-                    <div
-                      key={campaign.id}
-                      className={`dashboard-campaign-row ${index > 0 ? "with-divider" : ""}`}
-                    >
-                      <div className="dashboard-campaign-copy">
-                        <p className="dashboard-campaign-name">{campaign.name}</p>
-                        <div className="dashboard-campaign-meta">
-                          <p className="dashboard-campaign-path">{campaign.publicPath}</p>
-                        </div>
-                      </div>
-
-                      <div className="dashboard-campaign-actions">
-                        {submissionCount > 0 && (
-                          <span className="dashboard-video-count">
-                            {submissionCount} {submissionCount === 1 ? "video" : "videos"}
-                          </span>
-                        )}
-
-                        <span
-                          className={`dashboard-status-badge ${
-                            state === "Active" ? "is-active" : "is-inactive"
+                    return (
+                      <div
+                        key={campaign.id}
+                        className="dashboard-campaign-list-row"
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setSelectedCampaignId(campaign.id)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            setSelectedCampaignId(campaign.id);
+                          }
+                        }}
+                      >
+                        <div
+                          className={`dashboard-campaign-list-icon ${
+                            isDraft ? "is-draft" : "is-active"
                           }`}
                         >
-                          {state}
+                          {isDraft ? "✏️" : submissionCount > 20 ? "🚀" : "🎯"}
+                        </div>
+
+                        <div className="dashboard-campaign-list-main">
+                          <p className="dashboard-campaign-list-name">{campaign.name}</p>
+                          <p className="dashboard-campaign-list-sub">
+                            {isDraft
+                              ? "Draft · Not published yet"
+                              : `${siteHost}${campaign.publicPath}${
+                                  createdAtLabel ? ` · Created ${createdAtLabel}` : ""
+                                }`}
+                          </p>
+                        </div>
+
+                        <div className="dashboard-campaign-list-metrics">
+                          <div className="dashboard-campaign-list-metric">
+                            <span>Reviews</span>
+                            <strong>{submissionCount}</strong>
+                          </div>
+                          <div className="dashboard-campaign-list-metric">
+                            <span>Rate</span>
+                            <strong>{submissionCount > 0 ? `${completionRate}%` : "—"}</strong>
+                          </div>
+                          <div className="dashboard-campaign-list-metric">
+                            <span>Rating</span>
+                            <strong className={avgRating > 0 ? "is-rating" : ""}>
+                              {avgRating > 0 ? `${avgRating.toFixed(1)}★` : "—"}
+                            </strong>
+                          </div>
+                          <div className="dashboard-campaign-list-progress">
+                            <div className="dashboard-campaign-list-progress-meta">
+                              <span>
+                                {approvedCount}/{submissionCount || 0}
+                              </span>
+                              <span>{completionRate}%</span>
+                            </div>
+                            <div className="dashboard-campaign-list-progress-bar">
+                              <span style={{ width: `${completionRate}%` }} />
+                            </div>
+                          </div>
+                        </div>
+
+                        <span className={`dashboard-campaign-list-badge ${isDraft ? "is-draft" : "is-active"}`}>
+                          {isDraft ? "Draft" : "Active"}
                         </span>
 
-                        <button
-                          type="button"
-                          className="dashboard-row-action"
-                          onClick={() => {
-                            setEditingCampaignId(campaign.id);
-                            setShowBuilder(true);
-                          }}
-                        >
-                          Edit
-                        </button>
-
-                        <button
-                          type="button"
-                          className="dashboard-row-action"
-                          onClick={() => setSelectedCampaignId(campaign.id)}
-                        >
-                          Submissions
-                        </button>
-
-                        <a
-                          href={campaign.publicPath}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="dashboard-row-link"
-                          aria-label="Open public campaign page"
-                        >
-                          Open
-                        </a>
+                        <div className="dashboard-campaign-list-actions">
+                          {isDraft ? (
+                            <button
+                              type="button"
+                              className="dashboard-secondary-btn dashboard-inline-action"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setEditingCampaignId(campaign.id);
+                                setShowBuilder(true);
+                              }}
+                            >
+                              Publish
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="dashboard-campaign-share-btn"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                copyText(`${siteOrigin}${campaign.publicPath}`);
+                              }}
+                            >
+                              <svg
+                                className="dashboard-button-icon"
+                                viewBox="0 0 12 12"
+                                fill="none"
+                                aria-hidden="true"
+                              >
+                                <path
+                                  d="M4.5 6.5L7.8 3.2M7.2 1.2h2.6v2.6M10 7.3v1.5A2.2 2.2 0 0 1 7.8 11H3.2A2.2 2.2 0 0 1 1 8.8V4.2A2.2 2.2 0 0 1 3.2 2h1.5"
+                                  stroke="currentColor"
+                                  strokeWidth="1.15"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
+                              Share
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="dashboard-campaign-kebab-btn"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setEditingCampaignId(campaign.id);
+                              setShowBuilder(true);
+                            }}
+                            aria-label={`Edit ${campaign.name}`}
+                          >
+                            <svg
+                              className="dashboard-button-icon"
+                              viewBox="0 0 12 12"
+                              fill="currentColor"
+                              aria-hidden="true"
+                            >
+                              <circle cx="6" cy="2.5" r="0.9" />
+                              <circle cx="6" cy="6" r="0.9" />
+                              <circle cx="6" cy="9.5" r="0.9" />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })
+                    );
+                  })}
+                </div>
               )}
             </div>
           )}
 
           {activeSection === "campaigns" && selectedCampaign && !selectedSubmissionDetail && (
-            <div className="dashboard-submissions-card">
-              <div className="dashboard-builder-toolbar dashboard-sub-toolbar">
+            <div className="dashboard-campaign-detail-view">
+              <div className="dashboard-section-topbar">
+                <span className="dashboard-section-topbar-title">Campaign</span>
+                <div className="dashboard-section-topbar-spacer" />
                 <button
                   type="button"
-                  className="dashboard-secondary-btn dashboard-back-btn"
+                  className="dashboard-section-btn dashboard-section-btn-secondary"
                   onClick={() => setSelectedCampaignId(null)}
                 >
-                  ← All campaigns
+                  <svg
+                    className="dashboard-button-icon"
+                    viewBox="0 0 14 14"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M9 2L4 7l5 5"
+                      stroke="currentColor"
+                      strokeWidth="1.35"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  All campaigns
                 </button>
-              </div>
-
-              <div className="dashboard-submissions-summary">
-                <div>
-                  <p className="dashboard-eyebrow">Submissions</p>
-                  <h2 className="dashboard-submissions-title">{selectedCampaign.name}</h2>
-                  <p className="dashboard-submissions-link">
-                    {selectedCampaignPublicUrl}
-                  </p>
-                </div>
-
                 <button
                   type="button"
-                  className="dashboard-secondary-btn dashboard-copy-btn"
+                  className="dashboard-section-btn dashboard-section-btn-secondary"
                   onClick={() => copyText(selectedCampaignPublicUrl)}
                 >
-                  📋 Copy link
+                  <svg
+                    className="dashboard-button-icon"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <rect
+                      x="1"
+                      y="4"
+                      width="7"
+                      height="7"
+                      rx="1.2"
+                      stroke="currentColor"
+                      strokeWidth="1.2"
+                    />
+                    <path
+                      d="M4 4V3a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H8"
+                      stroke="currentColor"
+                      strokeWidth="1.2"
+                    />
+                  </svg>
+                  Copy link
                 </button>
               </div>
 
-              <div className="dashboard-campaign-embed-card">
-                <div className="dashboard-campaign-webhook-head">
+              <div className="dashboard-campaign-detail-head">
+                <div className="dashboard-campaign-detail-summary">
                   <div>
+                    <p className="dashboard-eyebrow">Submissions</p>
+                    <h2 className="dashboard-submissions-title">{selectedCampaign.name}</h2>
+                    <p className="dashboard-submissions-link">{selectedCampaignPublicUrl}</p>
+                  </div>
+                  <span
+                    className={`dashboard-campaign-list-badge ${
+                      getCampaignState(selectedCampaign.hasNoEndDate, selectedCampaign.endsAt) === "Active"
+                        ? "is-active"
+                        : "is-draft"
+                    }`}
+                  >
+                    {getCampaignState(selectedCampaign.hasNoEndDate, selectedCampaign.endsAt) === "Active"
+                      ? "Active"
+                      : "Draft"}
+                  </span>
+                </div>
+
+                <div className="dashboard-campaign-detail-tabs">
+                  <button
+                    type="button"
+                    className={`dashboard-campaign-detail-tab ${
+                      campaignDetailTab === "submissions" ? "is-active" : ""
+                    }`}
+                    onClick={() => setCampaignDetailTab("submissions")}
+                  >
+                    Submissions
+                  </button>
+                  <button
+                    type="button"
+                    className={`dashboard-campaign-detail-tab ${
+                      campaignDetailTab === "embed" ? "is-active" : ""
+                    }`}
+                    onClick={() => setCampaignDetailTab("embed")}
+                  >
+                    Embed
+                  </button>
+                  <button
+                    type="button"
+                    className={`dashboard-campaign-detail-tab ${
+                      campaignDetailTab === "automation" ? "is-active" : ""
+                    }`}
+                    onClick={() => setCampaignDetailTab("automation")}
+                  >
+                    Automation
+                  </button>
+                  <button
+                    type="button"
+                    className={`dashboard-campaign-detail-tab ${
+                      campaignDetailTab === "settings" ? "is-active" : ""
+                    }`}
+                    onClick={() => setCampaignDetailTab("settings")}
+                  >
+                    Settings
+                  </button>
+                </div>
+              </div>
+
+              {campaignDetailTab === "submissions" && (
+                <>
+                  <div className="dashboard-detail-stats">
+                    <div className="dashboard-detail-stat">
+                      <p className="dashboard-detail-stat-label">Total submissions</p>
+                      <p className="dashboard-detail-stat-value">{selectedCampaignStats?.total || 0}</p>
+                    </div>
+                    <div className="dashboard-detail-stat">
+                      <p className="dashboard-detail-stat-label">Avg. rating</p>
+                      <p className="dashboard-detail-stat-value">
+                        {selectedCampaignStats && selectedCampaignStats.total > 0
+                          ? `${selectedCampaignStats.avgRating.toFixed(1)}★`
+                          : "0.0★"}
+                      </p>
+                    </div>
+                    <div className="dashboard-detail-stat">
+                      <p className="dashboard-detail-stat-label">Rewards sent</p>
+                      <p className="dashboard-detail-stat-value">
+                        {selectedCampaignStats?.approvedCount || 0}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="dashboard-flat-section-head dashboard-flat-section-head-inline">
+                    <span className="dashboard-flat-section-label">Video reviews</span>
+                    <span className="dashboard-flat-section-note">
+                      {selectedCampaign.submissions.length}{" "}
+                      {selectedCampaign.submissions.length === 1 ? "review" : "reviews"}
+                    </span>
+                  </div>
+
+                  {selectedCampaign.submissions.length === 0 ? (
+                    <div className="dashboard-detail-empty-state">
+                      <div className="dashboard-detail-empty-icon">▶</div>
+                      <h3>No reviews yet</h3>
+                      <p>Share your campaign link to start collecting video testimonials.</p>
+                      <button
+                        type="button"
+                        className="dashboard-action-btn"
+                        onClick={() => copyText(selectedCampaignPublicUrl)}
+                      >
+                        Copy campaign link
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="dashboard-detail-review-list">
+                      {selectedCampaign.submissions.map((submission) => {
+                        const normalizedStatus = normalizeSubmissionStatus(submission.status);
+                        const isApproved = normalizedStatus === "APPROVED";
+                        const submissionState = getSubmissionState(submission.status);
+                        const approveActionKey = `${submission.id}:APPROVED`;
+                        const rejectActionKey = `${submission.id}:REJECTED`;
+                        const excerpt = getSubmissionExcerpt(
+                          submission.aiKeyPhrase,
+                          submission.aiGeneratedReview,
+                          submission.answers
+                        );
+
+                        return (
+                          <div key={submission.id} className="dashboard-detail-review-row">
+                            <div className="dashboard-detail-review-avatar">
+                              {getReviewerInitials(submission.reviewerName)}
+                            </div>
+                            <div className="dashboard-detail-review-thumb">
+                              <video
+                                src={`/api/campaigns/${selectedCampaign.id}/submissions/${submission.id}/view`}
+                                ref={(node) => {
+                                  videoRefs.current[submission.id] = node;
+                                }}
+                                preload="metadata"
+                                playsInline
+                                onClick={() => toggleSubmissionPlayback(submission.id)}
+                              />
+                              {playingSubmissionId !== submission.id && (
+                                <button
+                                  type="button"
+                                  className="dashboard-detail-review-play"
+                                  onClick={() => toggleSubmissionPlayback(submission.id)}
+                                >
+                                  ▶
+                                </button>
+                              )}
+                            </div>
+                            <div className="dashboard-detail-review-copy">
+                              <p className="dashboard-detail-review-name">{submission.reviewerName}</p>
+                              <p className="dashboard-detail-review-note">
+                                {excerpt || "Video submission"} ·{" "}
+                                {formatSubmissionDuration(submission.durationSeconds) ||
+                                  formatShortDate(submission.createdAt) ||
+                                  "—"}
+                              </p>
+                            </div>
+                            <p className="dashboard-detail-review-stars">
+                              {"★".repeat(submission.reviewerRating || 0)}
+                              <span>
+                                {"★".repeat(Math.max(5 - (submission.reviewerRating || 0), 0))}
+                              </span>
+                            </p>
+                            <span
+                              className={`dashboard-campaign-list-badge ${submissionState.badgeClassName}`}
+                            >
+                              {submissionState.label}
+                            </span>
+                            <span className="dashboard-detail-review-date">
+                              {formatShortDate(submission.createdAt) || "—"}
+                            </span>
+                            {isApproved ? (
+                              <button
+                                type="button"
+                                className="dashboard-secondary-btn dashboard-inline-action"
+                                onClick={() => openSubmissionDetails(selectedCampaign.id, submission.id)}
+                              >
+                                View
+                              </button>
+                            ) : (
+                              <div className="dashboard-detail-review-actions">
+                                <button
+                                  type="button"
+                                  className="dashboard-secondary-btn dashboard-inline-action"
+                                  onClick={() =>
+                                    handleSubmissionAction(
+                                      selectedCampaign.id,
+                                      submission.id,
+                                      "REJECTED"
+                                    )
+                                  }
+                                  disabled={submissionActionId === rejectActionKey}
+                                >
+                                  {submissionActionId === rejectActionKey ? "Saving..." : "Reject"}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="dashboard-action-btn dashboard-inline-action"
+                                  onClick={() =>
+                                    handleSubmissionAction(
+                                      selectedCampaign.id,
+                                      submission.id,
+                                      "APPROVED"
+                                    )
+                                  }
+                                  disabled={submissionActionId === approveActionKey}
+                                >
+                                  {submissionActionId === approveActionKey ? "Saving..." : "Approve"}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {campaignDetailTab === "embed" && (
+                <div className="dashboard-detail-sections">
+                  <section className="dashboard-detail-section">
                     <p className="dashboard-eyebrow">Embed</p>
                     <h3 className="dashboard-campaign-webhook-title">Embed this campaign</h3>
                     <p className="dashboard-campaign-webhook-copy">
                       Add this campaign directly inside your website with an iframe.
                     </p>
-                  </div>
-                  <span className="dashboard-settings-pill">iframe</span>
-                </div>
-
-                <div className="dashboard-embed-block">
-                  <p className="dashboard-settings-label">Embed URL</p>
-                  <div className="dashboard-inline-code">{selectedCampaignEmbedUrl}</div>
-                  <button
-                    type="button"
-                    className="dashboard-secondary-btn dashboard-copy-btn"
-                    onClick={() => copyText(selectedCampaignEmbedUrl)}
-                  >
-                    Copy URL
-                  </button>
-                </div>
-
-                <div className="dashboard-embed-block">
-                  <p className="dashboard-settings-label">Embed snippet</p>
-                  <textarea
-                    readOnly
-                    rows={4}
-                    className="dashboard-embed-textarea"
-                    value={selectedCampaignEmbedSnippet}
-                  />
-                  <button
-                    type="button"
-                    className="dashboard-secondary-btn dashboard-copy-btn"
-                    onClick={() => copyText(selectedCampaignEmbedSnippet)}
-                  >
-                    Copy snippet
-                  </button>
-                </div>
-              </div>
-
-              <div className="dashboard-campaign-webhook-card">
-                <div className="dashboard-campaign-webhook-head">
-                  <div>
-                    <p className="dashboard-eyebrow">Automation</p>
-                    <h3 className="dashboard-campaign-webhook-title">
-                      Campaign webhook override
-                    </h3>
-                    <p className="dashboard-campaign-webhook-copy">
-                      If set, this campaign sends events only to the custom endpoint below.
-                      Otherwise events fall back to your account-level webhooks.
-                    </p>
-                  </div>
-                  <span className="dashboard-settings-pill">
-                    {selectedCampaign.webhookEndpoint
-                      ? "Using campaign webhook"
-                      : "Using account webhooks"}
-                  </span>
-                </div>
-
-                {campaignWebhookError && (
-                  <div className="dashboard-settings-alert dashboard-settings-alert-error">
-                    {campaignWebhookError}
-                  </div>
-                )}
-
-                {campaignWebhookNotice && (
-                  <div className="dashboard-settings-alert dashboard-settings-alert-success">
-                    {campaignWebhookNotice}
-                  </div>
-                )}
-
-                {latestCampaignWebhookSecret && (
-                  <div className="dashboard-secret-card">
-                    <div>
-                      <p className="dashboard-settings-label">Campaign signing secret</p>
-                      <p className="dashboard-secret-value">{latestCampaignWebhookSecret}</p>
-                    </div>
-                    <button
-                      type="button"
-                      className="dashboard-action-btn dashboard-secondary-action"
-                      onClick={() => {
-                        copyText(latestCampaignWebhookSecret);
-                      }}
-                    >
-                      Copy secret
-                    </button>
-                  </div>
-                )}
-
-                <form className="dashboard-webhook-form" onSubmit={handleSaveCampaignWebhook}>
-                  <div className="dashboard-webhook-form-grid">
-                    <label className="dashboard-webhook-field">
-                      <span className="dashboard-settings-label">Endpoint URL</span>
-                      <input
-                        type="url"
-                        className="dashboard-webhook-input"
-                        placeholder="https://hooks.zapier.com/..."
-                        value={campaignWebhookUrl}
-                        onChange={(event) => {
-                          setCampaignWebhookUrl(event.target.value);
-                        }}
-                        required
-                      />
-                    </label>
-                    <label className="dashboard-webhook-field">
-                      <span className="dashboard-settings-label">Description</span>
-                      <input
-                        type="text"
-                        className="dashboard-webhook-input"
-                        placeholder="Campaign-specific integration"
-                        value={campaignWebhookDescription}
-                        onChange={(event) => {
-                          setCampaignWebhookDescription(event.target.value);
-                        }}
-                      />
-                    </label>
-                  </div>
-
-                  <div className="dashboard-webhook-events">
-                    {WEBHOOK_EVENT_OPTIONS.map((option) => (
-                      <label key={`campaign-${option.value}`} className="dashboard-webhook-event-option">
-                        <input
-                          type="checkbox"
-                          checked={campaignWebhookEvents.includes(option.value)}
-                          onChange={() => {
-                            toggleCampaignWebhookEventSelection(option.value);
-                          }}
-                        />
-                        <span>
-                          <strong>{option.label}</strong>
-                          <small>{option.helper}</small>
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-
-                  <div className="dashboard-webhook-actions">
-                    <button
-                      type="submit"
-                      className="dashboard-action-btn"
-                      disabled={campaignWebhookSaving || campaignWebhookEvents.length === 0}
-                    >
-                      {campaignWebhookSaving ? "Saving..." : "Save campaign webhook"}
-                    </button>
-
-                    {selectedCampaign.webhookEndpoint && (
+                    <div className="dashboard-embed-block">
+                      <p className="dashboard-settings-label">Embed URL</p>
+                      <div className="dashboard-inline-code">{selectedCampaignEmbedUrl}</div>
                       <button
                         type="button"
-                        className="dashboard-action-btn dashboard-secondary-action"
-                        disabled={campaignWebhookSaving}
-                        onClick={handleRemoveCampaignWebhook}
+                        className="dashboard-secondary-btn dashboard-copy-btn"
+                        onClick={() => copyText(selectedCampaignEmbedUrl)}
                       >
-                        {campaignWebhookSaving ? "Removing..." : "Remove override"}
+                        Copy URL
                       </button>
+                    </div>
+                  </section>
+                  <section className="dashboard-detail-section">
+                    <p className="dashboard-settings-label">Embed snippet</p>
+                    <textarea
+                      readOnly
+                      rows={4}
+                      className="dashboard-embed-textarea"
+                      value={selectedCampaignEmbedSnippet}
+                    />
+                    <button
+                      type="button"
+                      className="dashboard-secondary-btn dashboard-copy-btn"
+                      onClick={() => copyText(selectedCampaignEmbedSnippet)}
+                    >
+                      Copy snippet
+                    </button>
+                  </section>
+                </div>
+              )}
+
+              {campaignDetailTab === "automation" && (
+                <div className="dashboard-detail-sections">
+                  <section className="dashboard-detail-section">
+                    <div className="dashboard-campaign-webhook-head">
+                      <div>
+                        <p className="dashboard-eyebrow">Automation</p>
+                        <h3 className="dashboard-campaign-webhook-title">
+                          Campaign webhook override
+                        </h3>
+                        <p className="dashboard-campaign-webhook-copy">
+                          If set, this campaign sends events only to the custom endpoint below.
+                          Otherwise events fall back to your account-level webhooks.
+                        </p>
+                      </div>
+                      <button type="button" className="dashboard-secondary-btn dashboard-inline-action">
+                        {selectedCampaign.webhookEndpoint
+                          ? "Using campaign webhook"
+                          : "Using account webhooks"}
+                      </button>
+                    </div>
+
+                    {campaignWebhookError && (
+                      <div className="dashboard-settings-alert dashboard-settings-alert-error">
+                        {campaignWebhookError}
+                      </div>
                     )}
-                  </div>
-                </form>
-              </div>
 
-              <div className="dashboard-metrics-grid">
-                <div className="dashboard-metric-card">
-                  <p className="dashboard-metric-label">Total submissions</p>
-                  <p className="dashboard-metric-value">{selectedCampaignStats?.total || 0}</p>
-                </div>
-                <div className="dashboard-metric-card">
-                  <p className="dashboard-metric-label">Avg. rating</p>
-                  <p className="dashboard-metric-value">
-                    {selectedCampaignStats && selectedCampaignStats.total > 0
-                      ? `${selectedCampaignStats.avgRating.toFixed(1)}★`
-                      : "0.0★"}
-                  </p>
-                </div>
-                <div className="dashboard-metric-card">
-                  <p className="dashboard-metric-label">Rewards sent</p>
-                  <p className="dashboard-metric-value">
-                    {selectedCampaignStats?.approvedCount || 0}
-                  </p>
-                </div>
-              </div>
+                    {campaignWebhookNotice && (
+                      <div className="dashboard-settings-alert dashboard-settings-alert-success">
+                        {campaignWebhookNotice}
+                      </div>
+                    )}
 
-              <div className="dashboard-reviews-shell">
-                <div className="dashboard-reviews-head">
-                  <h3 className="dashboard-reviews-title">Video reviews</h3>
-                  <span className="dashboard-list-count">
-                    {selectedCampaign.submissions.length}{" "}
-                    {selectedCampaign.submissions.length === 1 ? "review" : "reviews"}
-                  </span>
-                </div>
+                    {latestCampaignWebhookSecret && (
+                      <div className="dashboard-secret-card">
+                        <div>
+                          <p className="dashboard-settings-label">Campaign signing secret</p>
+                          <p className="dashboard-secret-value">{latestCampaignWebhookSecret}</p>
+                        </div>
+                        <button
+                          type="button"
+                          className="dashboard-secondary-btn"
+                          onClick={() => copyText(latestCampaignWebhookSecret)}
+                        >
+                          Copy secret
+                        </button>
+                      </div>
+                    )}
 
-                {selectedCampaign.submissions.length === 0 ? (
-                  <div className="dashboard-empty-state">No submissions collected yet.</div>
-                ) : (
-                  <div className="dashboard-review-grid">
-                    {selectedCampaign.submissions.map((submission) => {
-                      const normalizedStatus = normalizeSubmissionStatus(submission.status);
-                      const isApproved = normalizedStatus === "APPROVED";
-                      const isPending = normalizedStatus === "PENDING";
-                      const durationLabel = formatSubmissionDuration(submission.durationSeconds);
-                      const excerpt = getSubmissionExcerpt(
-                        submission.aiKeyPhrase,
-                        submission.aiGeneratedReview,
-                        submission.answers
-                      );
-                      const approveActionKey = `${submission.id}:APPROVED`;
-                      const rejectActionKey = `${submission.id}:REJECTED`;
+                    <form className="dashboard-webhook-form" onSubmit={handleSaveCampaignWebhook}>
+                      <div className="dashboard-webhook-form-grid">
+                        <label className="dashboard-webhook-field">
+                          <span className="dashboard-settings-label">Endpoint URL</span>
+                          <input
+                            type="url"
+                            className="dashboard-webhook-input"
+                            placeholder="https://hooks.zapier.com/..."
+                            value={campaignWebhookUrl}
+                            onChange={(event) => {
+                              setCampaignWebhookUrl(event.target.value);
+                            }}
+                            required
+                          />
+                        </label>
+                        <label className="dashboard-webhook-field">
+                          <span className="dashboard-settings-label">Description</span>
+                          <input
+                            type="text"
+                            className="dashboard-webhook-input"
+                            placeholder="Campaign-specific integration"
+                            value={campaignWebhookDescription}
+                            onChange={(event) => {
+                              setCampaignWebhookDescription(event.target.value);
+                            }}
+                          />
+                        </label>
+                      </div>
 
-                      return (
-                        <article key={submission.id} className="dashboard-review-card">
-                          <div className="dashboard-review-video">
-                            <span
-                              className={`dashboard-review-badge ${
-                                isApproved
-                                  ? "is-approved"
-                                  : isPending
-                                    ? "is-pending"
-                                    : "is-rejected"
-                              }`}
-                            >
-                              {isApproved ? "Published" : isPending ? "Pending" : "Removed"}
-                            </span>
-
-                            <video
-                              src={`/api/campaigns/${selectedCampaign.id}/submissions/${submission.id}/view`}
-                              ref={(node) => {
-                                videoRefs.current[submission.id] = node;
-                              }}
-                              preload="metadata"
-                              playsInline
-                              onClick={() => toggleSubmissionPlayback(submission.id)}
-                              onPlay={() => setPlayingSubmissionId(submission.id)}
-                              onPause={() => {
-                                setPlayingSubmissionId((current) =>
-                                  current === submission.id ? null : current
-                                );
-                              }}
-                              onEnded={() => {
-                                setPlayingSubmissionId((current) =>
-                                  current === submission.id ? null : current
-                                );
+                      <div className="dashboard-webhook-events">
+                        {WEBHOOK_EVENT_OPTIONS.map((option) => (
+                          <label
+                            key={`campaign-${option.value}`}
+                            className="dashboard-webhook-event-option"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={campaignWebhookEvents.includes(option.value)}
+                              onChange={() => {
+                                toggleCampaignWebhookEventSelection(option.value);
                               }}
                             />
-
-                            {playingSubmissionId !== submission.id && (
-                              <button
-                                type="button"
-                                className="dashboard-review-play"
-                                onClick={() => toggleSubmissionPlayback(submission.id)}
-                                aria-label="Play video"
-                              >
-                                ▶
-                              </button>
-                            )}
-
-                            <span className="dashboard-review-time">
-                              {durationLabel ||
-                                new Date(submission.createdAt).toLocaleDateString()}
+                            <span>
+                              <strong>{option.label}</strong>
+                              <small>{option.helper}</small>
                             </span>
-                          </div>
+                          </label>
+                        ))}
+                      </div>
 
-                          <div className="dashboard-review-body">
-                            <p className="dashboard-review-name">{submission.reviewerName}</p>
-                            <p className="dashboard-review-email">{submission.reviewerEmail}</p>
-                            <p className="dashboard-review-stars">
-                              {"★".repeat(submission.reviewerRating || 0)}
-                              <span className="dashboard-review-stars-muted">
-                                {"★".repeat(Math.max(5 - (submission.reviewerRating || 0), 0))}
-                              </span>
-                            </p>
-                            <p className="dashboard-review-note">
-                              {excerpt ||
-                                `Submitted on ${new Date(submission.createdAt).toLocaleDateString()}`}
-                            </p>
-                          </div>
+                      <div className="dashboard-webhook-actions">
+                        <button
+                          type="submit"
+                          className="dashboard-action-btn"
+                          disabled={campaignWebhookSaving || campaignWebhookEvents.length === 0}
+                        >
+                          {campaignWebhookSaving ? "Saving..." : "Save campaign webhook"}
+                        </button>
 
-                          <div className="dashboard-review-actions">
-                            {isApproved ? (
-                              <>
-                                <span className="dashboard-status-badge dashboard-review-status is-active">
-                                  Published
-                                </span>
-                                <button
-                                  type="button"
-                                  className="dashboard-secondary-btn dashboard-inline-action"
-                                  onClick={() => {
-                                    openSubmissionDetails(selectedCampaign.id, submission.id);
-                                  }}
-                                >
-                                  Details
-                                </button>
-                                <button
-                                  type="button"
-                                  className="dashboard-secondary-btn dashboard-inline-action"
-                                  onClick={() => {
-                                    handleSubmissionAction(
-                                      selectedCampaign.id,
-                                      submission.id,
-                                      "REJECTED"
-                                    );
-                                  }}
-                                  disabled={submissionActionId === rejectActionKey}
-                                >
-                                  {submissionActionId === rejectActionKey ? "Saving..." : "Remove"}
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <button
-                                  type="button"
-                                  className="dashboard-action-btn dashboard-inline-action"
-                                  onClick={() => {
-                                    handleSubmissionAction(
-                                      selectedCampaign.id,
-                                      submission.id,
-                                      "APPROVED"
-                                    );
-                                  }}
-                                  disabled={submissionActionId === approveActionKey}
-                                >
-                                  {submissionActionId === approveActionKey ? "Saving..." : "Approve"}
-                                </button>
-                                <button
-                                  type="button"
-                                  className="dashboard-secondary-btn dashboard-inline-action"
-                                  onClick={() => {
-                                    openSubmissionDetails(selectedCampaign.id, submission.id);
-                                  }}
-                                >
-                                  Details
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </article>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+                        {selectedCampaign.webhookEndpoint && (
+                          <button
+                            type="button"
+                            className="dashboard-secondary-btn"
+                            disabled={campaignWebhookSaving}
+                            onClick={handleRemoveCampaignWebhook}
+                          >
+                            {campaignWebhookSaving ? "Removing..." : "Remove override"}
+                          </button>
+                        )}
+                      </div>
+                    </form>
+                  </section>
+                </div>
+              )}
+
+              {campaignDetailTab === "settings" && (
+                <div className="dashboard-detail-sections">
+                  <section className="dashboard-detail-section">
+                    <p className="dashboard-eyebrow">Settings</p>
+                    <h3 className="dashboard-campaign-webhook-title">Campaign settings</h3>
+                    <p className="dashboard-campaign-webhook-copy">
+                      Configure the current campaign and manage its public availability.
+                    </p>
+
+                    <div className="dashboard-detail-option-block">
+                      <div className="dashboard-detail-option-row">
+                        <div>
+                          <p className="dashboard-detail-option-title">Campaign status</p>
+                          <p className="dashboard-detail-option-copy">
+                            Publish or unpublish this campaign without changing its link.
+                          </p>
+                        </div>
+                        {selectedCampaign.hasNoEndDate || !selectedCampaign.endsAt ? (
+                          <button
+                            type="button"
+                            className="dashboard-secondary-btn"
+                            onClick={() => {
+                              void fetch(`/api/campaigns/${selectedCampaign.id}`, {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ action: "unpublish" }),
+                              }).then(() => router.refresh());
+                            }}
+                          >
+                            Unpublish
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="dashboard-secondary-btn"
+                            onClick={() => {
+                              void fetch(`/api/campaigns/${selectedCampaign.id}`, {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ action: "publish" }),
+                              }).then(() => router.refresh());
+                            }}
+                          >
+                            Publish
+                          </button>
+                        )}
+                      </div>
+                      <div className="dashboard-detail-option-row">
+                        <div>
+                          <p className="dashboard-detail-option-title">Reward</p>
+                          <p className="dashboard-detail-option-copy">
+                            {selectedCampaign.rewardText
+                              ? `${selectedCampaign.rewardText}${selectedCampaign.rewardValue ? ` · ${selectedCampaign.rewardValue}` : ""}`
+                              : "No reward configured."}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          className="dashboard-secondary-btn"
+                          onClick={() => {
+                            setEditingCampaignId(selectedCampaign.id);
+                            setShowBuilder(true);
+                          }}
+                        >
+                          Edit
+                        </button>
+                      </div>
+                      <div className="dashboard-detail-option-row">
+                        <div>
+                          <p className="dashboard-detail-option-title">Question</p>
+                          <p className="dashboard-detail-option-copy">
+                            {selectedCampaign.questions[0]?.text || "No guiding question configured."}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          className="dashboard-secondary-btn"
+                          onClick={() => {
+                            setEditingCampaignId(selectedCampaign.id);
+                            setShowBuilder(true);
+                          }}
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+              )}
             </div>
           )}
 
           {activeSection === "campaigns" && selectedCampaign && selectedSubmissionDetail && (
-            <div className="dashboard-submissions-card dashboard-submission-detail-page">
-              <div className="dashboard-builder-toolbar dashboard-sub-toolbar">
+            <div className="dashboard-submission-detail-view">
+              <div className="dashboard-section-topbar">
+                <span className="dashboard-section-topbar-title">Submission</span>
+                <div className="dashboard-section-topbar-spacer" />
                 <button
                   type="button"
-                  className="dashboard-secondary-btn dashboard-back-btn"
+                  className="dashboard-section-btn dashboard-section-btn-secondary"
                   onClick={closeSubmissionDetails}
                 >
-                  ← Back to submissions
+                  <svg
+                    className="dashboard-button-icon"
+                    viewBox="0 0 14 14"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M9 2L4 7l5 5"
+                      stroke="currentColor"
+                      strokeWidth="1.35"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  Back to submissions
                 </button>
+                {selectedSubmissionStatus === "PENDING" && (
+                  <>
+                    <button
+                      type="button"
+                      className="dashboard-section-btn dashboard-section-btn-secondary"
+                      onClick={() =>
+                        handleSubmissionAction(
+                          selectedSubmissionDetail.campaign.id,
+                          selectedSubmissionDetail.submission.id,
+                          "REJECTED"
+                        )
+                      }
+                      disabled={submissionActionId === selectedSubmissionRejectActionKey}
+                    >
+                      {submissionActionId === selectedSubmissionRejectActionKey
+                        ? "Saving..."
+                        : "Reject"}
+                    </button>
+                    <button
+                      type="button"
+                      className="dashboard-section-btn dashboard-section-btn-primary"
+                      onClick={() =>
+                        handleSubmissionAction(
+                          selectedSubmissionDetail.campaign.id,
+                          selectedSubmissionDetail.submission.id,
+                          "APPROVED"
+                        )
+                      }
+                      disabled={submissionActionId === selectedSubmissionApproveActionKey}
+                    >
+                      {submissionActionId === selectedSubmissionApproveActionKey
+                        ? "Saving..."
+                        : "Approve"}
+                    </button>
+                  </>
+                )}
+                {selectedSubmissionState && selectedSubmissionStatus !== "PENDING" && (
+                  <span
+                    className={`dashboard-campaign-list-badge ${selectedSubmissionState.badgeClassName}`}
+                  >
+                    {selectedSubmissionState.label}
+                  </span>
+                )}
               </div>
 
-              <div className="dashboard-submission-page-head">
-                <div>
+              <div className="dashboard-submission-detail-head">
+                <div className="dashboard-submission-detail-head-copy">
                   <p className="dashboard-eyebrow">Submission details</p>
                   <h2 className="dashboard-submissions-title">
                     {selectedSubmissionDetail.submission.reviewerName}
                   </h2>
-                  <p className="dashboard-submissions-link">{selectedSubmissionDetail.campaign.name}</p>
+                  <p className="dashboard-submissions-link">
+                    {selectedSubmissionDetail.campaign.name}
+                    {formatDateTime(selectedSubmissionDetail.submission.createdAt)
+                      ? ` · ${formatDateTime(selectedSubmissionDetail.submission.createdAt)}`
+                      : ""}
+                  </p>
+                </div>
+                <div className="dashboard-submission-detail-head-meta">
+                  <div className="dashboard-detail-review-stars dashboard-detail-review-stars-static">
+                    {"★".repeat(selectedSubmissionDetail.submission.reviewerRating || 0)}
+                    <span>
+                      {"★".repeat(
+                        Math.max(5 - (selectedSubmissionDetail.submission.reviewerRating || 0), 0)
+                      )}
+                    </span>
+                  </div>
+                  {selectedSubmissionExcerpt && (
+                    <p className="dashboard-submission-detail-head-note">
+                      {selectedSubmissionExcerpt}
+                    </p>
+                  )}
                 </div>
               </div>
 
-              <div className="dashboard-submission-detail-frame">
-                <div className="dashboard-submission-detail-player">
-                  <video
-                    controls
-                    playsInline
-                    preload="metadata"
-                    src={`/api/campaigns/${selectedSubmissionDetail.campaign.id}/submissions/${selectedSubmissionDetail.submission.id}/view`}
-                  />
-                </div>
+              <div className="dashboard-detail-sections">
+                <section className="dashboard-detail-section">
+                  <div className="dashboard-submission-stage">
+                    <div className="dashboard-submission-detail-player">
+                      <video
+                        controls
+                        playsInline
+                        preload="metadata"
+                        src={`/api/campaigns/${selectedSubmissionDetail.campaign.id}/submissions/${selectedSubmissionDetail.submission.id}/view`}
+                      />
+                    </div>
 
-                <div className="dashboard-submission-detail-grid">
-                  <div className="dashboard-submission-detail-item">
-                    <strong>Status</strong>
-                    <p>{selectedSubmissionDetail.submission.status}</p>
+                    <div className="dashboard-submission-facts">
+                      <div className="dashboard-submission-fact-row">
+                        <span>Status</span>
+                        <strong>{selectedSubmissionState?.label || selectedSubmissionDetail.submission.status}</strong>
+                      </div>
+                      <div className="dashboard-submission-fact-row">
+                        <span>Rating</span>
+                        <strong>
+                          {typeof selectedSubmissionDetail.submission.reviewerRating === "number"
+                            ? `${selectedSubmissionDetail.submission.reviewerRating} / 5`
+                            : "N/A"}
+                        </strong>
+                      </div>
+                      <div className="dashboard-submission-fact-row">
+                        <span>Email</span>
+                        <strong>{selectedSubmissionDetail.submission.reviewerEmail}</strong>
+                      </div>
+                      <div className="dashboard-submission-fact-row">
+                        <span>Campaign</span>
+                        <strong>{selectedSubmissionDetail.campaign.name}</strong>
+                      </div>
+                      <div className="dashboard-submission-fact-row">
+                        <span>Duration</span>
+                        <strong>
+                          {formatSubmissionDuration(
+                            selectedSubmissionDetail.submission.durationSeconds
+                          ) || "—"}
+                        </strong>
+                      </div>
+                      <div className="dashboard-submission-fact-row">
+                        <span>AI status</span>
+                        <strong>{selectedSubmissionDetail.submission.aiStatus}</strong>
+                      </div>
+                    </div>
                   </div>
-                  <div className="dashboard-submission-detail-item">
-                    <strong>Rating</strong>
-                    <p>
-                      {typeof selectedSubmissionDetail.submission.reviewerRating === "number"
-                        ? `${selectedSubmissionDetail.submission.reviewerRating} / 5`
-                        : "N/A"}
-                    </p>
-                  </div>
-                  <div className="dashboard-submission-detail-item">
-                    <strong>Email</strong>
-                    <p>{selectedSubmissionDetail.submission.reviewerEmail}</p>
-                  </div>
-                  <div className="dashboard-submission-detail-item">
-                    <strong>Campaign</strong>
-                    <p>{selectedSubmissionDetail.campaign.name}</p>
-                  </div>
-                  <div className="dashboard-submission-detail-item">
-                    <strong>Submitted</strong>
-                    <p>{new Date(selectedSubmissionDetail.submission.createdAt).toLocaleString()}</p>
-                  </div>
-                  <div className="dashboard-submission-detail-item">
-                    <strong>AI status</strong>
-                    <p>{selectedSubmissionDetail.submission.aiStatus}</p>
-                  </div>
-                </div>
+                </section>
 
                 {selectedSubmissionDetail.submission.aiError && (
-                  <div className="dashboard-settings-alert dashboard-settings-alert-error">
-                    AI processing failed: {selectedSubmissionDetail.submission.aiError}
-                  </div>
+                  <section className="dashboard-detail-section">
+                    <div className="dashboard-settings-alert dashboard-settings-alert-error">
+                      AI processing failed: {selectedSubmissionDetail.submission.aiError}
+                    </div>
+                  </section>
                 )}
 
                 {(selectedSubmissionDetail.submission.aiKeyPhrase ||
                   selectedSubmissionDetail.submission.aiGeneratedReview) && (
-                  <div className="dashboard-submission-ai-block">
-                    <p className="dashboard-settings-label">Key phrase</p>
+                  <section className="dashboard-detail-section">
+                    <p className="dashboard-settings-label">Summary</p>
                     <p className="dashboard-submission-ai-copy">
                       {selectedSubmissionDetail.submission.aiKeyPhrase ||
                         selectedSubmissionDetail.submission.aiGeneratedReview}
                     </p>
-                  </div>
+                  </section>
                 )}
 
                 {selectedSubmissionDetail.submission.aiGeneratedReview && (
-                  <div className="dashboard-submission-ai-block">
+                  <section className="dashboard-detail-section">
                     <p className="dashboard-settings-label">AI written review</p>
                     <p className="dashboard-submission-ai-copy">
                       {selectedSubmissionDetail.submission.aiGeneratedReview}
                     </p>
-                  </div>
+                  </section>
                 )}
 
-                <div className="dashboard-submission-ai-block">
+                <section className="dashboard-detail-section">
                   <p className="dashboard-settings-label">Transcript</p>
                   <p className="dashboard-submission-ai-copy">
                     {selectedSubmissionDetail.submission.aiTranscript ||
                       "Transcript not available yet."}
                   </p>
-                </div>
-              </div>
-            </div>
-          )}
+                </section>
 
-          {activeSection === "wall" && (
-            <div className="dashboard-settings-shell">
-              <div className="dashboard-page-header">
-                <div className="dashboard-page-header-copy">
-                  <h1 className="dashboard-title">Wall of Love</h1>
-                  <p className="dashboard-subtitle">
-                    Build and publish a public page with your best approved video reviews.
-                  </p>
-                </div>
-              </div>
-
-              <div className="dashboard-settings-card">
-                <div className="dashboard-settings-head">
-                  <div>
-                    <h2 className="dashboard-settings-title">Publish social proof wall</h2>
-                    <p className="dashboard-settings-copy">
-                      Build a public page with your best approved video reviews. Choose which
-                      campaigns and submissions are visible.
-                    </p>
-                  </div>
-                  <span className="dashboard-settings-pill">
-                    {wallPublished ? "Published" : "Draft"}
-                  </span>
-                </div>
-
-                {wallError && (
-                  <div className="dashboard-settings-alert dashboard-settings-alert-error">
-                    {wallError}
-                  </div>
-                )}
-
-                {wallNotice && (
-                  <div className="dashboard-settings-alert dashboard-settings-alert-success">
-                    {wallNotice}
-                  </div>
-                )}
-
-                <form className="dashboard-webhook-form" onSubmit={handleSaveWallSettings}>
-                  {wallLoading && (
-                    <div className="dashboard-settings-alert dashboard-settings-alert-neutral">
-                      {wallConfig
-                        ? "Refreshing Wall of Love settings..."
-                        : "Loading Wall of Love settings... You can already edit the draft."}
-                    </div>
-                  )}
-
-                  <div className="dashboard-webhook-form-grid">
-                    <label className="dashboard-webhook-field">
-                      <span className="dashboard-settings-label">Wall title</span>
-                      <input
-                        type="text"
-                        className="dashboard-webhook-input"
-                        value={wallTitle}
-                        onChange={(event) => {
-                          setWallTitle(event.target.value);
-                        }}
-                        maxLength={120}
-                        required
-                      />
-                    </label>
-                    <label className="dashboard-webhook-field">
-                      <span className="dashboard-settings-label">Wall subtitle</span>
-                      <input
-                        type="text"
-                        className="dashboard-webhook-input"
-                        value={wallSubtitle}
-                        onChange={(event) => {
-                          setWallSubtitle(event.target.value);
-                        }}
-                        maxLength={240}
-                      />
-                    </label>
-                  </div>
-
-                    <div className="dashboard-wall-toggle-grid">
-                      <label className="dashboard-webhook-event-option">
-                      <input
-                        type="checkbox"
-                        checked={wallPublished}
-                        onChange={(event) => {
-                          setWallPublished(event.target.checked);
-                        }}
-                      />
-                        <span>
-                          <strong>Publish Wall of Love</strong>
-                          <small>
-                            {wallPublicPath
-                              ? `Make your wall public at tellr.me${wallPublicPath}.`
-                              : "Make your wall public at your personal wall URL."}
-                          </small>
-                        </span>
-                      </label>
-
-                    <label className="dashboard-webhook-event-option">
-                      <input
-                        type="checkbox"
-                        checked={wallIncludeAllCampaigns}
-                        onChange={(event) => {
-                          const checked = event.target.checked;
-                          setWallIncludeAllCampaigns(checked);
-                          if (checked) {
-                            setWallSelectedCampaignIds([]);
-                          }
-                        }}
-                      />
-                      <span>
-                        <strong>Include all campaigns</strong>
-                        <small>Disable to select specific campaigns.</small>
-                      </span>
-                    </label>
-
-                    <label className="dashboard-webhook-event-option">
-                      <input
-                        type="checkbox"
-                        checked={wallIncludeAllSubmissions}
-                        onChange={(event) => {
-                          const checked = event.target.checked;
-                          setWallIncludeAllSubmissions(checked);
-                          if (checked) {
-                            setWallSelectedSubmissionIds([]);
-                          }
-                        }}
-                      />
-                      <span>
-                        <strong>Include all approved submissions</strong>
-                        <small>Disable to manually choose which reviews are visible.</small>
-                      </span>
-                      </label>
-                    </div>
-
-                    {wallPublished && wallPublicPath && (
-                      <div className="dashboard-wall-link-card">
-                        <div>
-                          <p className="dashboard-settings-label">Public wall link</p>
-                          <p className="dashboard-wall-link-value">tellr.me{wallPublicPath}</p>
+                {selectedSubmissionDetail.submission.answers.length > 0 && (
+                  <section className="dashboard-detail-section">
+                    <p className="dashboard-settings-label">Answers</p>
+                    <div className="dashboard-submission-answers">
+                      {selectedSubmissionDetail.submission.answers.map((answer) => (
+                        <div key={answer.questionId} className="dashboard-submission-answer-row">
+                          <p className="dashboard-submission-answer-question">{answer.questionText}</p>
+                          <p className="dashboard-submission-answer-copy">{answer.answer}</p>
                         </div>
-                        <div className="dashboard-webhook-actions">
-                          <button
-                            type="button"
-                            className="dashboard-action-btn dashboard-secondary-action"
-                            onClick={() => {
-                              copyText(`tellr.me${wallPublicPath}`);
-                            }}
-                          >
-                            Copy link
-                          </button>
-                          <a
-                            href={wallPublicPath}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="dashboard-action-btn dashboard-secondary-action"
-                          >
-                            Open wall
-                          </a>
-                        </div>
-                      </div>
-                    )}
-
-                  <div className="dashboard-wall-panels">
-                    <div className="dashboard-wall-selection-card">
-                      <p className="dashboard-settings-label">Wall preview data</p>
-                      {approvedSubmissionsForWall.length === 0 ? (
-                        <p className="dashboard-settings-copy">
-                          No approved submissions yet. Once you approve reviews, they will appear here
-                          and can be published on your wall.
-                        </p>
-                      ) : (
-                        <div className="dashboard-wall-preview-list">
-                          {approvedSubmissionsForWall.slice(0, 3).map((submission) => (
-                            <div key={submission.id} className="dashboard-wall-preview-item">
-                              <p>{submission.reviewerName}</p>
-                              <small>
-                                {submission.campaignName} ·{" "}
-                                {submission.reviewerRating ? `${submission.reviewerRating}★` : "No rating"}
-                              </small>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      ))}
                     </div>
-
-                    {!wallIncludeAllCampaigns && (
-                      <div className="dashboard-wall-selection-card">
-                        <p className="dashboard-settings-label">Visible campaigns</p>
-                        {campaignsState.length === 0 ? (
-                          <p className="dashboard-settings-copy">No campaigns available.</p>
-                        ) : (
-                          <div className="dashboard-wall-list">
-                            {campaignsState.map((campaign) => (
-                              <label key={campaign.id} className="dashboard-webhook-event-option">
-                                <input
-                                  type="checkbox"
-                                  checked={wallSelectedCampaignIds.includes(campaign.id)}
-                                  onChange={() => {
-                                    toggleWallCampaignSelection(campaign.id);
-                                  }}
-                                />
-                                <span>
-                                  <strong>{campaign.name}</strong>
-                                  <small>{campaign.submissions.length} submissions</small>
-                                </span>
-                              </label>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {!wallIncludeAllSubmissions && (
-                      <div className="dashboard-wall-selection-card">
-                        <p className="dashboard-settings-label">Visible reviews</p>
-                        {approvedSubmissionsForWall.length === 0 ? (
-                          <p className="dashboard-settings-copy">
-                            No approved submissions available for the selected campaigns.
-                          </p>
-                        ) : (
-                          <div className="dashboard-wall-list">
-                            {approvedSubmissionsForWall.map((submission) => (
-                              <label key={submission.id} className="dashboard-webhook-event-option">
-                                <input
-                                  type="checkbox"
-                                  checked={wallSelectedSubmissionIds.includes(submission.id)}
-                                  onChange={() => {
-                                    toggleWallSubmissionSelection(submission.id);
-                                  }}
-                                />
-                                <span>
-                                  <strong>{submission.reviewerName}</strong>
-                                  <small>
-                                    {submission.campaignName} ·{" "}
-                                    {submission.reviewerRating
-                                      ? `${submission.reviewerRating}★`
-                                      : "No rating"}
-                                  </small>
-                                </span>
-                              </label>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="dashboard-webhook-actions">
-                    <button type="submit" className="dashboard-action-btn" disabled={wallSaving}>
-                      {wallSaving ? "Saving..." : "Save Wall settings"}
-                    </button>
-
-                    {wallPublicPath && (
-                      <>
-                        <button
-                          type="button"
-                          className="dashboard-action-btn dashboard-secondary-action"
-                          onClick={() => {
-                            copyText(`tellr.me${wallPublicPath}`);
-                          }}
-                        >
-                          Copy wall link
-                        </button>
-                        <a
-                          href={wallPublicPath}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="dashboard-action-btn dashboard-secondary-action"
-                        >
-                          Open wall
-                        </a>
-                      </>
-                    )}
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
-
-          {activeSection === "brand" && (
-            <div className="dashboard-settings-shell">
-              <div className="dashboard-page-header">
-                <div className="dashboard-page-header-copy">
-                  <h1 className="dashboard-title">Brand</h1>
-                  <p className="dashboard-subtitle">
-                    Configure the brand details used across campaigns and public pages.
-                  </p>
-                </div>
-              </div>
-
-              <div className="dashboard-settings-card">
-                <div className="dashboard-settings-head">
-                  <div>
-                    <h2 className="dashboard-settings-title">Brand identity</h2>
-                    <p className="dashboard-settings-copy">
-                      Configure your brand details for campaigns and public pages.
-                    </p>
-                  </div>
-                  <span className="dashboard-settings-pill">
-                    {brandProfile ? "Configured" : "Draft"}
-                  </span>
-                </div>
-
-                {brandError && (
-                  <div className="dashboard-settings-alert dashboard-settings-alert-error">
-                    {brandError}
-                  </div>
+                  </section>
                 )}
-
-                {brandNotice && (
-                  <div className="dashboard-settings-alert dashboard-settings-alert-success">
-                    {brandNotice}
-                  </div>
-                )}
-
-                <form className="dashboard-webhook-form" onSubmit={handleSaveBrandSettings}>
-                  {brandLoading && (
-                    <div className="dashboard-settings-alert dashboard-settings-alert-neutral">
-                      Loading brand settings...
-                    </div>
-                  )}
-
-                  <div className="dashboard-webhook-form-grid">
-                    <label className="dashboard-webhook-field">
-                      <span className="dashboard-settings-label">Brand name</span>
-                      <input
-                        type="text"
-                        className="dashboard-webhook-input"
-                        value={brandName}
-                        onChange={(event) => {
-                          setBrandName(event.target.value);
-                        }}
-                        maxLength={80}
-                        required
-                      />
-                    </label>
-
-                    <label className="dashboard-webhook-field">
-                      <span className="dashboard-settings-label">Website URL</span>
-                      <input
-                        type="url"
-                        className="dashboard-webhook-input"
-                        value={brandWebsiteUrl}
-                        onChange={(event) => {
-                          setBrandWebsiteUrl(event.target.value);
-                        }}
-                        placeholder="https://yourcompany.com"
-                      />
-                    </label>
-                  </div>
-
-                  <div className="dashboard-webhook-form-grid">
-                    <label className="dashboard-webhook-field">
-                      <span className="dashboard-settings-label">Primary color</span>
-                      <div className="dashboard-brand-color-field">
-                        <div
-                          className="dashboard-brand-color-chip"
-                          style={{ background: primaryColorModel.hex }}
-                        />
-                        <input
-                          type="text"
-                          className="dashboard-webhook-input"
-                          value={brandPrimaryColor}
-                          onChange={(event) => {
-                            setBrandPrimaryColor(event.target.value);
-                          }}
-                          onBlur={() => {
-                            setBrandPrimaryColor((current) =>
-                              normalizeHexInput(current, "#ff5c35")
-                            );
-                          }}
-                          placeholder="#ff5c35"
-                        />
-                      </div>
-                      <div className="dashboard-brand-color-composer">
-                        <label className="dashboard-brand-slider-row">
-                          <span>Hue</span>
-                          <input
-                            type="range"
-                            min={0}
-                            max={360}
-                            value={primaryColorModel.h}
-                            className="dashboard-brand-slider"
-                            style={{
-                              background:
-                                "linear-gradient(90deg,#ff0000 0%,#ffff00 17%,#00ff00 33%,#00ffff 50%,#0000ff 67%,#ff00ff 83%,#ff0000 100%)",
-                            }}
-                            onChange={(event) => {
-                              updatePrimaryColorFromHsl({
-                                h: Number(event.target.value),
-                              });
-                            }}
-                          />
-                        </label>
-                        <label className="dashboard-brand-slider-row">
-                          <span>Saturation</span>
-                          <input
-                            type="range"
-                            min={0}
-                            max={100}
-                            value={primaryColorModel.s}
-                            className="dashboard-brand-slider"
-                            style={{
-                              background: `linear-gradient(90deg, hsl(${primaryColorModel.h} 0% ${primaryColorModel.l}%), hsl(${primaryColorModel.h} 100% ${primaryColorModel.l}%))`,
-                            }}
-                            onChange={(event) => {
-                              updatePrimaryColorFromHsl({
-                                s: Number(event.target.value),
-                              });
-                            }}
-                          />
-                        </label>
-                        <label className="dashboard-brand-slider-row">
-                          <span>Lightness</span>
-                          <input
-                            type="range"
-                            min={0}
-                            max={100}
-                            value={primaryColorModel.l}
-                            className="dashboard-brand-slider"
-                            style={{
-                              background: `linear-gradient(90deg, #000000 0%, hsl(${primaryColorModel.h} ${primaryColorModel.s}% 50%) 50%, #ffffff 100%)`,
-                            }}
-                            onChange={(event) => {
-                              updatePrimaryColorFromHsl({
-                                l: Number(event.target.value),
-                              });
-                            }}
-                          />
-                        </label>
-                      </div>
-                    </label>
-
-                    <label className="dashboard-webhook-field">
-                      <span className="dashboard-settings-label">Secondary color</span>
-                      <div className="dashboard-brand-color-field">
-                        <div
-                          className="dashboard-brand-color-chip"
-                          style={{ background: secondaryColorModel.hex }}
-                        />
-                        <input
-                          type="text"
-                          className="dashboard-webhook-input"
-                          value={brandSecondaryColor}
-                          onChange={(event) => {
-                            setBrandSecondaryColor(event.target.value);
-                          }}
-                          onBlur={() => {
-                            setBrandSecondaryColor((current) =>
-                              normalizeHexInput(current, "#111318")
-                            );
-                          }}
-                          placeholder="#111318"
-                        />
-                      </div>
-                      <div className="dashboard-brand-color-composer">
-                        <label className="dashboard-brand-slider-row">
-                          <span>Hue</span>
-                          <input
-                            type="range"
-                            min={0}
-                            max={360}
-                            value={secondaryColorModel.h}
-                            className="dashboard-brand-slider"
-                            style={{
-                              background:
-                                "linear-gradient(90deg,#ff0000 0%,#ffff00 17%,#00ff00 33%,#00ffff 50%,#0000ff 67%,#ff00ff 83%,#ff0000 100%)",
-                            }}
-                            onChange={(event) => {
-                              updateSecondaryColorFromHsl({
-                                h: Number(event.target.value),
-                              });
-                            }}
-                          />
-                        </label>
-                        <label className="dashboard-brand-slider-row">
-                          <span>Saturation</span>
-                          <input
-                            type="range"
-                            min={0}
-                            max={100}
-                            value={secondaryColorModel.s}
-                            className="dashboard-brand-slider"
-                            style={{
-                              background: `linear-gradient(90deg, hsl(${secondaryColorModel.h} 0% ${secondaryColorModel.l}%), hsl(${secondaryColorModel.h} 100% ${secondaryColorModel.l}%))`,
-                            }}
-                            onChange={(event) => {
-                              updateSecondaryColorFromHsl({
-                                s: Number(event.target.value),
-                              });
-                            }}
-                          />
-                        </label>
-                        <label className="dashboard-brand-slider-row">
-                          <span>Lightness</span>
-                          <input
-                            type="range"
-                            min={0}
-                            max={100}
-                            value={secondaryColorModel.l}
-                            className="dashboard-brand-slider"
-                            style={{
-                              background: `linear-gradient(90deg, #000000 0%, hsl(${secondaryColorModel.h} ${secondaryColorModel.s}% 50%) 50%, #ffffff 100%)`,
-                            }}
-                            onChange={(event) => {
-                              updateSecondaryColorFromHsl({
-                                l: Number(event.target.value),
-                              });
-                            }}
-                          />
-                        </label>
-                      </div>
-                    </label>
-                  </div>
-
-                  <label className="dashboard-webhook-field">
-                    <span className="dashboard-settings-label">Logo (link or upload)</span>
-                    <div className="dashboard-brand-logo-row">
-                      <input
-                        type="url"
-                        className="dashboard-webhook-input"
-                        value={brandLogoUrl}
-                        onChange={(event) => {
-                          setBrandLogoUrl(event.target.value);
-                        }}
-                        placeholder="https://yourcompany.com/logo.png"
-                      />
-                      <input
-                        ref={brandLogoFileInputRef}
-                        type="file"
-                        accept="image/png,image/jpeg,image/webp,image/avif"
-                        className="dashboard-brand-logo-input"
-                        onChange={handleBrandLogoFileChange}
-                      />
-                      <button
-                        type="button"
-                        className="dashboard-secondary-btn"
-                        onClick={() => brandLogoFileInputRef.current?.click()}
-                        disabled={brandLogoUploading}
-                      >
-                        {brandLogoUploading ? "Uploading..." : "Upload image"}
-                      </button>
-                    </div>
-                    {brandLogoUploading && (
-                      <div className="dashboard-brand-upload-progress">
-                        <div
-                          className="dashboard-brand-upload-fill"
-                          style={{ width: `${brandLogoUploadProgress}%` }}
-                        />
-                      </div>
-                    )}
-                  </label>
-
-                  <div className="dashboard-brand-preview">
-                    <div className="dashboard-brand-preview-logo">
-                      {brandLogoUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={brandLogoUrl} alt={`${brandName || "Brand"} logo`} />
-                      ) : (
-                        <span>{(brandName || "B").slice(0, 2).toUpperCase()}</span>
-                      )}
-                    </div>
-                    <div>
-                      <p className="dashboard-brand-preview-name">{brandName || "Your brand"}</p>
-                      <p className="dashboard-brand-preview-url">
-                        {brandWebsiteUrl || "No website set"}
-                      </p>
-                    </div>
-                    <div className="dashboard-brand-preview-colors">
-                      <span style={{ background: normalizeHexInput(brandPrimaryColor, "#ff5c35") }} />
-                      <span style={{ background: normalizeHexInput(brandSecondaryColor, "#111318") }} />
-                    </div>
-                  </div>
-
-                  <div className="dashboard-webhook-actions">
-                    <button type="submit" className="dashboard-action-btn" disabled={brandSaving}>
-                      {brandSaving ? "Saving..." : "Save brand settings"}
-                    </button>
-                  </div>
-                </form>
               </div>
             </div>
           )}
 
           {activeSection === "settings" && (
-            <div className="dashboard-settings-shell">
-              <div className="dashboard-page-header">
-                <div className="dashboard-page-header-copy">
-                  <h1 className="dashboard-title">Settings</h1>
-                  <p className="dashboard-subtitle">
-                    Configure your workspace details and external automations.
-                  </p>
-                </div>
-              </div>
-
-              {settingsTab === "general" && (
-                <div className="dashboard-settings-card">
-                  <h2 className="dashboard-settings-title">Workspace profile</h2>
-                  <p className="dashboard-settings-copy">
-                    Keep only the essential details for this workspace and the current user.
-                  </p>
-
-                  <div className="dashboard-settings-grid">
-                    <div className="dashboard-settings-item dashboard-settings-profile-item">
-                      <p className="dashboard-settings-label">Profile</p>
-                      <div className="dashboard-settings-profile-row">
-                        <div className="dashboard-avatar">
-                          <UserButton afterSignOutUrl="/" />
-                        </div>
-                        <div>
-                          <p className="dashboard-settings-value">{viewerName}</p>
-                          <p className="dashboard-settings-subvalue">Current user</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="dashboard-settings-item">
-                      <p className="dashboard-settings-label">Workspace</p>
-                      <p className="dashboard-settings-value">{workspaceName}</p>
-                    </div>
-                    <div className="dashboard-settings-item">
-                      <p className="dashboard-settings-label">Campaigns</p>
-                      <p className="dashboard-settings-value">
-                        {campaignsState.length} {campaignsState.length === 1 ? "campaign" : "campaigns"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {settingsTab === "webhooks" && (
-                <div className="dashboard-settings-card">
-                  <div className="dashboard-settings-head">
-                    <div>
-                      <h2 className="dashboard-settings-title">Webhook endpoints</h2>
-                      <p className="dashboard-settings-copy">
-                        Connect Tellr to external tools and receive new submission and approval events.
-                      </p>
-                    </div>
-                  </div>
-
-                  {webhookError && (
-                    <div className="dashboard-settings-alert dashboard-settings-alert-error">
-                      {webhookError}
-                    </div>
-                  )}
-
-                  {webhookNotice && (
-                    <div className="dashboard-settings-alert dashboard-settings-alert-success">
-                      {webhookNotice}
-                    </div>
-                  )}
-
-                  {latestWebhookSecret && (
-                    <div className="dashboard-secret-card">
-                      <div>
-                        <p className="dashboard-settings-label">Signing secret</p>
-                        <p className="dashboard-secret-value">{latestWebhookSecret}</p>
-                      </div>
-                      <button
-                        type="button"
-                        className="dashboard-action-btn dashboard-secondary-action"
-                        onClick={() => {
-                          copyText(latestWebhookSecret);
-                        }}
-                      >
-                        Copy secret
-                      </button>
-                    </div>
-                  )}
-
-                  <form className="dashboard-webhook-form" onSubmit={handleCreateWebhook}>
-                    <div className="dashboard-webhook-form-grid">
-                      <label className="dashboard-webhook-field">
-                        <span className="dashboard-settings-label">Endpoint URL</span>
-                        <input
-                          type="url"
-                          className="dashboard-webhook-input"
-                          placeholder="https://hooks.zapier.com/..."
-                          value={webhookUrl}
-                          onChange={(event) => {
-                            setWebhookUrl(event.target.value);
-                          }}
-                          required
-                        />
-                      </label>
-                      <label className="dashboard-webhook-field">
-                        <span className="dashboard-settings-label">Description</span>
-                        <input
-                          type="text"
-                          className="dashboard-webhook-input"
-                          placeholder="Zapier, Make, n8n, custom API..."
-                          value={webhookDescription}
-                          onChange={(event) => {
-                            setWebhookDescription(event.target.value);
-                          }}
-                        />
-                      </label>
-                    </div>
-
-                    <div className="dashboard-settings-alert dashboard-settings-alert-neutral">
-                      Tellr sends webhook calls with the <strong>POST</strong> method to the endpoint
-                      you enter here. Make sure your URL accepts POST requests.
-                    </div>
-
-                    <div className="dashboard-webhook-events">
-                      {WEBHOOK_EVENT_OPTIONS.map((option) => (
-                        <label key={option.value} className="dashboard-webhook-event-option">
-                          <input
-                            type="checkbox"
-                            checked={webhookEvents.includes(option.value)}
-                            onChange={() => {
-                              toggleWebhookEventSelection(option.value);
-                            }}
-                          />
-                          <span>
-                            <strong>{option.label}</strong>
-                            <small>{option.helper}</small>
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-
-                    <div className="dashboard-webhook-actions">
-                      <button
-                        type="submit"
-                        className="dashboard-action-btn"
-                        disabled={webhookFormSaving || webhookEvents.length === 0}
-                      >
-                        {webhookFormSaving ? "Saving..." : "Add endpoint"}
-                      </button>
-                    </div>
-                  </form>
-
-                  <div className="dashboard-webhook-list">
-                    {webhookEndpoints.length === 0 ? (
-                      <div className="dashboard-empty-state">
-                        No webhook endpoints yet. Add one to start sending events.
-                      </div>
-                    ) : (
-                      webhookEndpoints.map((endpoint) => (
-                        <div key={endpoint.id} className="dashboard-webhook-card">
-                          <div className="dashboard-webhook-card-head">
-                            <div>
-                              <p className="dashboard-webhook-url">{endpoint.url}</p>
-                              <p className="dashboard-webhook-meta">
-                                {endpoint.description || "No description"} ·{" "}
-                                {endpoint.isActive ? "Active" : "Paused"}
-                              </p>
-                            </div>
-                            <div className="dashboard-webhook-card-actions">
-                              <button
-                                type="button"
-                                className="dashboard-action-btn dashboard-secondary-action dashboard-inline-action"
-                                onClick={() => {
-                                  handleSendWebhookTest(endpoint.id);
-                                }}
-                                disabled={webhookActionId === `test:${endpoint.id}`}
-                              >
-                                {webhookActionId === `test:${endpoint.id}` ? "Sending..." : "Send test"}
-                              </button>
-                              <button
-                                type="button"
-                                className="dashboard-action-btn dashboard-secondary-action dashboard-inline-action"
-                                onClick={() => {
-                                  handleRotateWebhookSecret(endpoint.id);
-                                }}
-                                disabled={webhookActionId === `rotate:${endpoint.id}`}
-                              >
-                                {webhookActionId === `rotate:${endpoint.id}` ? "Rotating..." : "Rotate secret"}
-                              </button>
-                              <button
-                                type="button"
-                                className="dashboard-action-btn dashboard-secondary-action dashboard-inline-action"
-                                onClick={() => {
-                                  handleToggleWebhook(endpoint);
-                                }}
-                                disabled={webhookActionId === `toggle:${endpoint.id}`}
-                              >
-                                {webhookActionId === `toggle:${endpoint.id}`
-                                  ? "Saving..."
-                                  : endpoint.isActive
-                                    ? "Pause"
-                                    : "Enable"}
-                              </button>
-                              <button
-                                type="button"
-                                className="dashboard-action-btn dashboard-inline-action"
-                                onClick={() => {
-                                  handleDeleteWebhook(endpoint.id);
-                                }}
-                                disabled={webhookActionId === `delete:${endpoint.id}`}
-                              >
-                                {webhookActionId === `delete:${endpoint.id}` ? "Deleting..." : "Delete"}
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="dashboard-webhook-tag-row">
-                            {endpoint.subscribedEvents.map((eventType) => (
-                              <span key={eventType} className="dashboard-webhook-tag">
-                                {eventType}
-                              </span>
-                            ))}
-                          </div>
-
-                          <div className="dashboard-webhook-deliveries">
-                            <p className="dashboard-settings-label">Recent deliveries</p>
-                            {endpoint.deliveries.length === 0 ? (
-                              <p className="dashboard-webhook-meta">No deliveries yet.</p>
-                            ) : (
-                              endpoint.deliveries.map((delivery) => (
-                                <div key={delivery.id} className="dashboard-webhook-delivery-row">
-                                  <span>{delivery.eventType}</span>
-                                  <span>{delivery.status}</span>
-                                  <span>
-                                    {delivery.responseStatus
-                                      ? `HTTP ${delivery.responseStatus}`
-                                      : `Attempt ${delivery.attemptCount}`}
-                                  </span>
-                                </div>
-                              ))
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
+            <DashboardSettings
+              viewerName={viewerName}
+              viewerEmail={viewerEmail}
+              workspaceName={workspaceName}
+              siteHost={siteHost}
+              websiteUrl={brandWebsiteUrl}
+              campaignsCount={campaignsState.length}
+              totalReviews={reviewsStats.total}
+              webhookEndpoints={webhookEndpoints}
+              webhookLoading={webhookLoading}
+              webhookError={webhookError}
+              webhookActionId={webhookActionId}
+              webhookUrl={webhookUrl}
+              webhookDescription={webhookDescription}
+              webhookEvents={webhookEvents}
+              webhookFormSaving={webhookFormSaving}
+              latestWebhookSecret={latestWebhookSecret}
+              webhookNotice={webhookNotice}
+              webhookEventOptions={WEBHOOK_EVENT_OPTIONS}
+              onWebhookUrlChange={setWebhookUrl}
+              onWebhookDescriptionChange={setWebhookDescription}
+              onToggleWebhookEvent={toggleWebhookEventSelection}
+              onCreateWebhook={handleCreateWebhook}
+              onSendWebhookTest={handleSendWebhookTest}
+              onRotateWebhookSecret={handleRotateWebhookSecret}
+              onToggleWebhook={handleToggleWebhook}
+              onDeleteWebhook={handleDeleteWebhook}
+              onCopyText={copyText}
+              brandLoading={brandLoading}
+              brandSaving={brandSaving}
+              brandError={brandError}
+              brandNotice={brandNotice}
+              brandName={brandName}
+              brandWebsiteUrl={brandWebsiteUrl}
+              brandLogoUrl={brandLogoUrl}
+              brandPrimaryColor={brandPrimaryColor}
+              brandSecondaryColor={brandSecondaryColor}
+              brandLogoUploading={brandLogoUploading}
+              brandLogoUploadProgress={brandLogoUploadProgress}
+              onBrandNameChange={setBrandName}
+              onBrandWebsiteUrlChange={setBrandWebsiteUrl}
+              onBrandLogoUrlChange={setBrandLogoUrl}
+              onBrandPrimaryColorChange={setBrandPrimaryColor}
+              onBrandSecondaryColorChange={setBrandSecondaryColor}
+              onBrandLogoFileChange={handleBrandLogoFileChange}
+              onSaveBrandSettings={handleSaveBrandSettings}
+              initialPanel={initialSettingsPanel}
+            />
           )}
         </div>
       </section>
@@ -2869,7 +2345,27 @@ export default function DashboardShell({
 
 const dashboardShellStyles = `
   .dashboard-shell {
+    /* Internal dashboard baseline: flat workspace first, cards only for focused data blocks. */
     min-height: 100vh;
+    --brand: #ff4820;
+    --dashboard-bg: #ffffff;
+    --dashboard-bg-subtle: #f7f7f7;
+    --dashboard-bg-raised: #ffffff;
+    --dashboard-border: #e8e8e8;
+    --dashboard-border-strong: #d0d0d0;
+    --dashboard-text: #0a0a0a;
+    --dashboard-text-secondary: #5c5c5c;
+    --dashboard-text-tertiary: #9a9a9a;
+    --dashboard-font: "Geist", "Inter", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: var(--dashboard-font);
+    color: var(--dashboard-text);
+    background: var(--dashboard-bg);
+  }
+
+  .dashboard-shell button,
+  .dashboard-shell input,
+  .dashboard-shell textarea {
+    font-family: var(--dashboard-font);
   }
 
   .dashboard-sidebar {
@@ -2877,79 +2373,178 @@ const dashboardShellStyles = `
     top: 0;
     left: 0;
     bottom: 0;
-    width: 212px;
-    background: #ffffff;
-    border-right: 1px solid rgba(24, 24, 32, 0.08);
+    width: 232px;
+    background: var(--dashboard-bg-subtle);
+    border-right: 1px solid var(--dashboard-border);
     display: flex;
     flex-direction: column;
     z-index: 20;
   }
 
   .dashboard-sidebar-top {
-    border-bottom: 1px solid rgba(24, 24, 32, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 9px;
+    border-bottom: 1px solid var(--dashboard-border);
+    height: 48px;
+    min-height: 48px;
+    padding: 0 14px;
   }
 
   .dashboard-brand {
     display: flex;
     align-items: center;
-    padding: 12px 14px 10px;
+    gap: 9px;
     text-decoration: none;
-    color: #14141b;
+    color: var(--dashboard-text);
+    min-width: 0;
   }
 
-  .dashboard-brand-image {
-    display: block;
-    height: 36px;
-    width: auto;
-    max-width: 138px;
-  }
-
-  .dashboard-profile-card {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 4px 14px 12px;
-  }
-
-  .dashboard-avatar {
-    width: 40px;
-    height: 40px;
+  .dashboard-brand-mark {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background: #0a0a0a;
     display: grid;
     place-items: center;
     flex-shrink: 0;
   }
 
+  .dashboard-brand-mark img {
+    width: 11px;
+    height: 11px;
+  }
+
+  .dashboard-brand-copy {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+  }
+
+  .dashboard-brand-name {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--dashboard-text);
+  }
+
+  .dashboard-brand-workspace {
+    font-size: 11px;
+    color: var(--dashboard-text-tertiary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .dashboard-brand-menu {
+    border: none;
+    background: transparent;
+    color: var(--dashboard-text-tertiary);
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+  }
+
+  .dashboard-brand-menu:hover {
+    background: #f7f7f7;
+    color: var(--dashboard-text);
+  }
+
+  .dashboard-sidebar-spacer {
+    flex: 1;
+  }
+
+  .dashboard-sidebar-footer {
+    border-top: 1px solid var(--dashboard-border);
+    padding: 8px;
+  }
+
+  .dashboard-profile-card {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+    padding: 7px 9px;
+    border-radius: 6px;
+  }
+
+  .dashboard-profile-card:hover {
+    background: var(--dashboard-bg-muted, #f0f0f0);
+  }
+
+  .dashboard-profile-avatar-shell {
+    position: relative;
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+  }
+
+  .dashboard-profile-avatar-fallback {
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    background: #0a0a0a;
+    color: #ffffff;
+    display: grid;
+    place-items: center;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .dashboard-avatar {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    opacity: 0;
+  }
+
   .dashboard-avatar :where(.cl-userButtonBox, .cl-userButtonTrigger, .cl-avatarBox) {
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
+    width: 26px;
+    height: 26px;
+    border-radius: 999px;
   }
 
   .dashboard-profile-name {
-    font-size: 14px;
-    font-weight: 800;
-    color: #14141b;
-    letter-spacing: -0.02em;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--dashboard-text);
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .dashboard-profile-workspace {
-    font-size: 12px;
-    color: rgba(24, 24, 32, 0.42);
+    font-size: 11px;
+    color: var(--dashboard-text-tertiary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .dashboard-sidebar-nav {
-    padding: 12px 10px;
+    padding: 8px;
+    display: grid;
+    gap: 6px;
+  }
+
+  .dashboard-nav-group {
     display: grid;
     gap: 2px;
   }
 
   .dashboard-nav-label {
     font-size: 10px;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.07em;
     text-transform: uppercase;
-    font-weight: 800;
-    color: rgba(24, 24, 32, 0.22);
-    margin: 10px 8px 6px;
+    font-weight: 600;
+    color: var(--dashboard-text-tertiary);
+    margin: 10px 8px 5px;
   }
 
   .dashboard-nav-item {
@@ -2958,70 +2553,84 @@ const dashboardShellStyles = `
     align-items: center;
     gap: 9px;
     min-height: 36px;
-    padding: 8px 10px;
-    border-radius: 10px;
+    padding: 7px 9px;
+    border-radius: 6px;
     border: 1px solid transparent;
     background: transparent;
-    color: rgba(24, 24, 32, 0.66);
-    font-family: "Figtree", sans-serif;
+    color: var(--dashboard-text-secondary);
+    font-family: var(--dashboard-font);
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 400;
     text-align: left;
     cursor: pointer;
+    transition: all 100ms ease;
   }
 
   .dashboard-nav-item-active {
-    border-color: transparent;
-    background: rgba(255, 92, 53, 0.1);
-    color: var(--brand);
+    border: 1px solid var(--dashboard-border);
+    background: #ffffff;
+    color: #111111;
+    font-weight: 500;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   }
 
   .dashboard-nav-item-muted:hover {
-    background: #f7f6f4;
-    color: #14141b;
+    background: #f0f0f0;
+    color: var(--dashboard-text);
   }
 
   .dashboard-nav-icon {
-    width: 18px;
-    text-align: center;
-    font-size: 14px;
+    width: 15px;
+    height: 15px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
+    opacity: 0.65;
+  }
+
+  .dashboard-nav-icon svg {
+    width: 15px;
+    height: 15px;
   }
 
   .dashboard-nav-count {
     margin-left: auto;
-    min-width: 20px;
+    min-width: 24px;
     height: 20px;
-    padding: 0 6px;
+    padding: 0 5px;
     border-radius: 999px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     background: var(--brand);
     color: #fff;
-    font-size: 10px;
-    font-weight: 800;
-    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: var(--dashboard-font);
+  }
+
+  .dashboard-nav-count.is-muted {
+    background: #f0f0f0;
+    color: var(--dashboard-text-tertiary);
   }
 
   .dashboard-nav-caret {
     margin-left: auto;
-    width: 18px;
-    height: 18px;
+    width: 22px;
+    height: 22px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: rgba(24, 24, 32, 0.4);
-    font-size: 16px;
-    font-weight: 800;
+    color: var(--dashboard-text-tertiary);
+    font-size: 20px;
+    font-weight: 600;
     line-height: 1;
-    transform: rotate(180deg);
-    transition: transform 160ms ease, color 160ms ease;
+    transition: color 160ms ease;
   }
 
   .dashboard-nav-caret.is-open {
-    transform: rotate(0deg);
-    color: rgba(24, 24, 32, 0.7);
+    color: var(--dashboard-text-secondary);
   }
 
   .dashboard-subnav {
@@ -3036,7 +2645,7 @@ const dashboardShellStyles = `
     border: none;
     border-radius: 8px;
     background: transparent;
-    color: rgba(24, 24, 32, 0.48);
+    color: var(--dashboard-text-secondary);
     font-size: 12px;
     font-weight: 700;
     text-align: left;
@@ -3044,19 +2653,19 @@ const dashboardShellStyles = `
   }
 
   .dashboard-subnav-item:hover {
-    color: #14141b;
-    background: rgba(24, 24, 32, 0.04);
+    color: var(--dashboard-text);
+    background: var(--dashboard-bg-subtle);
   }
 
   .dashboard-subnav-item.is-active {
-    color: #14141b;
-    background: rgba(24, 24, 32, 0.06);
+    color: var(--dashboard-text);
+    background: var(--dashboard-bg-subtle);
   }
 
   .dashboard-main {
-    margin-left: 212px;
+    margin-left: 232px;
     min-height: 100vh;
-    background: #fbfaf8;
+    background: var(--dashboard-bg);
   }
 
   .dashboard-content {
@@ -3064,33 +2673,520 @@ const dashboardShellStyles = `
     gap: 16px;
     padding: 32px 24px 32px;
     width: 100%;
-    max-width: 1280px;
+    max-width: none;
+  }
+
+  .dashboard-content.is-campaigns-workspace {
+    padding: 0;
+    gap: 0;
+  }
+
+  .dashboard-content.is-settings-view {
+    padding: 0;
+    gap: 0;
+  }
+
+  .dashboard-flat-view {
+    border: 1px solid var(--dashboard-border);
+    border-radius: 8px;
+    background: var(--dashboard-bg-raised);
+    overflow: hidden;
+    display: grid;
+    width: 100%;
+  }
+
+  .dashboard-flat-topbar {
+    height: 48px;
+    border-bottom: 1px solid var(--dashboard-border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 20px;
+    flex-shrink: 0;
+  }
+
+  .dashboard-flat-topbar-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--dashboard-text);
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+  }
+
+  .dashboard-flat-topbar-divider {
+    width: 1px;
+    height: 16px;
+    background: var(--dashboard-border);
+    flex-shrink: 0;
+  }
+
+  .dashboard-flat-topbar-note {
+    font-size: 11px;
+    color: var(--dashboard-text-tertiary);
+    white-space: nowrap;
+  }
+
+  .dashboard-flat-topbar-spacer {
+    flex: 1;
+  }
+
+  .dashboard-section-topbar {
+    height: 48px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--dashboard-border);
+    background: #fff;
+  }
+
+  .dashboard-section-topbar-title {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--dashboard-text);
+    white-space: nowrap;
+  }
+
+  .dashboard-section-topbar-spacer {
+    flex: 1;
+  }
+
+  .dashboard-section-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    height: 30px;
+    padding: 0 12px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--dashboard-text);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: var(--dashboard-font);
+  }
+
+  .dashboard-section-btn-primary {
+    background: #0a0a0a;
+    color: #fff;
+    border-color: #0a0a0a;
+  }
+
+  .dashboard-section-btn-secondary {
+    background: #fff;
+    color: var(--dashboard-text);
+    border-color: var(--dashboard-border);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+
+  .dashboard-section-btn-primary:hover {
+    background: #262626;
+    border-color: #262626;
+  }
+
+  .dashboard-section-btn-secondary:hover {
+    background: #f7f7f7;
+    border-color: var(--dashboard-border-strong);
+  }
+
+  .dashboard-flat-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    border-bottom: 1px solid var(--dashboard-border);
+  }
+
+  .dashboard-flat-stat-cell {
+    padding: 14px 16px;
+    border-right: 1px solid var(--dashboard-border);
+    display: grid;
+    gap: 4px;
+  }
+
+  .dashboard-flat-stat-cell:last-child {
+    border-right: none;
+  }
+
+  .dashboard-flat-stat-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--dashboard-text-tertiary);
+  }
+
+  .dashboard-flat-stat-value {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    color: var(--dashboard-text);
+    line-height: 1;
+  }
+
+  .dashboard-flat-stat-sub {
+    font-size: 11px;
+    color: var(--dashboard-text-secondary);
+  }
+
+  .dashboard-flat-stat-sub.is-up {
+    color: #16a34a;
+  }
+
+  .dashboard-flat-stat-sub.is-down {
+    color: var(--brand);
+  }
+
+  .dashboard-flat-section-head {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--dashboard-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .dashboard-flat-section-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--dashboard-text-secondary);
+  }
+
+  .dashboard-flat-section-note {
+    font-size: 11px;
+    color: var(--dashboard-text-tertiary);
+  }
+
+  .dashboard-flat-section-head-inline {
+    padding-left: 0;
+    padding-right: 0;
+    margin-top: 4px;
+  }
+
+  .dashboard-flat-inline-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .dashboard-flat-list {
+    display: grid;
+  }
+
+  .dashboard-flat-workspace {
+    display: grid;
+    gap: 18px;
+    padding: 18px 20px 20px;
+  }
+
+  .dashboard-flat-form-stack {
+    display: grid;
+    gap: 18px;
+  }
+
+  .dashboard-flat-form-section {
+    display: grid;
+    gap: 14px;
+    padding-top: 18px;
+    border-top: 1px solid var(--dashboard-border);
+  }
+
+  .dashboard-flat-form-section:first-child {
+    padding-top: 0;
+    border-top: none;
+  }
+
+  .dashboard-flat-form-section-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+  }
+
+  .dashboard-flat-form-title {
+    margin: 0 0 4px;
+    font-size: 18px;
+    line-height: 1.05;
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    color: var(--dashboard-text);
+  }
+
+  .dashboard-flat-form-copy {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--dashboard-text-secondary);
+    max-width: 620px;
+  }
+
+  .dashboard-campaigns-view {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .dashboard-campaigns-tabs {
+    display: flex;
+    flex-shrink: 0;
+  }
+
+  .dashboard-campaigns-tab {
+    height: 48px;
+    padding: 0 16px;
+    display: inline-flex;
+    align-items: center;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    background: transparent;
+    color: var(--dashboard-text-tertiary);
+    font-size: 13px;
+    font-weight: 500;
+    font-family: var(--dashboard-font);
+    cursor: default;
+  }
+
+  .dashboard-campaigns-tab.is-active {
+    color: var(--dashboard-text);
+    border-bottom-color: var(--dashboard-text);
+  }
+
+  .dashboard-campaigns-section-head {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .dashboard-campaign-list-row {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) auto auto auto;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--dashboard-border);
+    cursor: pointer;
+    transition: background 0.18s ease;
+  }
+
+  .dashboard-campaign-list-row:hover {
+    background: #fcfcfc;
+  }
+
+  .dashboard-campaign-list-row:last-child {
+    border-bottom: none;
+  }
+
+  .dashboard-campaign-list-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+    font-weight: 700;
+    background: #f5f5f5;
+    color: var(--dashboard-text-secondary);
+  }
+
+  .dashboard-campaign-list-icon.is-active {
+    background: #fff3f0;
+    color: var(--brand);
+  }
+
+  .dashboard-campaign-list-icon.is-draft {
+    opacity: 0.55;
+  }
+
+  .dashboard-campaign-list-main {
+    min-width: 0;
+  }
+
+  .dashboard-campaign-list-name {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--dashboard-text);
+  }
+
+  .dashboard-campaign-list-sub {
+    margin: 4px 0 0;
+    font-size: 11px;
+    color: var(--dashboard-text-tertiary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .dashboard-campaign-list-metrics {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .dashboard-campaign-list-metric {
+    min-width: 58px;
+    text-align: right;
+    display: grid;
+    gap: 2px;
+  }
+
+  .dashboard-campaign-list-metric span {
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dashboard-text-tertiary);
+  }
+
+  .dashboard-campaign-list-metric strong {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--dashboard-text);
+  }
+
+  .dashboard-campaign-list-metric strong.is-rating {
+    color: #f59e0b;
+  }
+
+  .dashboard-campaign-list-progress {
+    width: 132px;
+    display: grid;
+    gap: 4px;
+  }
+
+  .dashboard-campaign-list-progress-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 10px;
+    color: var(--dashboard-text-tertiary);
+  }
+
+  .dashboard-campaign-list-progress-bar {
+    width: 100%;
+    height: 6px;
+    border-radius: 999px;
+    background: #f1f1f1;
+    overflow: hidden;
+  }
+
+  .dashboard-campaign-list-progress-bar span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: #111111;
+  }
+
+  .dashboard-campaign-list-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    padding: 0 13px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .dashboard-campaign-list-badge.is-active {
+    border: 1px solid #b7f0c7;
+    background: #f0fdf4;
+    color: #16914b;
+  }
+
+  .dashboard-campaign-list-badge.is-active::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: #22c55e;
+    margin-right: 6px;
+  }
+
+  .dashboard-campaign-list-badge.is-draft {
+    border: 1px solid #e5e7eb;
+    background: #f5f5f5;
+    color: #666;
+  }
+
+  .dashboard-campaign-list-badge.is-pending {
+    border: 1px solid #fde68a;
+    background: #fffbeb;
+    color: #d97706;
+  }
+
+  .dashboard-campaign-list-badge.is-rejected {
+    border: 1px solid #fecaca;
+    background: #fef2f2;
+    color: #dc2626;
+  }
+
+  .dashboard-campaign-list-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .dashboard-campaign-share-btn,
+  .dashboard-campaign-kebab-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    border: none;
+    background: transparent;
+    color: #555;
+    min-height: 30px;
+    padding: 0 8px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .dashboard-campaign-share-btn:hover,
+  .dashboard-campaign-kebab-btn:hover {
+    background: #f6f6f6;
+    color: #111;
   }
 
   .dashboard-hero-card,
   .dashboard-list-card,
   .dashboard-submissions-card,
   .dashboard-alert-card {
-    border: 1px solid rgba(24, 24, 32, 0.08);
+    border: 1px solid var(--dashboard-border);
     border-radius: 16px;
-    background: rgba(255, 255, 255, 0.92);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 8px 22px rgba(0, 0, 0, 0.025);
+    background: var(--dashboard-bg-raised);
+    box-shadow: none;
   }
 
   .dashboard-page-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    gap: 18px;
-    padding: 2px 0 6px;
-    border: none;
-    border-radius: 0;
-    background: transparent;
+    align-items: center;
+    gap: 12px;
+    min-height: 48px;
+    padding: 8px 14px;
+    border: 1px solid var(--dashboard-border);
+    border-radius: 8px;
+    background: var(--dashboard-bg-raised);
     box-shadow: none;
   }
 
   .dashboard-page-header-copy {
     min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
   }
 
   .dashboard-page-header-actions {
@@ -3101,42 +3197,41 @@ const dashboardShellStyles = `
 
   .dashboard-eyebrow {
     font-size: 11px;
-    letter-spacing: 0.16em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     font-weight: 700;
     color: var(--brand);
-    margin-bottom: 4px;
-    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    margin-bottom: 6px;
+    font-family: var(--dashboard-font);
   }
 
   .dashboard-title {
-    font-size: clamp(28px, 3vw, 36px);
-    line-height: 1.02;
-    letter-spacing: -0.06em;
-    color: #121218;
-    margin: 0 0 8px;
+    font-size: 14px;
+    line-height: 1;
+    letter-spacing: -0.01em;
+    font-weight: 600;
+    color: var(--dashboard-text);
+    margin: 0;
   }
 
   .dashboard-subtitle {
-    max-width: 640px;
-    font-size: 14px;
-    line-height: 1.55;
-    color: rgba(24, 24, 32, 0.56);
+    display: none;
   }
 
   .dashboard-action-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 38px;
-    padding: 0 15px;
-    border-radius: 999px;
+    gap: 6px;
+    height: 30px;
+    padding: 0 12px;
+    border-radius: 6px;
     border: none;
     background: var(--brand);
     color: #fff;
-    font-family: "Figtree", sans-serif;
+    font-family: var(--dashboard-font);
     font-size: 13px;
-    font-weight: 800;
+    font-weight: 500;
     text-decoration: none;
     cursor: pointer;
   }
@@ -3144,13 +3239,30 @@ const dashboardShellStyles = `
   .dashboard-builder-wrap {
     display: grid;
     gap: 10px;
-    border-top: 1px solid rgba(24, 24, 32, 0.08);
+    border-top: 1px solid var(--dashboard-border);
     padding-top: 14px;
   }
 
-  .dashboard-builder-toolbar {
+  .dashboard-campaign-builder-view {
     display: flex;
-    justify-content: flex-end;
+    flex-direction: column;
+    min-height: calc(100vh - 32px);
+    background: var(--dashboard-bg);
+  }
+
+  .dashboard-builder-toolbar-shell {
+    flex-shrink: 0;
+  }
+
+  .dashboard-campaign-builder-content {
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .dashboard-campaign-builder-inner {
+    width: 100%;
+    max-width: none;
+    padding: 0 28px 18px;
   }
 
   .dashboard-sub-toolbar {
@@ -3168,7 +3280,7 @@ const dashboardShellStyles = `
   .dashboard-campaign-section {
     display: grid;
     gap: 0;
-    border-top: 1px solid rgba(24, 24, 32, 0.08);
+    border-top: 1px solid var(--dashboard-border);
   }
 
   .dashboard-campaign-section .dashboard-empty-state {
@@ -3184,13 +3296,13 @@ const dashboardShellStyles = `
     justify-content: space-between;
     gap: 16px;
     padding: 16px 0 10px;
-    border-bottom: 1px solid rgba(24, 24, 32, 0.08);
+    border-bottom: 1px solid var(--dashboard-border);
   }
 
   .dashboard-section-title {
-    font-size: 17px;
-    font-weight: 800;
-    color: #14141b;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--dashboard-text);
     letter-spacing: -0.03em;
     margin: 0;
   }
@@ -3198,14 +3310,14 @@ const dashboardShellStyles = `
   .dashboard-section-copy {
     margin: 6px 0 0;
     font-size: 13px;
-    color: rgba(24, 24, 32, 0.5);
+    color: var(--dashboard-text-secondary);
   }
 
   .dashboard-list-count {
     font-size: 11px;
     font-weight: 700;
-    color: rgba(24, 24, 32, 0.38);
-    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    color: var(--dashboard-text-secondary);
+    font-family: var(--dashboard-font);
     white-space: nowrap;
   }
 
@@ -3218,7 +3330,7 @@ const dashboardShellStyles = `
   }
 
   .dashboard-campaign-row.with-divider {
-    border-top: 1px solid rgba(24, 24, 32, 0.08);
+    border-top: 1px solid var(--dashboard-border);
   }
 
   .dashboard-campaign-copy {
@@ -3229,9 +3341,9 @@ const dashboardShellStyles = `
 
   .dashboard-campaign-name {
     font-size: 15px;
-    font-weight: 700;
-    color: #14141b;
-    letter-spacing: -0.03em;
+    font-weight: 500;
+    color: var(--dashboard-text);
+    letter-spacing: -0.01em;
     margin: 0;
   }
 
@@ -3244,8 +3356,8 @@ const dashboardShellStyles = `
 
   .dashboard-campaign-path {
     font-size: 11px;
-    color: rgba(24, 24, 32, 0.42);
-    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    color: var(--dashboard-text-secondary);
+    font-family: var(--dashboard-font);
     margin: 0;
     white-space: nowrap;
     overflow: hidden;
@@ -3258,18 +3370,6 @@ const dashboardShellStyles = `
     justify-content: flex-end;
     gap: 10px;
     flex-wrap: wrap;
-  }
-
-  .dashboard-video-count {
-    display: inline-flex;
-    align-items: center;
-    min-height: 24px;
-    padding: 0 8px;
-    border-radius: 999px;
-    background: rgba(255, 92, 53, 0.08);
-    color: var(--brand);
-    font-size: 10px;
-    font-weight: 700;
   }
 
   .dashboard-status-badge {
@@ -3314,19 +3414,25 @@ const dashboardShellStyles = `
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 34px;
+    gap: 6px;
+    height: 30px;
     padding: 0 12px;
-    border-radius: 999px;
-    border: 1px solid rgba(24, 24, 32, 0.14);
-    background: #fff;
-    color: #14141b;
-    font-size: 12px;
-    font-weight: 800;
+    border-radius: 6px;
+    border: 1px solid var(--dashboard-border);
+    background: var(--dashboard-bg-raised);
+    color: var(--dashboard-text);
+    font-size: 13px;
+    font-weight: 500;
     text-decoration: none;
     cursor: pointer;
   }
 
-  .dashboard-row-action,
+  .dashboard-button-icon {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+  }
+
   .dashboard-row-link {
     display: inline-flex;
     align-items: center;
@@ -3342,19 +3448,17 @@ const dashboardShellStyles = `
     cursor: pointer;
   }
 
-  .dashboard-row-action:hover,
   .dashboard-row-link:hover {
     color: #14141b;
   }
 
   .dashboard-secondary-btn:hover {
-    border-color: rgba(24, 24, 32, 0.2);
-    background: #faf8f6;
+    border-color: var(--dashboard-border-strong);
+    background: var(--dashboard-bg-subtle);
   }
 
   .dashboard-action-btn:disabled,
-  .dashboard-secondary-btn:disabled,
-  .dashboard-row-action:disabled {
+  .dashboard-secondary-btn:disabled {
     cursor: not-allowed;
   }
 
@@ -3401,7 +3505,7 @@ const dashboardShellStyles = `
     border-radius: 12px;
     background: #f8f6f3;
     color: rgba(24, 24, 32, 0.76);
-    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-family: var(--dashboard-font);
     font-size: 10px;
     line-height: 1.5;
     padding: 10px 12px;
@@ -3523,7 +3627,7 @@ const dashboardShellStyles = `
     text-transform: uppercase;
     color: rgba(24, 24, 32, 0.34);
     margin: 0 0 6px;
-    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-family: var(--dashboard-font);
   }
 
   .dashboard-settings-value {
@@ -3582,7 +3686,7 @@ const dashboardShellStyles = `
     margin: 4px 0 0;
     font-size: 12px;
     color: #14141b;
-    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-family: var(--dashboard-font);
     word-break: break-all;
   }
 
@@ -3596,13 +3700,6 @@ const dashboardShellStyles = `
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
-  }
-
-  .dashboard-wall-panels {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    align-items: start;
   }
 
   .dashboard-webhook-field {
@@ -3647,7 +3744,7 @@ const dashboardShellStyles = `
     color: rgba(24, 24, 32, 0.45);
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-family: var(--dashboard-font);
   }
 
   .dashboard-brand-slider {
@@ -3708,7 +3805,7 @@ const dashboardShellStyles = `
 
   .dashboard-brand-upload-fill {
     height: 100%;
-    background: linear-gradient(90deg, #ff5c35, #ff8b52);
+    background: var(--brand);
     transition: width 0.2s ease;
   }
 
@@ -3797,75 +3894,6 @@ const dashboardShellStyles = `
     gap: 10px;
   }
 
-  .dashboard-wall-toggle-grid {
-    display: grid;
-    gap: 10px;
-  }
-
-  .dashboard-wall-selection-card {
-    border: 1px solid rgba(24, 24, 32, 0.08);
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.72);
-    padding: 12px;
-    display: grid;
-    gap: 10px;
-    align-self: stretch;
-  }
-
-  .dashboard-wall-link-card {
-    border: 1px solid rgba(24, 24, 32, 0.08);
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.72);
-    padding: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-
-  .dashboard-wall-link-value {
-    margin: 0;
-    font-size: 12px;
-    color: rgba(24, 24, 32, 0.6);
-    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    word-break: break-all;
-  }
-
-  .dashboard-wall-list {
-    display: grid;
-    gap: 8px;
-    max-height: 280px;
-    overflow: auto;
-    padding-right: 4px;
-  }
-
-  .dashboard-wall-preview-list {
-    display: grid;
-    gap: 8px;
-  }
-
-  .dashboard-wall-preview-item {
-    border: 1px solid rgba(24, 24, 32, 0.08);
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.72);
-    padding: 8px 10px;
-  }
-
-  .dashboard-wall-preview-item p {
-    margin: 0;
-    font-size: 12px;
-    font-weight: 700;
-    color: #14141b;
-  }
-
-  .dashboard-wall-preview-item small {
-    display: block;
-    margin-top: 4px;
-    font-size: 11px;
-    color: rgba(24, 24, 32, 0.5);
-  }
-
   .dashboard-webhook-event-option {
     display: flex;
     align-items: flex-start;
@@ -3939,7 +3967,7 @@ const dashboardShellStyles = `
     border-radius: 999px;
     background: #faf8f6;
     color: #14141b;
-    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-family: var(--dashboard-font);
   }
 
   .dashboard-empty-state {
@@ -4004,7 +4032,7 @@ const dashboardShellStyles = `
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-family: var(--dashboard-font);
   }
 
   .dashboard-webhook-deliveries {
@@ -4020,7 +4048,7 @@ const dashboardShellStyles = `
     color: rgba(24, 24, 32, 0.62);
     padding-top: 6px;
     border-top: 1px solid rgba(24, 24, 32, 0.06);
-    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-family: var(--dashboard-font);
   }
 
   .dashboard-submissions-summary {
@@ -4046,7 +4074,7 @@ const dashboardShellStyles = `
   .dashboard-submissions-link {
     font-size: 11px;
     color: rgba(24, 24, 32, 0.34);
-    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-family: var(--dashboard-font);
   }
 
   .dashboard-back-btn {
@@ -4077,7 +4105,7 @@ const dashboardShellStyles = `
     min-height: 28px;
     padding: 0 10px;
     border-radius: 999px;
-    background: rgba(255, 92, 53, 0.08);
+    background: #fff3f0;
     color: var(--brand);
     font-size: 11px;
     font-weight: 700;
@@ -4110,6 +4138,303 @@ const dashboardShellStyles = `
     letter-spacing: -0.05em;
     font-weight: 900;
     color: #121218;
+  }
+
+  .dashboard-campaign-detail-view {
+    display: grid;
+    background: var(--dashboard-bg);
+  }
+
+  .dashboard-detail-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border: none;
+    background: transparent;
+    color: var(--dashboard-text-tertiary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .dashboard-detail-back:hover {
+    color: var(--dashboard-text);
+  }
+
+  .dashboard-campaign-detail-head {
+    padding: 18px 28px 0;
+    border-bottom: 1px solid var(--dashboard-border);
+  }
+
+  .dashboard-campaign-detail-summary {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .dashboard-campaign-detail-tabs {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .dashboard-campaign-detail-tab {
+    padding: 0 16px;
+    height: 48px;
+    display: inline-flex;
+    align-items: center;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--dashboard-text-tertiary);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 100ms;
+    margin-bottom: -1px;
+    background: none;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    font-family: var(--dashboard-font);
+    white-space: nowrap;
+  }
+
+  .dashboard-campaign-detail-tab:hover {
+    color: var(--dashboard-text);
+  }
+
+  .dashboard-campaign-detail-tab.is-active {
+    color: var(--dashboard-text);
+    border-bottom-color: var(--dashboard-text);
+  }
+
+  .dashboard-detail-stats {
+    display: flex;
+    border-bottom: 1px solid var(--dashboard-border);
+    flex-shrink: 0;
+  }
+
+  .dashboard-detail-stat {
+    flex: 1;
+    padding: 12px 20px;
+    border-right: 1px solid var(--dashboard-border);
+  }
+
+  .dashboard-detail-stat:last-child {
+    border-right: none;
+  }
+
+  .dashboard-detail-stat-label {
+    font-size: 11px;
+    color: var(--dashboard-text-tertiary);
+    margin-bottom: 3px;
+  }
+
+  .dashboard-detail-stat-value {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--dashboard-text);
+  }
+
+  .dashboard-detail-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 40px;
+    text-align: center;
+    gap: 10px;
+  }
+
+  .dashboard-detail-empty-icon {
+    width: 44px;
+    height: 44px;
+    background: var(--dashboard-bg-subtle);
+    border: 1px solid var(--dashboard-border);
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    color: var(--dashboard-text-tertiary);
+    margin-bottom: 4px;
+  }
+
+  .dashboard-detail-empty-state h3 {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--dashboard-text);
+    margin: 0;
+  }
+
+  .dashboard-detail-empty-state p {
+    font-size: 13px;
+    color: var(--dashboard-text-secondary);
+    max-width: 260px;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  .dashboard-detail-review-list {
+    display: grid;
+  }
+
+  .dashboard-detail-review-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 24px;
+    border-bottom: 1px solid var(--dashboard-border);
+    transition: background 80ms;
+  }
+
+  .dashboard-detail-review-row:hover {
+    background: var(--dashboard-bg-subtle);
+  }
+
+  .dashboard-detail-review-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    font-size: 9px;
+    font-weight: 600;
+    background: #eff6ff;
+    color: #2563eb;
+    flex-shrink: 0;
+  }
+
+  .dashboard-detail-review-thumb {
+    width: 56px;
+    height: 32px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    background: var(--dashboard-bg-subtle);
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+  }
+
+  .dashboard-detail-review-thumb video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    background: #111;
+  }
+
+  .dashboard-detail-review-play {
+    position: relative;
+    z-index: 1;
+    width: 18px;
+    height: 18px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+    border: none;
+    cursor: pointer;
+    color: #111;
+    font-size: 9px;
+    padding-left: 1px;
+  }
+
+  .dashboard-detail-review-copy {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .dashboard-detail-review-name {
+    margin: 0 0 1px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--dashboard-text);
+  }
+
+  .dashboard-detail-review-note {
+    margin: 0;
+    font-size: 12px;
+    color: var(--dashboard-text-tertiary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .dashboard-detail-review-stars {
+    display: flex;
+    gap: 1px;
+    color: #f59e0b;
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+
+  .dashboard-detail-review-stars span {
+    color: #e8e8e8;
+  }
+
+  .dashboard-detail-review-date {
+    font-size: 11px;
+    color: var(--dashboard-text-tertiary);
+    flex-shrink: 0;
+  }
+
+  .dashboard-detail-review-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .dashboard-detail-sections {
+    display: grid;
+  }
+
+  .dashboard-detail-section {
+    padding: 24px 28px;
+    border-bottom: 1px solid var(--dashboard-border);
+    display: grid;
+    gap: 14px;
+  }
+
+  .dashboard-detail-section:last-child {
+    border-bottom: none;
+  }
+
+  .dashboard-detail-option-block {
+    border: 1px solid var(--dashboard-border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .dashboard-detail-option-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 13px 15px;
+    border-bottom: 1px solid var(--dashboard-border);
+  }
+
+  .dashboard-detail-option-row:last-child {
+    border-bottom: none;
+  }
+
+  .dashboard-detail-option-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--dashboard-text);
+    margin: 0 0 4px;
+  }
+
+  .dashboard-detail-option-copy {
+    font-size: 12px;
+    color: var(--dashboard-text-tertiary);
+    margin: 0;
+    line-height: 1.45;
   }
 
   .dashboard-reviews-shell {
@@ -4147,18 +4472,17 @@ const dashboardShellStyles = `
 
   .dashboard-review-card {
     overflow: hidden;
-    border: 1px solid rgba(24, 24, 32, 0.08);
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid var(--dashboard-border);
+    border-radius: 10px;
+    background: var(--dashboard-bg-raised);
     display: flex;
     flex-direction: column;
     min-height: 100%;
-    transition: border-color 0.2s ease, transform 0.2s ease;
+    transition: border-color 0.2s ease;
   }
 
   .dashboard-review-card:hover {
-    border-color: rgba(24, 24, 32, 0.16);
-    transform: translateY(-2px);
+    border-color: var(--dashboard-border-strong);
   }
 
   .dashboard-review-video {
@@ -4240,7 +4564,7 @@ const dashboardShellStyles = `
     font-weight: 700;
     display: inline-flex;
     align-items: center;
-    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-family: var(--dashboard-font);
   }
 
   .dashboard-review-body {
@@ -4264,7 +4588,7 @@ const dashboardShellStyles = `
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-family: var(--dashboard-font);
   }
 
   .dashboard-review-stars {
@@ -4317,8 +4641,10 @@ const dashboardShellStyles = `
   }
 
   .dashboard-empty-state {
+    border: none;
+    background: transparent;
     padding: 16px;
-    color: rgba(24, 24, 32, 0.48);
+    color: var(--dashboard-text-secondary);
     font-size: 13px;
   }
 
@@ -4346,11 +4672,11 @@ const dashboardShellStyles = `
     letter-spacing: 0.12em;
     color: rgba(24, 24, 32, 0.34);
     font-weight: 700;
-    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-family: var(--dashboard-font);
   }
 
   .dashboard-table-id {
-    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-family: var(--dashboard-font);
     color: rgba(24, 24, 32, 0.42);
     font-size: 10px;
   }
@@ -4383,31 +4709,63 @@ const dashboardShellStyles = `
     font-size: 11px;
   }
 
-  .dashboard-submission-detail-page {
-    gap: 12px;
+  .dashboard-submission-detail-view {
+    display: grid;
+    background: var(--dashboard-bg);
   }
 
-  .dashboard-submission-page-head {
-    padding: 0 2px;
+  .dashboard-submission-detail-head {
+    padding: 18px 28px 16px;
+    border-bottom: 1px solid var(--dashboard-border);
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
   }
 
-  .dashboard-submission-detail-frame {
-    padding: 16px 0 0;
-    border-radius: 0;
-    border-top: 1px solid rgba(24, 24, 32, 0.08);
-    background: transparent;
+  .dashboard-submission-detail-head-copy {
+    min-width: 0;
+  }
+
+  .dashboard-submission-detail-head-meta {
+    display: grid;
+    justify-items: end;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .dashboard-detail-review-stars-static {
+    flex-wrap: nowrap;
+  }
+
+  .dashboard-submission-detail-head-note {
+    margin: 0;
+    max-width: 360px;
+    text-align: right;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--dashboard-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .dashboard-submission-stage {
+    display: grid;
+    grid-template-columns: minmax(0, 440px) minmax(280px, 1fr);
+    gap: 28px;
+    align-items: start;
   }
 
   .dashboard-submission-detail-player {
-    width: min(430px, 100%);
-    margin: 0 auto;
-    border-radius: 16px;
+    width: 100%;
+    border-radius: 12px;
     overflow: hidden;
     background: #09090c;
     aspect-ratio: 4 / 5;
   }
 
-  .dashboard-submission-detail-frame video {
+  .dashboard-submission-detail-player video {
     display: block;
     width: 100%;
     height: 100%;
@@ -4415,57 +4773,65 @@ const dashboardShellStyles = `
     background: #09090c;
   }
 
-  .dashboard-submission-detail-grid {
-    margin-top: 12px;
+  .dashboard-submission-facts {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    border-top: 1px solid var(--dashboard-border);
   }
 
-  .dashboard-submission-detail-item {
-    border: 1px solid rgba(24, 24, 32, 0.1);
-    border-radius: 10px;
-    background: #fff;
-    padding: 8px 10px;
+  .dashboard-submission-fact-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--dashboard-border);
   }
 
-  .dashboard-submission-detail-item strong {
-    display: block;
-    font-size: 10px;
+  .dashboard-submission-fact-row span {
+    font-size: 11px;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.11em;
-    color: rgba(24, 24, 32, 0.42);
-    margin-bottom: 4px;
-    font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    letter-spacing: 0.06em;
+    color: var(--dashboard-text-tertiary);
   }
 
-  .dashboard-submission-detail-item p {
+  .dashboard-submission-fact-row strong {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--dashboard-text);
+    text-align: right;
+    word-break: break-word;
+    max-width: 62%;
+  }
+
+  .dashboard-submission-answers {
+    display: grid;
+    gap: 14px;
+  }
+
+  .dashboard-submission-answer-row {
+    display: grid;
+    gap: 4px;
+  }
+
+  .dashboard-submission-answer-question {
     margin: 0;
     font-size: 12px;
     font-weight: 600;
-    color: #14141b;
-    line-height: 1.4;
-    word-break: break-word;
+    color: var(--dashboard-text);
   }
 
-  .dashboard-submission-ai-block {
-    margin-top: 10px;
-    border: 1px solid rgba(24, 24, 32, 0.1);
-    border-radius: 10px;
-    background: #fff;
-    padding: 8px 10px;
-  }
-
+  .dashboard-submission-answer-copy,
   .dashboard-submission-ai-copy {
-    margin-top: 6px;
+    margin: 0;
     font-size: 12px;
-    line-height: 1.5;
+    line-height: 1.65;
     color: rgba(24, 24, 32, 0.76);
     white-space: pre-wrap;
     word-break: break-word;
   }
 
-  @media (max-width: 1100px) {
+  @media (max-width: 960px) {
     .dashboard-sidebar {
       position: static;
       width: auto;
@@ -4482,8 +4848,50 @@ const dashboardShellStyles = `
       gap: 18px;
     }
 
+    .dashboard-flat-topbar {
+      height: auto;
+      min-height: 48px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+
+    .dashboard-section-topbar {
+      height: auto;
+      min-height: 48px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+
+    .dashboard-flat-topbar-spacer {
+      display: none;
+    }
+
+    .dashboard-section-topbar-spacer {
+      display: none;
+    }
+
+    .dashboard-flat-topbar-note {
+      white-space: normal;
+      order: 2;
+      width: 100%;
+    }
+
+    .dashboard-section-btn {
+      width: auto;
+    }
+
+    .dashboard-flat-stats {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .dashboard-page-header,
     .dashboard-section-head {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .dashboard-flat-form-section-head,
+    .dashboard-flat-section-head {
       flex-direction: column;
       align-items: flex-start;
     }
@@ -4500,15 +4908,32 @@ const dashboardShellStyles = `
       justify-content: flex-start;
     }
 
+    .dashboard-campaign-list-row {
+      grid-template-columns: 44px minmax(0, 1fr);
+      align-items: flex-start;
+    }
+
+    .dashboard-campaign-list-metrics,
+    .dashboard-campaign-list-actions,
+    .dashboard-campaign-list-badge {
+      grid-column: 2;
+      justify-content: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .dashboard-campaign-list-metrics {
+      gap: 12px;
+    }
+
+    .dashboard-campaign-list-progress {
+      width: min(200px, 100%);
+    }
+
     .dashboard-review-grid {
       grid-template-columns: repeat(auto-fill, 200px);
     }
 
     .dashboard-settings-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .dashboard-wall-panels {
       grid-template-columns: 1fr;
     }
 
@@ -4545,6 +4970,43 @@ const dashboardShellStyles = `
       grid-template-columns: 1fr;
       gap: 4px;
     }
+
+    .dashboard-campaign-detail-summary,
+    .dashboard-submission-detail-head,
+    .dashboard-detail-option-row,
+    .dashboard-detail-review-row {
+      flex-wrap: wrap;
+    }
+
+    .dashboard-detail-stats {
+      flex-direction: column;
+    }
+
+    .dashboard-detail-stat {
+      border-right: none;
+      border-bottom: 1px solid var(--dashboard-border);
+    }
+
+    .dashboard-detail-stat:last-child {
+      border-bottom: none;
+    }
+
+    .dashboard-submission-stage {
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+
+    .dashboard-submission-detail-head-meta {
+      justify-items: start;
+    }
+
+    .dashboard-submission-detail-head-note {
+      max-width: none;
+      text-align: left;
+      white-space: normal;
+      overflow: visible;
+      text-overflow: unset;
+    }
   }
 
   @media (max-width: 720px) {
@@ -4573,7 +5035,76 @@ const dashboardShellStyles = `
       width: 100%;
     }
 
+    .dashboard-flat-topbar {
+      padding: 10px 12px;
+    }
+
+    .dashboard-section-topbar {
+      padding: 10px 12px;
+    }
+
+    .dashboard-flat-topbar-note {
+      width: 100%;
+    }
+
+    .dashboard-flat-stats {
+      grid-template-columns: 1fr;
+    }
+
+    .dashboard-flat-stat-cell {
+      border-right: none;
+      border-bottom: 1px solid var(--dashboard-border);
+    }
+
+    .dashboard-flat-stat-cell:last-child {
+      border-bottom: none;
+    }
+
+    .dashboard-flat-section-head {
+      padding: 10px 12px;
+    }
+
     .dashboard-page-header-actions {
+      width: 100%;
+    }
+
+    .dashboard-flat-workspace {
+      padding: 14px 12px 16px;
+    }
+
+    .dashboard-campaign-list-row {
+      grid-template-columns: 1fr;
+      padding: 12px;
+    }
+
+    .dashboard-campaign-list-icon,
+    .dashboard-campaign-list-metrics,
+    .dashboard-campaign-list-actions,
+    .dashboard-campaign-list-badge {
+      grid-column: auto;
+    }
+
+    .dashboard-campaign-list-icon {
+      margin-bottom: -4px;
+    }
+
+    .dashboard-campaign-list-metric {
+      text-align: left;
+    }
+
+    .dashboard-campaign-builder-inner,
+    .dashboard-detail-section,
+    .dashboard-campaign-detail-head {
+      padding-left: 14px;
+      padding-right: 14px;
+    }
+
+    .dashboard-detail-review-row {
+      padding: 12px 14px;
+      align-items: flex-start;
+    }
+
+    .dashboard-detail-review-actions {
       width: 100%;
     }
 

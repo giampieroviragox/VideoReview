@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vouch — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:           #ffffff;
+  --bg-subtle:    #f7f7f7;
+  --bg-muted:     #f0f0f0;
+  --border:       #e8e8e8;
+  --border-strong:#d0d0d0;
+  --text:         #0a0a0a;
+  --text-2:       #5c5c5c;
+  --text-3:       #9a9a9a;
+  --accent:       #ff4820;
+  --accent-h:     #e03a15;
+  --accent-soft:  #fff3f0;
+  --accent-bd:    #ffccc4;
+  --success:      #16a34a;
+  --success-soft: #f0fdf4;
+  --success-bd:   #bbf7d0;
+  --warning:      #d97706;
+  --warning-soft: #fffbeb;
+  --danger:       #dc2626;
+  --danger-soft:  #fef2f2;
+  --info:         #2563eb;
+  --info-soft:    #eff6ff;
+  --sidebar-w:    220px;
+  --topbar-h:     48px;
+  --font: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+  --r-sm: 4px; --r-md: 6px; --r-lg: 8px; --r-xl: 10px; --r-2xl: 14px; --r-full: 9999px;
+  --sh-xs: 0 1px 2px rgba(0,0,0,.05);
+  --sh-sm: 0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --sh-md: 0 4px 8px -2px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.04);
+  --sh-lg: 0 12px 24px -4px rgba(0,0,0,.10),0 4px 8px -2px rgba(0,0,0,.04);
+  --ease: cubic-bezier(.16,1,.3,1);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--font);font-size:14px;line-height:1.5;color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased}
+
+/* ── LAYOUT ────────────────────────────────── */
+.app{display:flex;height:100vh;overflow:hidden}
+
+/* ── SIDEBAR ───────────────────────────────── */
+.sidebar{
+  width:var(--sidebar-w);flex-shrink:0;
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  background:var(--bg-subtle);
+  overflow:hidden;
+}
+.sb-top{
+  height:var(--topbar-h);flex-shrink:0;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:8px;
+  padding:0 14px;
+}
+.sb-logo{
+  width:22px;height:22px;background:var(--text);border-radius:5px;
+  display:grid;place-items:center;flex-shrink:0;
+}
+.sb-brand{font-size:14px;font-weight:600;letter-spacing:-.02em}
+.sb-ws{font-size:11px;color:var(--text-3)}
+
+.sb-nav{flex:1;padding:6px;overflow-y:auto}
+.sb-section{
+  font-size:10px;font-weight:600;color:var(--text-3);
+  text-transform:uppercase;letter-spacing:.07em;
+  padding:10px 8px 4px;
+}
+.sb-item{
+  display:flex;align-items:center;gap:8px;
+  padding:7px 8px;border-radius:var(--r-md);
+  font-size:13px;font-weight:400;color:var(--text-2);
+  cursor:pointer;transition:all 100ms var(--ease);
+  user-select:none;border:1px solid transparent;
+  position:relative;
+}
+.sb-item:hover{background:var(--bg-muted);color:var(--text)}
+.sb-item.active{
+  background:var(--bg);color:var(--text);
+  border-color:var(--border);font-weight:500;
+  box-shadow:var(--sh-xs);
+}
+.sb-item svg{width:14px;height:14px;flex-shrink:0;opacity:.7}
+.sb-item.active svg{opacity:1}
+.sb-badge{
+  margin-left:auto;background:var(--accent);color:#fff;
+  font-size:10px;font-weight:600;padding:1px 5px;
+  border-radius:var(--r-full);min-width:16px;text-align:center;
+}
+.sb-badge.neutral{background:var(--bg-muted);color:var(--text-2);}
+
+.sb-bottom{
+  padding:8px;border-top:1px solid var(--border);
+}
+.sb-user{
+  display:flex;align-items:center;gap:8px;
+  padding:7px 8px;border-radius:var(--r-md);cursor:pointer;
+  transition:background 100ms;
+}
+.sb-user:hover{background:var(--bg-muted)}
+.sb-user-name{font-size:12px;font-weight:500;line-height:1.2}
+.sb-user-email{font-size:11px;color:var(--text-3)}
+
+/* ── MAIN ──────────────────────────────────── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+
+/* ── TOPBAR ────────────────────────────────── */
+.topbar{
+  height:var(--topbar-h);flex-shrink:0;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+  padding:0 20px;background:var(--bg);
+}
+.topbar-title{font-size:14px;font-weight:600;letter-spacing:-.01em;white-space:nowrap}
+.topbar-divider{width:1px;height:16px;background:var(--border);flex-shrink:0}
+
+/* ── CONTENT AREA ──────────────────────────── */
+.content{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+
+/* ── VIEWS (pages) ─────────────────────────── */
+.view{display:none;flex-direction:column;flex:1}
+.view.active{display:flex}
+
+/* ── STAT STRIP ────────────────────────────── */
+.stat-strip{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.stat-cell{
+  flex:1;padding:16px 20px;
+  border-right:1px solid var(--border);
+}
+.stat-cell:last-child{border-right:none}
+.stat-lbl{font-size:11px;font-weight:500;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+.stat-val{font-size:22px;font-weight:600;letter-spacing:-.025em;line-height:1}
+.stat-sub{font-size:11px;font-weight:500;margin-top:3px}
+.stat-sub.up{color:var(--success)}
+.stat-sub.down{color:var(--danger)}
+.stat-sub.neutral{color:var(--text-3)}
+
+/* ── SECTION ROW ───────────────────────────── */
+.section-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 20px;border-bottom:1px solid var(--border);
+  background:var(--bg);flex-shrink:0;
+}
+.section-label{font-size:11px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:.05em}
+
+/* ── FLAT LIST ROWS ────────────────────────── */
+.list-row{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 20px;border-bottom:1px solid var(--border);
+  cursor:pointer;transition:background 80ms;
+  flex-shrink:0;
+}
+.list-row:hover{background:var(--bg-subtle)}
+.list-row:last-child{border-bottom:none}
+.row-main{flex:1;min-width:0}
+.row-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-sub{font-size:12px;color:var(--text-3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-meta{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.row-date{font-size:11px;color:var(--text-3)}
+
+/* ── CAMPAIGN ROW ──────────────────────────── */
+.camp-ico{
+  width:28px;height:28px;border-radius:var(--r-md);
+  background:var(--bg-subtle);border:1px solid var(--border);
+  display:grid;place-items:center;font-size:14px;flex-shrink:0;
+}
+.camp-progress{width:80px}
+
+/* ── BUTTONS ───────────────────────────────── */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;
+  font-family:var(--font);font-size:13px;font-weight:500;line-height:1;
+  border:1px solid transparent;border-radius:var(--r-md);
+  padding:0 12px;height:30px;cursor:pointer;white-space:nowrap;
+  outline:none;text-decoration:none;transition:all 100ms var(--ease);
+  user-select:none;
+}
+.btn:focus-visible{box-shadow:0 0 0 3px rgba(255,72,32,.18)}
+.btn-primary{background:var(--text);color:#fff;border-color:var(--text)}
+.btn-primary:hover{background:#262626}
+.btn-accent{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 2px 8px rgba(255,72,32,.22)}
+.btn-accent:hover{background:var(--accent-h)}
+.btn-secondary{background:var(--bg);color:var(--text);border-color:var(--border);box-shadow:var(--sh-xs)}
+.btn-secondary:hover{background:var(--bg-subtle);border-color:var(--border-strong)}
+.btn-ghost{background:transparent;color:var(--text-2);border-color:transparent}
+.btn-ghost:hover{background:var(--bg-subtle);color:var(--text)}
+.btn-danger-ghost{background:transparent;color:var(--danger);border-color:transparent}
+.btn-danger-ghost:hover{background:var(--danger-soft)}
+.btn-sm{height:26px;font-size:12px;padding:0 9px;border-radius:var(--r-sm);gap:4px}
+.btn-icon{padding:0;width:30px}
+.btn-icon.btn-sm{width:26px}
+.btn:disabled{opacity:.38;pointer-events:none}
+
+/* ── BADGES ────────────────────────────────── */
+.badge{
+  display:inline-flex;align-items:center;gap:3px;
+  padding:1px 7px;border-radius:var(--r-full);
+  font-size:11px;font-weight:500;line-height:1.6;
+  white-space:nowrap;border:1px solid transparent;
+}
+.bdot{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.65}
+.b-neutral{background:var(--bg-muted);color:#525252;border-color:var(--border)}
+.b-success{background:var(--success-soft);color:var(--success);border-color:var(--success-bd)}
+.b-warning{background:var(--warning-soft);color:var(--warning);border-color:#fde68a}
+.b-danger {background:var(--danger-soft);color:var(--danger);border-color:#fecaca}
+.b-info   {background:var(--info-soft);color:var(--info);border-color:#bfdbfe}
+.b-accent {background:var(--accent-soft);color:var(--accent);border-color:var(--accent-bd)}
+
+/* ── AVATAR ────────────────────────────────── */
+.av{
+  border-radius:50%;display:grid;place-items:center;
+  font-weight:600;flex-shrink:0;letter-spacing:-.01em;
+}
+.av-sm{width:26px;height:26px;font-size:9px}
+.av-md{width:32px;height:32px;font-size:11px}
+.av-lg{width:40px;height:40px;font-size:14px}
+
+/* ── STARS ─────────────────────────────────── */
+.stars{display:flex;gap:1px}
+.star{width:11px;height:11px;color:#f59e0b;fill:#f59e0b}
+.star-e{color:#e8e8e8;fill:#e8e8e8}
+
+/* ── PROGRESS ──────────────────────────────── */
+.prog{width:100%;height:4px;background:var(--bg-muted);border-radius:var(--r-full);overflow:hidden}
+.prog-fill{height:100%;border-radius:var(--r-full);background:var(--text);transition:width .4s var(--ease)}
+.prog-fill.accent{background:var(--accent)}
+.prog-fill.success{background:var(--success)}
+
+/* ── INPUT ─────────────────────────────────── */
+.input{
+  width:100%;height:32px;background:var(--bg);
+  border:1px solid var(--border);border-radius:var(--r-md);
+  padding:0 10px;font-family:var(--font);font-size:13px;
+  color:var(--text);outline:none;
+  transition:border-color 100ms,box-shadow 100ms;
+}
+.input::placeholder{color:var(--text-3)}
+.input:hover{border-color:var(--border-strong)}
+.input:focus{border-color:var(--text);box-shadow:0 0 0 3px rgba(10,10,10,.07)}
+.input-sm{height:28px;font-size:12px;padding:0 8px}
+.search-wrap{position:relative;display:flex;align-items:center}
+.search-icon{position:absolute;left:8px;color:var(--text-3);pointer-events:none}
+.input-search{padding-left:28px}
+
+/* ── TABS ──────────────────────────────────── */
+.tabs-pill{
+  display:flex;gap:1px;padding:2px;
+  background:var(--bg-subtle);border:1px solid var(--border);
+  border-radius:var(--r-lg);width:fit-content;
+}
+.tab-p{
+  padding:3px 10px;font-size:12px;font-weight:500;
+  color:var(--text-2);cursor:pointer;border-radius:var(--r-md);
+  background:none;border:none;font-family:var(--font);white-space:nowrap;
+  transition:all 100ms;
+}
+.tab-p:hover{color:var(--text)}
+.tab-p.active{background:var(--bg);color:var(--text);box-shadow:var(--sh-xs)}
+
+/* ── VIDEO THUMB (small) ───────────────────── */
+.vthumb{
+  width:52px;height:30px;border-radius:4px;flex-shrink:0;
+  background:var(--bg-muted);position:relative;overflow:hidden;
+  display:grid;place-items:center;
+}
+.vthumb-play{
+  width:16px;height:16px;background:rgba(255,255,255,.88);
+  border-radius:50%;display:grid;place-items:center;
+  box-shadow:0 1px 4px rgba(0,0,0,.25);
+}
+
+/* ── EMPTY STATE ───────────────────────────── */
+.empty{
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  text-align:center;gap:10px;padding:60px 40px;
+}
+.empty-ico{
+  width:44px;height:44px;background:var(--bg-subtle);
+  border:1px solid var(--border);border-radius:var(--r-xl);
+  display:grid;place-items:center;color:var(--text-3);margin-bottom:4px;
+}
+.empty-title{font-size:15px;font-weight:600;letter-spacing:-.01em}
+.empty-body{font-size:13px;color:var(--text-2);max-width:260px;line-height:1.6}
+
+/* ── MODAL ─────────────────────────────────── */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.3);
+  backdrop-filter:blur(3px);display:grid;place-items:center;
+  padding:20px;z-index:100;opacity:0;pointer-events:none;
+  transition:opacity 200ms;
+}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{
+  background:var(--bg);border:1px solid var(--border);
+  border-radius:var(--r-2xl);box-shadow:var(--sh-lg);
+  width:100%;max-width:460px;overflow:hidden;
+  transform:translateY(8px) scale(.98);
+  transition:transform 200ms var(--ease);
+}
+.modal-overlay.open .modal{transform:translateY(0) scale(1)}
+.modal-head{
+  padding:14px 18px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.modal-title{font-size:14px;font-weight:600;letter-spacing:-.01em}
+.modal-close{
+  width:22px;height:22px;background:var(--bg-subtle);
+  border:1px solid var(--border);border-radius:var(--r-full);
+  display:grid;place-items:center;cursor:pointer;color:var(--text-2);
+  transition:all 100ms;
+}
+.modal-close:hover{background:var(--bg-muted);color:var(--text)}
+.modal-body{padding:18px}
+.modal-footer{
+  padding:10px 18px;border-top:1px solid var(--border);
+  background:var(--bg-subtle);display:flex;gap:6px;justify-content:flex-end;
+}
+
+/* ── TOGGLE ────────────────────────────────── */
+.tog{
+  width:32px;height:18px;background:#d0d0d0;
+  border-radius:var(--r-full);flex-shrink:0;cursor:pointer;
+  border:none;position:relative;transition:background 160ms var(--ease);
+  padding:0;font-family:var(--font);
+}
+.tog::after{
+  content:'';position:absolute;width:12px;height:12px;
+  background:#fff;border-radius:50%;top:3px;left:3px;
+  transition:transform 160ms var(--ease);
+  box-shadow:0 1px 3px rgba(0,0,0,.2);
+}
+.tog.on{background:var(--text)}
+.tog.on::after{transform:translateX(14px)}
+
+/* ── WALL OF LOVE CARD ─────────────────────── */
+.wol-card{
+  background:var(--bg);border:1px solid var(--border);
+  border-radius:var(--r-xl);overflow:hidden;
+  transition:border-color 120ms,box-shadow 120ms;
+}
+.wol-card:hover{border-color:var(--border-strong);box-shadow:var(--sh-md)}
+.wol-thumb{width:100%;aspect-ratio:16/9;background:var(--bg-muted);position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.wol-play{
+  width:36px;height:36px;background:rgba(255,255,255,.92);
+  border-radius:50%;display:grid;place-items:center;z-index:1;
+  box-shadow:0 2px 10px rgba(0,0,0,.22);transition:transform 100ms;cursor:pointer;
+}
+.wol-play:hover{transform:scale(1.08)}
+.wol-dur{
+  position:absolute;top:8px;left:8px;
+  background:rgba(0,0,0,.52);color:#fff;backdrop-filter:blur(4px);
+  font-size:10px;font-weight:500;padding:2px 7px;border-radius:var(--r-full);
+}
+.wol-body{padding:12px 14px}
+.wol-text{font-size:12px;color:var(--text-2);line-height:1.55;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.wol-author{display:flex;align-items:center;gap:8px}
+.wol-name{font-size:12px;font-weight:500}
+.wol-role{font-size:11px;color:var(--text-3)}
+.wol-foot{padding:8px 14px;border-top:1px solid var(--border);background:var(--bg-subtle);display:flex;align-items:center;justify-content:space-between}
+
+/* ── WOL GRID (card exception within flat plane) ── */
+.wol-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;padding:16px 20px}
+
+/* ── BRAND PAGE ────────────────────────────── */
+.brand-section{padding:20px;border-bottom:1px solid var(--border)}
+.brand-section-title{font-size:13px;font-weight:600;letter-spacing:-.01em;margin-bottom:4px}
+.brand-section-desc{font-size:12px;color:var(--text-2);margin-bottom:16px;line-height:1.55}
+.brand-color-row{display:flex;gap:8px;flex-wrap:wrap}
+.color-chip{
+  width:40px;height:40px;border-radius:var(--r-lg);
+  border:1.5px solid var(--border);cursor:pointer;
+  position:relative;transition:transform 100ms;flex-shrink:0;
+}
+.color-chip.selected::after{
+  content:'✓';position:absolute;inset:0;display:grid;place-items:center;
+  color:#fff;font-size:14px;font-weight:700;
+  text-shadow:0 1px 2px rgba(0,0,0,.4);
+}
+.color-chip:hover{transform:scale(1.08)}
+
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fg{display:flex;flex-direction:column;gap:5px}
+.flabel{font-size:12px;font-weight:500;color:var(--text)}
+.fhint{font-size:11px;color:var(--text-3);line-height:1.45}
+.select-wrap{position:relative}
+.select-wrap::after{content:'';position:absolute;right:10px;top:50%;transform:translateY(-50%);width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:4px solid var(--text-2);pointer-events:none}
+.select{padding-right:28px;cursor:pointer;-webkit-appearance:none}
+
+/* ── SETTINGS ──────────────────────────────── */
+.settings-section{border-bottom:1px solid var(--border)}
+.settings-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 20px;border-bottom:1px solid var(--border);
+}
+.settings-row:last-child{border-bottom:none}
+.settings-label{font-size:13px;font-weight:500}
+.settings-desc{font-size:12px;color:var(--text-2);margin-top:1px;line-height:1.45}
+.settings-head{padding:16px 20px;border-bottom:1px solid var(--border)}
+.settings-head-title{font-size:13px;font-weight:600;letter-spacing:-.01em;margin-bottom:2px}
+.settings-head-desc{font-size:12px;color:var(--text-2)}
+
+/* ── CAMPAIGN DETAIL ───────────────────────── */
+.detail-topbar{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 20px;border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+
+/* ── NOTIFY TOAST ──────────────────────────── */
+.toast-stack{position:fixed;bottom:20px;right:20px;display:flex;flex-direction:column;gap:6px;z-index:200}
+.toast{
+  display:inline-flex;align-items:center;gap:10px;
+  padding:10px 14px;background:#0a0a0a;color:#fff;
+  border-radius:var(--r-lg);font-size:13px;font-weight:500;
+  box-shadow:var(--sh-lg);max-width:320px;
+  animation:toast-in .2s var(--ease);
+}
+@keyframes toast-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.toast-x{background:none;border:none;cursor:pointer;color:#737373;padding:1px;margin-left:auto}
+.toast-x:hover{color:#fff}
+
+/* ── NEW CAMPAIGN FORM ─────────────────────── */
+.nc-steps{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:16px}
+.nc-step{
+  flex:1;display:flex;align-items:center;gap:6px;
+  padding:10px 14px;font-size:12px;font-weight:500;color:var(--text-3);
+}
+.nc-step.done{color:var(--success)}
+.nc-step.active{color:var(--text)}
+.nc-dot{
+  width:18px;height:18px;border-radius:50%;border:1.5px solid currentColor;
+  display:grid;place-items:center;flex-shrink:0;font-size:10px;font-weight:700;
+}
+.nc-step.done .nc-dot{background:var(--success);border-color:var(--success);color:#fff}
+.nc-step.active .nc-dot{border-color:var(--text);color:var(--text)}
+
+/* ── MISC ──────────────────────────────────── */
+.divider{height:1px;background:var(--border);margin:0}
+.spacer{flex:1}
+.fw500{font-weight:500}
+.fw600{font-weight:600}
+.text-sm{font-size:13px}
+.text-xs{font-size:12px}
+.text-xxs{font-size:11px}
+.text-2{color:var(--text-2)}
+.text-3{color:var(--text-3)}
+.text-acc{color:var(--accent)}
+.flex{display:flex}
+.col{flex-direction:column}
+.items-c{align-items:center}
+.items-s{align-items:flex-start}
+.jb{justify-content:space-between}
+.gap2{gap:6px}
+.gap3{gap:10px}
+.gap4{gap:14px}
+.ml-a{margin-left:auto}
+.w-full{width:100%}
+.mt2{margin-top:6px}
+.mt3{margin-top:10px}
+.mt4{margin-top:14px}
+.mb2{margin-bottom:6px}
+.mb3{margin-bottom:10px}
+.p4{padding:14px}
+.p5{padding:20px}
+.scrollable{overflow-y:auto;flex:1}
+
+/* ── REC DOT ───────────────────────────────── */
+.rec-dot{width:6px;height:6px;background:var(--accent);border-radius:50%;animation:pdot 2s infinite;flex-shrink:0}
+@keyframes pdot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.4)}}
+
+/* ── SKELETON ──────────────────────────────── */
+.skel{background:linear-gradient(90deg,#f4f4f4 25%,#e8e8e8 50%,#f4f4f4 75%);background-size:200% 100%;animation:shim 1.4s infinite;border-radius:var(--r-md)}
+@keyframes shim{from{background-position:200% 0}to{background-position:-200% 0}}
+
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ══ SIDEBAR ═════════════════════════════ -->
+  <aside class="sidebar">
+    <div class="sb-top">
+      <div class="sb-logo">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <circle cx="6" cy="6" r="2" fill="white"/>
+          <path d="M6 1v2M6 9v2M1 6h2M9 6h2" stroke="white" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <div class="sb-brand">Vouch</div>
+        <div class="sb-ws">Acme workspace</div>
+      </div>
+      <button class="btn btn-icon btn-ghost btn-sm" style="margin-left:auto">
+        <svg width="12" height="12" fill="none" viewBox="0 0 12 12"><circle cx="6" cy="3" r=".9" fill="currentColor"/><circle cx="6" cy="6" r=".9" fill="currentColor"/><circle cx="6" cy="9" r=".9" fill="currentColor"/></svg>
+      </button>
+    </div>
+
+    <nav class="sb-nav">
+      <div class="sb-section">Workspace</div>
+
+      <div class="sb-item" data-view="campaigns" onclick="nav(this,'campaigns')">
+        <svg viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.2" stroke="currentColor" stroke-width="1.2"/><path d="M7 4v3.2l2 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        Campaigns
+        <span class="sb-badge">2</span>
+      </div>
+
+      <div class="sb-item active" data-view="reviews" onclick="nav(this,'reviews')">
+        <svg viewBox="0 0 14 14" fill="none"><rect x="1.5" y="3" width="11" height="8.5" rx="1.2" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 6.5l3 1.5-3 1.5V6.5z" fill="currentColor" opacity=".5"/></svg>
+        Reviews
+        <span class="sb-badge">3</span>
+      </div>
+
+      <div class="sb-item" data-view="wol" onclick="nav(this,'wol')">
+        <svg viewBox="0 0 14 14" fill="none"><path d="M7 11.5S2 8.5 2 5a3 3 0 0 1 5-2.2A3 3 0 0 1 12 5c0 3.5-5 6.5-5 6.5z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+        Wall of Love
+      </div>
+
+      <div class="sb-section" style="margin-top:6px">Account</div>
+
+      <div class="sb-item" data-view="brand" onclick="nav(this,'brand')">
+        <svg viewBox="0 0 14 14" fill="none"><rect x="1.5" y="1.5" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.2"/><circle cx="7" cy="7" r="2.5" stroke="currentColor" stroke-width="1.2"/></svg>
+        Brand
+      </div>
+
+      <div class="sb-item" data-view="settings" onclick="nav(this,'settings')">
+        <svg viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="2" stroke="currentColor" stroke-width="1.2"/><path d="M7 1.5v1M7 11.5v1M1.5 7h1M11.5 7h1M3 3l.7.7M10.3 10.3l.7.7M3 11l.7-.7M10.3 3.7l.7-.7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        Settings
+      </div>
+
+    </nav>
+
+    <div class="sb-bottom">
+      <div class="sb-user">
+        <div class="av av-sm" style="background:#fff0ed;color:#ff4820">AK</div>
+        <div>
+          <div class="sb-user-name">Alex Kim</div>
+          <div class="sb-user-email">alex@acme.com</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══ MAIN ════════════════════════════════ -->
+  <main class="main">
+
+    <!-- ── VIEW: REVIEWS ─────────────────────── -->
+    <section class="view active" id="view-reviews">
+
+      <!-- Topbar -->
+      <div class="topbar">
+        <span class="topbar-title">Reviews</span>
+        <div class="topbar-divider"></div>
+        <div class="tabs-pill">
+          <button class="tab-p active" onclick="filterReviews(this,'all')">All</button>
+          <button class="tab-p" onclick="filterReviews(this,'video')">Video</button>
+          <button class="tab-p" onclick="filterReviews(this,'text')">Text</button>
+          <button class="tab-p" onclick="filterReviews(this,'pending')">Pending</button>
+        </div>
+        <div class="spacer"></div>
+        <div class="search-wrap">
+          <svg class="search-icon" width="13" height="13" fill="none" viewBox="0 0 13 13"><circle cx="5.5" cy="5.5" r="3.5" stroke="currentColor" stroke-width="1.2"/><path d="M8.5 8.5l2.5 2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          <input class="input input-search input-sm" style="width:180px" placeholder="Search reviews…" oninput="searchReviews(this.value)">
+        </div>
+        <button class="btn btn-secondary btn-sm">
+          <svg width="11" height="11" fill="none" viewBox="0 0 11 11"><path d="M1 2.5h9M2.5 5.5h6M4 8.5h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          Filter
+        </button>
+        <button class="btn btn-accent btn-sm" onclick="openModal('new-review')">
+          <svg width="11" height="11" fill="none" viewBox="0 0 11 11"><circle cx="5.5" cy="5.5" r="3" fill="currentColor" opacity=".35"/><circle cx="5.5" cy="5.5" r="1.8" fill="currentColor"/></svg>
+          Request Review
+        </button>
+      </div>
+
+      <div class="content" id="reviews-content">
+        <!-- Stat strip -->
+        <div class="stat-strip">
+          <div class="stat-cell">
+            <div class="stat-lbl">Total reviews</div>
+            <div class="stat-val">1,284</div>
+            <div class="stat-sub up">↑ +18% this month</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-lbl">Avg rating</div>
+            <div class="stat-val">4.8★</div>
+            <div class="stat-sub neutral">across all campaigns</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-lbl">Completion rate</div>
+            <div class="stat-val">68%</div>
+            <div class="stat-sub down">↓ −3% vs last week</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-lbl">Rewards sent</div>
+            <div class="stat-val">$2,400</div>
+            <div class="stat-sub up">96 redeemed</div>
+          </div>
+        </div>
+
+        <!-- Section: recent -->
+        <div class="section-row">
+          <span class="section-label">Recent reviews</span>
+          <span class="text-xxs text-3">3 pending approval</span>
+        </div>
+
+        <!-- Flat review rows -->
+        <div id="review-list">
+
+          <div class="list-row" data-type="video" data-status="published" data-name="Marco Rossi">
+            <div class="av av-sm" style="background:#eff6ff;color:#2563eb">MR</div>
+            <div class="vthumb"><div style="position:absolute;inset:0;background:#1c1c1a"></div><div class="vthumb-play"><svg width="7" height="7" fill="none" viewBox="0 0 8 8"><path d="M2 1.5l5 2.5-5 2.5V1.5z" fill="#0a0a0a"/></svg></div></div>
+            <div class="row-main">
+              <div class="row-name">Marco Rossi — SaaS Launch Q2</div>
+              <div class="row-sub">"Vouch completely changed how we collect testimonials…" · 1:24</div>
+            </div>
+            <div class="row-meta">
+              <div class="stars"><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg></div>
+              <span class="badge b-neutral">Video</span>
+              <span class="badge b-success">Published</span>
+              <span class="row-date">Jun 14</span>
+              <button class="btn btn-ghost btn-sm" onclick="openModal('review-detail')">View</button>
+              <button class="btn btn-icon btn-ghost btn-sm"><svg width="11" height="11" fill="none" viewBox="0 0 11 11"><circle cx="5.5" cy="3" r=".9" fill="currentColor"/><circle cx="5.5" cy="5.5" r=".9" fill="currentColor"/><circle cx="5.5" cy="8" r=".9" fill="currentColor"/></svg></button>
+            </div>
+          </div>
+
+          <div class="list-row" data-type="video" data-status="pending" data-name="Sofia Andersen">
+            <div class="av av-sm" style="background:#fff0ed;color:#ff4820">SA</div>
+            <div class="vthumb"><div style="position:absolute;inset:0;background:#2e2e2c"></div><div class="vthumb-play" style="opacity:.7"><svg width="7" height="7" fill="none" viewBox="0 0 8 8"><path d="M2 1.5l5 2.5-5 2.5V1.5z" fill="#0a0a0a"/></svg></div></div>
+            <div class="row-main">
+              <div class="row-name">Sofia Andersen — Agency Outreach</div>
+              <div class="row-sub">"Really impressed with the ease of use. Setup took under 5 minutes…" · 2:01</div>
+            </div>
+            <div class="row-meta">
+              <div class="stars"><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star star-e" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg></div>
+              <span class="badge b-neutral">Video</span>
+              <span class="badge b-warning">Pending</span>
+              <span class="row-date">Jun 12</span>
+              <button class="btn btn-danger-ghost btn-sm" onclick="rejectReview(this)">Reject</button>
+              <button class="btn btn-primary btn-sm" onclick="approveReview(this)">Approve</button>
+            </div>
+          </div>
+
+          <div class="list-row" data-type="text" data-status="published" data-name="Tom Keller">
+            <div class="av av-sm" style="background:#f0fdf4;color:#16a34a">TK</div>
+            <div class="vthumb" style="background:#f0f0f0;display:grid;place-items:center;"><svg width="14" height="14" fill="none" viewBox="0 0 14 14"><rect x="2" y="2" width="10" height="10" rx="1.5" stroke="#9a9a9a" stroke-width="1.2"/><path d="M4.5 5h5M4.5 7h5M4.5 9h3" stroke="#9a9a9a" stroke-width="1.2" stroke-linecap="round"/></svg></div>
+            <div class="row-main">
+              <div class="row-name">Tom Keller — SaaS Launch Q2</div>
+              <div class="row-sub">"This tool paid for itself in the first week on our landing page." · Text review</div>
+            </div>
+            <div class="row-meta">
+              <div class="stars"><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg></div>
+              <span class="badge b-neutral">Text</span>
+              <span class="badge b-success">Published</span>
+              <span class="badge b-neutral">30% code 🎁</span>
+              <span class="row-date">Jun 10</span>
+              <button class="btn btn-ghost btn-sm" onclick="openModal('review-detail')">View</button>
+              <button class="btn btn-icon btn-ghost btn-sm"><svg width="11" height="11" fill="none" viewBox="0 0 11 11"><circle cx="5.5" cy="3" r=".9" fill="currentColor"/><circle cx="5.5" cy="5.5" r=".9" fill="currentColor"/><circle cx="5.5" cy="8" r=".9" fill="currentColor"/></svg></button>
+            </div>
+          </div>
+
+          <div class="list-row" data-type="video" data-status="pending" data-name="Lena Müller">
+            <div class="av av-sm" style="background:#fffbeb;color:#d97706">LM</div>
+            <div class="vthumb"><div style="position:absolute;inset:0;background:#2e2e2c"></div><div class="vthumb-play" style="opacity:.7"><svg width="7" height="7" fill="none" viewBox="0 0 8 8"><path d="M2 1.5l5 2.5-5 2.5V1.5z" fill="#0a0a0a"/></svg></div></div>
+            <div class="row-main">
+              <div class="row-name">Lena Müller — SaaS Launch Q2</div>
+              <div class="row-sub">"We started getting 3× more demo requests after embedding these…" · 1:48</div>
+            </div>
+            <div class="row-meta">
+              <div class="stars"><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg></div>
+              <span class="badge b-neutral">Video</span>
+              <span class="badge b-warning">Pending</span>
+              <span class="row-date">Jun 9</span>
+              <button class="btn btn-danger-ghost btn-sm" onclick="rejectReview(this)">Reject</button>
+              <button class="btn btn-primary btn-sm" onclick="approveReview(this)">Approve</button>
+            </div>
+          </div>
+
+          <div class="list-row" data-type="video" data-status="published" data-name="James Park">
+            <div class="av av-sm" style="background:#f0fdf4;color:#16a34a">JP</div>
+            <div class="vthumb"><div style="position:absolute;inset:0;background:#1c1c1a"></div><div class="vthumb-play"><svg width="7" height="7" fill="none" viewBox="0 0 8 8"><path d="M2 1.5l5 2.5-5 2.5V1.5z" fill="#0a0a0a"/></svg></div></div>
+            <div class="row-main">
+              <div class="row-name">James Park — Agency Outreach</div>
+              <div class="row-sub">"Absolutely love the reward feature — it doubled our response rate." · 0:55</div>
+            </div>
+            <div class="row-meta">
+              <div class="stars"><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star star-e" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg></div>
+              <span class="badge b-neutral">Video</span>
+              <span class="badge b-success">Published</span>
+              <span class="row-date">Jun 7</span>
+              <button class="btn btn-ghost btn-sm" onclick="openModal('review-detail')">View</button>
+              <button class="btn btn-icon btn-ghost btn-sm"><svg width="11" height="11" fill="none" viewBox="0 0 11 11"><circle cx="5.5" cy="3" r=".9" fill="currentColor"/><circle cx="5.5" cy="5.5" r=".9" fill="currentColor"/><circle cx="5.5" cy="8" r=".9" fill="currentColor"/></svg></button>
+            </div>
+          </div>
+
+        </div><!-- /review-list -->
+      </div>
+    </section>
+
+    <!-- ── VIEW: CAMPAIGNS ───────────────────── -->
+    <section class="view" id="view-campaigns">
+      <div class="topbar">
+        <span class="topbar-title">Campaigns</span>
+        <div class="topbar-divider"></div>
+        <div class="spacer"></div>
+        <button class="btn btn-secondary btn-sm">
+          <svg width="11" height="11" fill="none" viewBox="0 0 11 11"><path d="M1 2.5h9M2.5 5.5h6M4 8.5h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          Filter
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="openModal('new-campaign')">
+          <svg width="11" height="11" fill="none" viewBox="0 0 11 11"><path d="M5.5 1v9M1 5.5h9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          New Campaign
+        </button>
+      </div>
+      <div class="content">
+        <div class="stat-strip">
+          <div class="stat-cell"><div class="stat-lbl">Active</div><div class="stat-val">2</div><div class="stat-sub neutral">campaigns running</div></div>
+          <div class="stat-cell"><div class="stat-lbl">Total responses</div><div class="stat-val">66</div><div class="stat-sub up">↑ +12 this week</div></div>
+          <div class="stat-cell"><div class="stat-lbl">Avg completion</div><div class="stat-val">74%</div><div class="stat-sub neutral">across campaigns</div></div>
+          <div class="stat-cell"><div class="stat-lbl">Rewards budget</div><div class="stat-val">$800</div><div class="stat-sub down">$200 remaining</div></div>
+        </div>
+        <div class="section-row">
+          <span class="section-label">All campaigns</span>
+          <span class="text-xxs text-3">2 active · 1 draft</span>
+        </div>
+
+        <div class="list-row" onclick="openModal('campaign-detail')" style="cursor:pointer">
+          <div class="camp-ico">🚀</div>
+          <div class="row-main">
+            <div class="row-name">SaaS Launch Q2</div>
+            <div class="row-sub">vouch.io/acme-q2 · Created Jun 1</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:20px">
+            <div style="text-align:right"><div class="text-xxs text-3">Reviews</div><div class="fw600 text-sm">47</div></div>
+            <div style="text-align:right"><div class="text-xxs text-3">Rate</div><div class="fw600 text-sm">82%</div></div>
+            <div style="text-align:right"><div class="text-xxs text-3">Rating</div><div class="fw600 text-sm" style="color:#f59e0b">4.9★</div></div>
+            <div class="camp-progress"><div class="text-xxs text-3 mb2" style="display:flex;justify-content:space-between"><span>47/60</span><span>78%</span></div><div class="prog"><div class="prog-fill" style="width:78%"></div></div></div>
+          </div>
+          <span class="badge b-success" style="margin-left:14px"><span class="bdot"></span>Active</span>
+          <div style="display:flex;gap:4px;margin-left:10px">
+            <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();copyLink()">
+              <svg width="11" height="11" fill="none" viewBox="0 0 11 11"><path d="M7 1l3 3-3 3M10 4H3a3 3 0 0 0 0 6h1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Share
+            </button>
+            <button class="btn btn-icon btn-ghost btn-sm" onclick="event.stopPropagation()"><svg width="11" height="11" fill="none" viewBox="0 0 11 11"><circle cx="5.5" cy="3" r=".9" fill="currentColor"/><circle cx="5.5" cy="5.5" r=".9" fill="currentColor"/><circle cx="5.5" cy="8" r=".9" fill="currentColor"/></svg></button>
+          </div>
+        </div>
+
+        <div class="list-row" onclick="openModal('campaign-detail')">
+          <div class="camp-ico">🎯</div>
+          <div class="row-main">
+            <div class="row-name">Agency Outreach</div>
+            <div class="row-sub">vouch.io/acme-agency · Created May 20</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:20px">
+            <div style="text-align:right"><div class="text-xxs text-3">Reviews</div><div class="fw600 text-sm">19</div></div>
+            <div style="display:flex;align-items:center;gap:20px"><div style="text-align:right"><div class="text-xxs text-3">Rate</div><div class="fw600 text-sm">61%</div></div></div>
+            <div style="text-align:right"><div class="text-xxs text-3">Rating</div><div class="fw600 text-sm" style="color:#f59e0b">4.6★</div></div>
+            <div class="camp-progress"><div class="text-xxs text-3 mb2" style="display:flex;justify-content:space-between"><span>19/30</span><span>63%</span></div><div class="prog"><div class="prog-fill" style="width:63%"></div></div></div>
+          </div>
+          <span class="badge b-success" style="margin-left:14px"><span class="bdot"></span>Active</span>
+          <div style="display:flex;gap:4px;margin-left:10px">
+            <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();copyLink()">
+              <svg width="11" height="11" fill="none" viewBox="0 0 11 11"><path d="M7 1l3 3-3 3M10 4H3a3 3 0 0 0 0 6h1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Share
+            </button>
+            <button class="btn btn-icon btn-ghost btn-sm" onclick="event.stopPropagation()"><svg width="11" height="11" fill="none" viewBox="0 0 11 11"><circle cx="5.5" cy="3" r=".9" fill="currentColor"/><circle cx="5.5" cy="5.5" r=".9" fill="currentColor"/><circle cx="5.5" cy="8" r=".9" fill="currentColor"/></svg></button>
+          </div>
+        </div>
+
+        <div class="list-row">
+          <div class="camp-ico" style="opacity:.5">✏️</div>
+          <div class="row-main">
+            <div class="row-name" style="color:var(--text-2)">Q3 Product Update</div>
+            <div class="row-sub">Draft · Not published yet</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:20px">
+            <div style="text-align:right"><div class="text-xxs text-3">Reviews</div><div class="fw600 text-sm text-3">—</div></div>
+            <div style="text-align:right"><div class="text-xxs text-3">Rate</div><div class="fw600 text-sm text-3">—</div></div>
+            <div style="text-align:right"><div class="text-xxs text-3">Rating</div><div class="fw600 text-sm text-3">—</div></div>
+            <div class="camp-progress"><div class="prog" style="background:var(--bg-muted)"><div class="prog-fill" style="width:0%"></div></div></div>
+          </div>
+          <span class="badge b-neutral" style="margin-left:14px">Draft</span>
+          <div style="display:flex;gap:4px;margin-left:10px">
+            <button class="btn btn-secondary btn-sm" onclick="toast('Campaign published!','success')">Publish</button>
+            <button class="btn btn-icon btn-ghost btn-sm"><svg width="11" height="11" fill="none" viewBox="0 0 11 11"><circle cx="5.5" cy="3" r=".9" fill="currentColor"/><circle cx="5.5" cy="5.5" r=".9" fill="currentColor"/><circle cx="5.5" cy="8" r=".9" fill="currentColor"/></svg></button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── VIEW: WALL OF LOVE ────────────────── -->
+    <section class="view" id="view-wol">
+      <div class="topbar">
+        <span class="topbar-title">Wall of Love</span>
+        <div class="topbar-divider"></div>
+        <div class="tabs-pill">
+          <button class="tab-p active">All</button>
+          <button class="tab-p">Video</button>
+          <button class="tab-p">Text</button>
+        </div>
+        <div class="spacer"></div>
+        <button class="btn btn-secondary btn-sm" onclick="toast('Embed code copied!','success')">
+          <svg width="11" height="11" fill="none" viewBox="0 0 11 11"><path d="M1.5 4l-1 1 1 1M9.5 4l1 1-1 1M6.5 2l-2 6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          Get embed
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="toast('Wall link copied!','success')">
+          <svg width="11" height="11" fill="none" viewBox="0 0 11 11"><path d="M7 1l3 3-3 3M10 4H3a3 3 0 0 0 0 6h1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Share wall
+        </button>
+      </div>
+      <div class="content">
+        <div class="stat-strip">
+          <div class="stat-cell"><div class="stat-lbl">Published</div><div class="stat-val">52</div><div class="stat-sub neutral">reviews visible</div></div>
+          <div class="stat-cell"><div class="stat-lbl">Wall views</div><div class="stat-val">8.4k</div><div class="stat-sub up">↑ +34% this month</div></div>
+          <div class="stat-cell"><div class="stat-lbl">Click-through</div><div class="stat-val">12%</div><div class="stat-sub up">↑ good engagement</div></div>
+          <div class="stat-cell"><div class="stat-lbl">Embed impressions</div><div class="stat-val">21k</div><div class="stat-sub neutral">across 3 pages</div></div>
+        </div>
+        <div class="section-row">
+          <span class="section-label">Published reviews</span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <span class="text-xxs text-3">Layout</span>
+            <button class="btn btn-ghost btn-sm">Grid</button>
+            <button class="btn btn-secondary btn-sm">List</button>
+          </div>
+        </div>
+        <!-- Card grid — used as exception within flat workspace -->
+        <div class="wol-grid scrollable">
+
+          <div class="wol-card">
+            <div class="wol-thumb"><div style="position:absolute;inset:0;background:linear-gradient(135deg,#1c1c1a,#2e2e2c)"></div><div class="wol-play"><svg width="8" height="8" fill="none" viewBox="0 0 8 8"><path d="M2 1.5l5 2.5-5 2.5V1.5z" fill="#0a0a0a"/></svg></div><div class="wol-dur">1:24</div></div>
+            <div class="wol-body">
+              <div class="stars mb2"><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg></div>
+              <div class="wol-text">"Vouch completely changed how we collect testimonials. The video format is 10× more impactful."</div>
+              <div class="wol-author"><div class="av av-sm" style="background:#eff6ff;color:#2563eb">MR</div><div><div class="wol-name">Marco Rossi</div><div class="wol-role">CEO @ Acme Corp</div></div></div>
+            </div>
+            <div class="wol-foot"><span class="badge b-success">Published</span><div style="display:flex;gap:4px"><button class="btn btn-ghost btn-sm" onclick="toast('Embed code copied!','success')"><svg width="11" height="11" fill="none" viewBox="0 0 11 11"><path d="M1.5 4l-1 1 1 1M9.5 4l1 1-1 1M6.5 2l-2 6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button><button class="btn btn-ghost btn-sm" onclick="toast('Removed from wall','info')"><svg width="11" height="11" fill="none" viewBox="0 0 11 11"><path d="M2 9l7-7M9 9L2 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button></div></div>
+          </div>
+
+          <div class="wol-card">
+            <div class="wol-thumb"><div style="position:absolute;inset:0;background:linear-gradient(135deg,#1a1a2e,#16213e)"></div><div class="wol-play"><svg width="8" height="8" fill="none" viewBox="0 0 8 8"><path d="M2 1.5l5 2.5-5 2.5V1.5z" fill="#0a0a0a"/></svg></div><div class="wol-dur">0:55</div></div>
+            <div class="wol-body">
+              <div class="stars mb2"><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star star-e" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg></div>
+              <div class="wol-text">"The reward feature doubled our response rate overnight. Highly recommend."</div>
+              <div class="wol-author"><div class="av av-sm" style="background:#f0fdf4;color:#16a34a">JP</div><div><div class="wol-name">James Park</div><div class="wol-role">Growth @ Pixel Studio</div></div></div>
+            </div>
+            <div class="wol-foot"><span class="badge b-success">Published</span><div style="display:flex;gap:4px"><button class="btn btn-ghost btn-sm" onclick="toast('Embed code copied!','success')"><svg width="11" height="11" fill="none" viewBox="0 0 11 11"><path d="M1.5 4l-1 1 1 1M9.5 4l1 1-1 1M6.5 2l-2 6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button><button class="btn btn-ghost btn-sm" onclick="toast('Removed from wall','info')"><svg width="11" height="11" fill="none" viewBox="0 0 11 11"><path d="M2 9l7-7M9 9L2 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button></div></div>
+          </div>
+
+          <div class="wol-card">
+            <div class="wol-thumb" style="background:#f0f0f0;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" fill="none" viewBox="0 0 22 22"><rect x="3" y="3" width="16" height="16" rx="2" stroke="#c0c0c0" stroke-width="1.4"/><path d="M7 8h8M7 11h8M7 14h5" stroke="#c0c0c0" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+            <div class="wol-body">
+              <div class="stars mb2"><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg></div>
+              <div class="wol-text">"This tool paid for itself in the first week. Our landing page conversion jumped 40%."</div>
+              <div class="wol-author"><div class="av av-sm" style="background:#fffbeb;color:#d97706">TK</div><div><div class="wol-name">Tom Keller</div><div class="wol-role">Founder, KlickFunnel</div></div></div>
+            </div>
+            <div class="wol-foot"><span class="badge b-success">Published</span><div style="display:flex;gap:4px"><button class="btn btn-ghost btn-sm" onclick="toast('Embed code copied!','success')"><svg width="11" height="11" fill="none" viewBox="0 0 11 11"><path d="M1.5 4l-1 1 1 1M9.5 4l1 1-1 1M6.5 2l-2 6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button><button class="btn btn-ghost btn-sm" onclick="toast('Removed from wall','info')"><svg width="11" height="11" fill="none" viewBox="0 0 11 11"><path d="M2 9l7-7M9 9L2 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button></div></div>
+          </div>
+
+          <div class="wol-card">
+            <div class="wol-thumb"><div style="position:absolute;inset:0;background:linear-gradient(135deg,#0a1628,#1a2e44)"></div><div class="wol-play"><svg width="8" height="8" fill="none" viewBox="0 0 8 8"><path d="M2 1.5l5 2.5-5 2.5V1.5z" fill="#0a0a0a"/></svg></div><div class="wol-dur">1:48</div></div>
+            <div class="wol-body">
+              <div class="stars mb2"><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg></div>
+              <div class="wol-text">"3× more demo requests after embedding these on our homepage. This is a no-brainer."</div>
+              <div class="wol-author"><div class="av av-sm" style="background:#fffbeb;color:#d97706">LM</div><div><div class="wol-name">Lena Müller</div><div class="wol-role">Marketing @ SolarOps</div></div></div>
+            </div>
+            <div class="wol-foot"><span class="badge b-success">Published</span><div style="display:flex;gap:4px"><button class="btn btn-ghost btn-sm" onclick="toast('Embed code copied!','success')"><svg width="11" height="11" fill="none" viewBox="0 0 11 11"><path d="M1.5 4l-1 1 1 1M9.5 4l1 1-1 1M6.5 2l-2 6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button><button class="btn btn-ghost btn-sm" onclick="toast('Removed from wall','info')"><svg width="11" height="11" fill="none" viewBox="0 0 11 11"><path d="M2 9l7-7M9 9L2 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button></div></div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ── VIEW: BRAND ───────────────────────── -->
+    <section class="view" id="view-brand">
+      <div class="topbar">
+        <span class="topbar-title">Brand</span>
+        <div class="topbar-divider"></div>
+        <span class="text-xxs text-3">Customize your recorder widget appearance</span>
+        <div class="spacer"></div>
+        <button class="btn btn-secondary btn-sm">Preview widget</button>
+        <button class="btn btn-primary btn-sm" onclick="toast('Brand settings saved!','success')">Save changes</button>
+      </div>
+      <div class="content scrollable">
+
+        <div class="brand-section">
+          <div class="brand-section-title">Workspace details</div>
+          <div class="brand-section-desc">Name and logo shown in the recorder widget and review pages.</div>
+          <div class="form-row">
+            <div class="fg"><label class="flabel">Workspace name</label><input class="input" type="text" value="Acme Corporation"></div>
+            <div class="fg"><label class="flabel">Review page URL</label>
+              <div style="position:relative;display:flex;align-items:center">
+                <div style="position:absolute;left:0;height:100%;display:flex;align-items:center;padding:0 10px;background:var(--bg-subtle);border-right:1px solid var(--border);border-radius:var(--r-md) 0 0 var(--r-md);font-size:12px;color:var(--text-2);white-space:nowrap">vouch.io/</div>
+                <input class="input" type="text" value="acme-corp" style="padding-left:82px">
+              </div>
+            </div>
+            <div class="fg"><label class="flabel">Website</label><input class="input" type="text" value="https://acme.com" placeholder="https://yoursite.com"></div>
+            <div class="fg"><label class="flabel">Industry</label><div class="select-wrap"><select class="input select"><option>SaaS / Software</option><option>Agency</option><option>E-commerce</option><option>Consulting</option><option>Other</option></select></div></div>
+          </div>
+        </div>
+
+        <div class="brand-section">
+          <div class="brand-section-title">Brand color</div>
+          <div class="brand-section-desc">Used for the record button and key accents in the widget.</div>
+          <div class="brand-color-row">
+            <div class="color-chip selected" style="background:#ff4820" title="#FF4820 (Default)"></div>
+            <div class="color-chip" style="background:#0a0a0a" title="#0A0A0A" onclick="selectColor(this)"></div>
+            <div class="color-chip" style="background:#2563eb" title="#2563EB" onclick="selectColor(this)"></div>
+            <div class="color-chip" style="background:#16a34a" title="#16A34A" onclick="selectColor(this)"></div>
+            <div class="color-chip" style="background:#d97706" title="#D97706" onclick="selectColor(this)"></div>
+            <div class="color-chip" style="background:#7c3aed" title="#7C3AED" onclick="selectColor(this)"></div>
+            <div class="color-chip" style="background:#db2777" title="#DB2777" onclick="selectColor(this)"></div>
+            <div class="color-chip" style="background:#0891b2" title="#0891B2" onclick="selectColor(this)"></div>
+            <div style="display:flex;align-items:center;gap:8px;margin-left:4px">
+              <input class="input" type="text" value="#FF4820" style="width:90px;font-size:12px;height:28px" id="color-hex">
+            </div>
+          </div>
+        </div>
+
+        <div class="brand-section">
+          <div class="brand-section-title">Prompt & messaging</div>
+          <div class="brand-section-desc">The message shown to reviewers in the recorder widget.</div>
+          <div class="form-row">
+            <div class="fg" style="grid-column:span 2">
+              <label class="flabel">Prompt title</label>
+              <input class="input" type="text" value="Tell us about your experience">
+            </div>
+            <div class="fg" style="grid-column:span 2">
+              <label class="flabel">Prompt description</label>
+              <textarea class="input" style="height:70px;padding:8px 10px;resize:vertical">A quick 60-second video helps other customers make the right decision. Share what you love most about our product.</textarea>
+            </div>
+            <div class="fg">
+              <label class="flabel">Thank you title</label>
+              <input class="input" type="text" value="Thank you! 🎉">
+            </div>
+            <div class="fg">
+              <label class="flabel">Thank you message</label>
+              <input class="input" type="text" value="Your review has been submitted successfully.">
+            </div>
+          </div>
+        </div>
+
+        <div class="brand-section" style="border-bottom:none">
+          <div class="brand-section-title">Widget options</div>
+          <div class="brand-section-desc">Control what's shown in the recorder widget.</div>
+          <div style="display:flex;flex-direction:column;gap:12px;max-width:500px">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div><div class="flabel">Show Vouch branding</div><div class="fhint">Display "Powered by Vouch" in the widget footer</div></div>
+              <button class="tog on" onclick="this.classList.toggle('on')"></button>
+            </div>
+            <div style="height:1px;background:var(--border)"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div><div class="flabel">Allow text reviews</div><div class="fhint">Reviewers can submit text instead of video</div></div>
+              <button class="tog on" onclick="this.classList.toggle('on')"></button>
+            </div>
+            <div style="height:1px;background:var(--border)"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div><div class="flabel">Allow file upload</div><div class="fhint">Reviewers can upload a pre-recorded video</div></div>
+              <button class="tog" onclick="this.classList.toggle('on')"></button>
+            </div>
+            <div style="height:1px;background:var(--border)"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div><div class="flabel">Collect star rating</div><div class="fhint">Show a star rating step before recording</div></div>
+              <button class="tog on" onclick="this.classList.toggle('on')"></button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── VIEW: SETTINGS ────────────────────── -->
+    <section class="view" id="view-settings">
+      <div class="topbar">
+        <span class="topbar-title">Settings</span>
+        <div class="topbar-divider"></div>
+        <div class="spacer"></div>
+        <button class="btn btn-primary btn-sm" onclick="toast('Settings saved!','success')">Save changes</button>
+      </div>
+      <div class="content scrollable">
+
+        <div class="settings-section">
+          <div class="settings-head"><div class="settings-head-title">Workspace</div><div class="settings-head-desc">General workspace preferences</div></div>
+          <div class="settings-row">
+            <div><div class="settings-label">Workspace name</div><div class="settings-desc">Visible to your team members</div></div>
+            <input class="input" type="text" value="Acme Corporation" style="width:220px">
+          </div>
+          <div class="settings-row">
+            <div><div class="settings-label">Timezone</div><div class="settings-desc">Used for analytics and scheduled sends</div></div>
+            <div class="select-wrap"><select class="input select" style="width:220px"><option>UTC+1 — Rome, Paris</option><option>UTC — London</option><option>UTC-5 — New York</option><option>UTC-8 — Los Angeles</option></select></div>
+          </div>
+          <div class="settings-row">
+            <div><div class="settings-label">Language</div><div class="settings-desc">Default language for the recorder widget</div></div>
+            <div class="select-wrap"><select class="input select" style="width:220px"><option>English (US)</option><option>Italian</option><option>French</option><option>Spanish</option><option>German</option></select></div>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-head"><div class="settings-head-title">Notifications</div><div class="settings-head-desc">Control when and how you receive alerts</div></div>
+          <div class="settings-row">
+            <div><div class="settings-label">New review submitted</div><div class="settings-desc">Get notified when a customer submits a review</div></div>
+            <button class="tog on" onclick="this.classList.toggle('on')"></button>
+          </div>
+          <div class="settings-row">
+            <div><div class="settings-label">Review pending approval</div><div class="settings-desc">Reminder if a review hasn't been approved in 48h</div></div>
+            <button class="tog on" onclick="this.classList.toggle('on')"></button>
+          </div>
+          <div class="settings-row">
+            <div><div class="settings-label">Reward redeemed</div><div class="settings-desc">When a customer claims their reward</div></div>
+            <button class="tog" onclick="this.classList.toggle('on')"></button>
+          </div>
+          <div class="settings-row">
+            <div><div class="settings-label">Weekly digest</div><div class="settings-desc">Summary of reviews and campaign performance every Monday</div></div>
+            <button class="tog on" onclick="this.classList.toggle('on')"></button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-head"><div class="settings-head-title">Reviews & moderation</div><div class="settings-head-desc">Control how reviews are handled</div></div>
+          <div class="settings-row">
+            <div><div class="settings-label">Require manual approval</div><div class="settings-desc">All reviews must be approved before publishing</div></div>
+            <button class="tog on" onclick="this.classList.toggle('on')"></button>
+          </div>
+          <div class="settings-row">
+            <div><div class="settings-label">Auto-publish 5-star reviews</div><div class="settings-desc">Skip approval for verified 5-star reviews</div></div>
+            <button class="tog" onclick="this.classList.toggle('on')"></button>
+          </div>
+          <div class="settings-row">
+            <div><div class="settings-label">Max video duration</div><div class="settings-desc">Limit reviewer video length</div></div>
+            <div class="select-wrap"><select class="input select" style="width:180px"><option>60 seconds</option><option>90 seconds</option><option>2 minutes</option><option>3 minutes</option><option>No limit</option></select></div>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-head"><div class="settings-head-title">Integrations</div><div class="settings-head-desc">Connect Vouch to your existing tools</div></div>
+          <div class="settings-row">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:32px;height:32px;background:#f0f0f0;border-radius:6px;display:grid;place-items:center;font-size:16px;flex-shrink:0">🔔</div>
+              <div><div class="settings-label">Slack</div><div class="settings-desc">Get review notifications in your Slack channels</div></div>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="toast('Slack connected!','success')">Connect</button>
+          </div>
+          <div class="settings-row">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:32px;height:32px;background:#f0f0f0;border-radius:6px;display:grid;place-items:center;font-size:16px;flex-shrink:0">📧</div>
+              <div><div class="settings-label">Mailchimp</div><div class="settings-desc">Sync reviewers to your email lists</div></div>
+            </div>
+            <button class="btn btn-secondary btn-sm">Connect</button>
+          </div>
+          <div class="settings-row">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:32px;height:32px;background:#f0f0f0;border-radius:6px;display:grid;place-items:center;font-size:16px;flex-shrink:0">⚡</div>
+              <div><div class="settings-label">Zapier</div><div class="settings-desc">Automate workflows with 5,000+ apps</div></div>
+            </div>
+            <span class="badge b-success" style="margin-right:8px">Connected</span>
+          </div>
+        </div>
+
+        <div class="settings-section" style="border-bottom:none">
+          <div class="settings-head"><div class="settings-head-title" style="color:var(--danger)">Danger zone</div><div class="settings-head-desc">Irreversible actions — proceed with caution</div></div>
+          <div class="settings-row">
+            <div><div class="settings-label">Delete all reviews</div><div class="settings-desc">Permanently delete all collected reviews. This cannot be undone.</div></div>
+            <button class="btn btn-danger-ghost btn-sm" onclick="toast('Action not available in demo','info')">Delete all</button>
+          </div>
+          <div class="settings-row">
+            <div><div class="settings-label">Delete workspace</div><div class="settings-desc">Permanently delete your workspace and all data.</div></div>
+            <button class="btn btn-danger-ghost btn-sm" onclick="toast('Action not available in demo','info')">Delete workspace</button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ══ MODALS ═══════════════════════════════════ -->
+
+<!-- Review Detail Modal -->
+<div class="modal-overlay" id="modal-review-detail" onclick="closeModalOutside(event,'review-detail')">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Review detail</div>
+      <button class="modal-close" onclick="closeModal('review-detail')"><svg width="9" height="9" fill="none" viewBox="0 0 9 9"><path d="M1 1l7 7M8 1l-7 7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="av av-lg" style="background:#eff6ff;color:#2563eb">MR</div>
+        <div>
+          <div style="font-size:14px;font-weight:600">Marco Rossi</div>
+          <div style="font-size:12px;color:var(--text-3)">marco@example.com · CEO @ Acme Corp</div>
+        </div>
+        <span class="badge b-success" style="margin-left:auto">Published</span>
+      </div>
+      <div style="background:var(--bg-muted);border-radius:var(--r-xl);aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden">
+        <div style="position:absolute;inset:0;background:linear-gradient(135deg,#1c1c1a,#2e2e2c)"></div>
+        <button style="width:48px;height:48px;background:rgba(255,255,255,.92);border-radius:50%;display:grid;place-items:center;border:none;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,.3);z-index:1"><svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M4 3l10 5-10 5V3z" fill="#0a0a0a"/></svg></button>
+        <div style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;font-weight:500;padding:3px 9px;border-radius:99px;backdrop-filter:blur(4px)">1:24</div>
+      </div>
+      <div class="stars" style="gap:2px"><svg class="star" style="width:14px;height:14px" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" style="width:14px;height:14px" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" style="width:14px;height:14px" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" style="width:14px;height:14px" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg><svg class="star" style="width:14px;height:14px" viewBox="0 0 12 12"><path d="M6 1l1.5 3h3l-2.4 1.8.9 3L6 7.3l-3 1.5.9-3L1.5 4h3z" fill="currentColor"/></svg></div>
+      <div style="font-size:13px;color:var(--text-2);line-height:1.65;background:var(--bg-subtle);padding:12px;border-radius:var(--r-lg);border:1px solid var(--border)">"Vouch completely changed how we collect testimonials. The video format is way more impactful than text reviews. We embedded it on our homepage and our trial-to-paid rate went up."</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary btn-sm" style="flex:1" onclick="toast('Embed code copied!','success')"><svg width="11" height="11" fill="none" viewBox="0 0 11 11"><path d="M1.5 4l-1 1 1 1M9.5 4l1 1-1 1M6.5 2l-2 6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Copy embed</button>
+        <button class="btn btn-secondary btn-sm" style="flex:1" onclick="toast('Link copied!','success')"><svg width="11" height="11" fill="none" viewBox="0 0 11 11"><path d="M7 1l3 3-3 3M10 4H3a3 3 0 0 0 0 6h1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Share link</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('review-detail')">Close</button>
+      <button class="btn btn-danger-ghost btn-sm">Remove from wall</button>
+      <button class="btn btn-primary btn-sm" onclick="toast('Added to wall!','success');closeModal('review-detail')">Add to Wall of Love</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Campaign Modal -->
+<div class="modal-overlay" id="modal-new-campaign" onclick="closeModalOutside(event,'new-campaign')">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">New campaign</div>
+      <button class="modal-close" onclick="closeModal('new-campaign')"><svg width="9" height="9" fill="none" viewBox="0 0 9 9"><path d="M1 1l7 7M8 1l-7 7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:12px">
+      <div class="nc-steps">
+        <div class="nc-step active"><div class="nc-dot">1</div>Basics</div>
+        <div class="nc-step"><div class="nc-dot">2</div>Prompt</div>
+        <div class="nc-step"><div class="nc-dot">3</div>Reward</div>
+      </div>
+      <div class="fg"><label class="flabel">Campaign name</label><input class="input" type="text" placeholder="e.g. Summer 2025 Launch"></div>
+      <div class="fg">
+        <label class="flabel">URL slug</label>
+        <div style="position:relative;display:flex;align-items:center">
+          <div style="position:absolute;left:0;height:100%;display:flex;align-items:center;padding:0 10px;background:var(--bg-subtle);border-right:1px solid var(--border);border-radius:var(--r-md) 0 0 var(--r-md);font-size:12px;color:var(--text-2);white-space:nowrap">vouch.io/</div>
+          <input class="input" type="text" placeholder="your-campaign" style="padding-left:82px">
+        </div>
+      </div>
+      <div class="fg"><label class="flabel">Campaign goal <span style="font-weight:400;color:var(--text-3)">(optional)</span></label><input class="input" type="number" placeholder="e.g. 50 reviews" min="1"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--border)">
+        <div><div class="flabel">Enable reward</div><div class="fhint">Add an optional reward for reviewers</div></div>
+        <button class="tog" id="reward-tog" onclick="this.classList.toggle('on');document.getElementById('reward-fields').style.display=this.classList.contains('on')?'flex':'none'"></button>
+      </div>
+      <div id="reward-fields" style="display:none;flex-direction:column;gap:10px;padding:12px;background:var(--bg-subtle);border-radius:var(--r-lg);border:1px solid var(--border)">
+        <div class="fg"><label class="flabel">Reward type</label><div class="select-wrap"><select class="input select"><option>Gift card (Amazon, etc.)</option><option>Discount code</option><option>Store credit</option><option>Custom reward</option></select></div></div>
+        <div class="fg"><label class="flabel">Reward value</label><input class="input" type="text" placeholder="e.g. $25 or 20% off"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('new-campaign')">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="toast('Campaign created!','success');closeModal('new-campaign')">Create campaign →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Request Review Modal -->
+<div class="modal-overlay" id="modal-new-review" onclick="closeModalOutside(event,'new-review')">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Request a review</div>
+      <button class="modal-close" onclick="closeModal('new-review')"><svg width="9" height="9" fill="none" viewBox="0 0 9 9"><path d="M1 1l7 7M8 1l-7 7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:12px">
+      <div class="fg"><label class="flabel">Customer email</label><input class="input" type="email" placeholder="customer@company.com"></div>
+      <div class="fg"><label class="flabel">Customer name <span style="font-weight:400;color:var(--text-3)">(optional)</span></label><input class="input" type="text" placeholder="Jane Smith"></div>
+      <div class="fg">
+        <label class="flabel">Campaign</label>
+        <div class="select-wrap"><select class="input select"><option>SaaS Launch Q2</option><option>Agency Outreach</option></select></div>
+      </div>
+      <div style="background:var(--bg-subtle);border:1px solid var(--border);border-radius:var(--r-lg);padding:10px 12px;font-size:12px;color:var(--text-2);line-height:1.55">
+        <div style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Email preview</div>
+        Hi there — we'd love to hear about your experience! Click below to leave a short video review. It takes less than 60 seconds. <span style="color:var(--accent)">→ Leave a review</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('new-review')">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="toast('Review request sent!','success');closeModal('new-review')">
+        <svg width="11" height="11" fill="none" viewBox="0 0 11 11"><path d="M1 5.5h8M6 2.5l3 3-3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Send request
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Campaign Detail Modal -->
+<div class="modal-overlay" id="modal-campaign-detail" onclick="closeModalOutside(event,'campaign-detail')">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-head">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="font-size:18px">🚀</div>
+        <div class="modal-title">SaaS Launch Q2</div>
+        <span class="badge b-success" style="margin-left:4px"><span class="bdot"></span>Active</span>
+      </div>
+      <button class="modal-close" onclick="closeModal('campaign-detail')"><svg width="9" height="9" fill="none" viewBox="0 0 9 9"><path d="M1 1l7 7M8 1l-7 7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border-radius:var(--r-lg);overflow:hidden;border:1px solid var(--border)">
+        <div style="background:var(--bg);padding:12px 14px"><div style="font-size:11px;font-weight:500;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Reviews</div><div style="font-size:20px;font-weight:600;letter-spacing:-.025em">47</div></div>
+        <div style="background:var(--bg);padding:12px 14px"><div style="font-size:11px;font-weight:500;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Completion</div><div style="font-size:20px;font-weight:600;letter-spacing:-.025em">82%</div></div>
+        <div style="background:var(--bg);padding:12px 14px"><div style="font-size:11px;font-weight:500;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Rating</div><div style="font-size:20px;font-weight:600;letter-spacing:-.025em;color:#f59e0b">4.9★</div></div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:12px;color:var(--text-3)"><span>Progress to goal</span><span>47 / 60 reviews</span></div>
+        <div class="prog" style="height:6px"><div class="prog-fill" style="width:78%"></div></div>
+      </div>
+      <div class="fg">
+        <label class="flabel">Campaign link</label>
+        <div style="display:flex;gap:6px">
+          <input class="input" type="text" value="vouch.io/acme-q2" readonly style="background:var(--bg-subtle)">
+          <button class="btn btn-secondary btn-sm" style="flex-shrink:0" onclick="toast('Link copied!','success')">Copy</button>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="flabel">Reward</label>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--warning-soft);border:1px solid #fde68a;border-radius:var(--r-lg)">
+          <div style="font-size:20px">🎁</div>
+          <div><div style="font-size:13px;font-weight:500">$25 Amazon Gift Card</div><div style="font-size:11px;color:var(--text-3)">Sent automatically via email after submission</div></div>
+          <span class="badge b-success" style="margin-left:auto">Active</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('campaign-detail')">Close</button>
+      <button class="btn btn-danger-ghost btn-sm" onclick="toast('Campaign paused','info');closeModal('campaign-detail')">Pause</button>
+      <button class="btn btn-primary btn-sm" onclick="closeModal('campaign-detail')">Edit campaign</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TOAST STACK ════════════════════════════ -->
+<div class="toast-stack" id="toasts"></div>
+
+<script>
+// ── NAVIGATION ──────────────────────────────
+function nav(el, viewId) {
+  document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + viewId).classList.add('active');
+}
+
+// Auto-activate Reviews on load (sidebar)
+document.querySelector('[data-view="reviews"]').classList.add('active');
+
+// ── MODALS ──────────────────────────────────
+function openModal(id) {
+  document.getElementById('modal-' + id).classList.add('open');
+}
+function closeModal(id) {
+  document.getElementById('modal-' + id).classList.remove('open');
+}
+function closeModalOutside(e, id) {
+  if (e.target === document.getElementById('modal-' + id)) closeModal(id);
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+  }
+});
+
+// ── REVIEW FILTERS ──────────────────────────
+function filterReviews(btn, filter) {
+  document.querySelectorAll('.tabs-pill .tab-p').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('#review-list .list-row').forEach(row => {
+    if (filter === 'all') { row.style.display = ''; return; }
+    const type = row.dataset.type;
+    const status = row.dataset.status;
+    if (filter === 'video' && type === 'video') row.style.display = '';
+    else if (filter === 'text' && type === 'text') row.style.display = '';
+    else if (filter === 'pending' && status === 'pending') row.style.display = '';
+    else row.style.display = 'none';
+  });
+}
+
+function searchReviews(q) {
+  const term = q.toLowerCase();
+  document.querySelectorAll('#review-list .list-row').forEach(row => {
+    const name = (row.dataset.name || '').toLowerCase();
+    const sub = row.querySelector('.row-sub')?.textContent.toLowerCase() || '';
+    row.style.display = (name.includes(term) || sub.includes(term) || term === '') ? '' : 'none';
+  });
+}
+
+// ── APPROVE / REJECT ────────────────────────
+function approveReview(btn) {
+  const row = btn.closest('.list-row');
+  row.dataset.status = 'published';
+  const badge = row.querySelector('.badge.b-warning');
+  if (badge) { badge.className = 'badge b-success'; badge.innerHTML = 'Published'; }
+  btn.closest('.row-meta').querySelectorAll('.btn-danger-ghost, .btn-primary').forEach(b => b.remove());
+  const viewBtn = document.createElement('button');
+  viewBtn.className = 'btn btn-ghost btn-sm';
+  viewBtn.textContent = 'View';
+  viewBtn.onclick = () => openModal('review-detail');
+  btn.closest('.row-meta').appendChild(viewBtn);
+  updatePendingCount();
+  toast('Review approved and published!', 'success');
+}
+
+function rejectReview(btn) {
+  const row = btn.closest('.list-row');
+  row.style.opacity = '0';
+  row.style.transition = 'opacity .2s';
+  setTimeout(() => row.remove(), 200);
+  updatePendingCount();
+  toast('Review rejected', 'info');
+}
+
+function updatePendingCount() {
+  const pending = document.querySelectorAll('#review-list .list-row[data-status="pending"]').length;
+  const badge = document.querySelector('[data-view="reviews"] .sb-badge');
+  if (badge) badge.textContent = pending;
+  const note = document.querySelector('#view-reviews .section-row .text-xxs');
+  if (note) note.textContent = pending + ' pending approval';
+}
+
+// ── COPY LINK ───────────────────────────────
+function copyLink() { toast('Campaign link copied!', 'success'); }
+
+// ── COLOR CHIPS ─────────────────────────────
+function selectColor(el) {
+  document.querySelectorAll('.color-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  const hex = el.getAttribute('title').split(' ')[0];
+  document.getElementById('color-hex').value = hex;
+}
+
+// ── TOAST ────────────────────────────────────
+function toast(msg, type = 'info') {
+  const icons = {
+    success: `<svg width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" stroke="#16a34a" stroke-width="1.2"/><path d="M4.5 7.5l2 2 3-4" stroke="#16a34a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    info:    `<svg width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" stroke="#2563eb" stroke-width="1.2"/><path d="M7 4.5h.01M7 6.5v3" stroke="#2563eb" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+    warning: `<svg width="14" height="14" fill="none" viewBox="0 0 14 14"><path d="M7 2L1.5 12h11L7 2z" stroke="#d97706" stroke-width="1.2" stroke-linejoin="round"/><path d="M7 6v3M7 10.5h.01" stroke="#d97706" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+    danger:  `<svg width="14" height="14" fill="none" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" stroke="#dc2626" stroke-width="1.2"/><path d="M5 5l4 4M9 5l-4 4" stroke="#dc2626" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+  };
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = `${icons[type] || icons.info} ${msg} <button class="toast-x" onclick="this.parentElement.remove()"><svg width="10" height="10" fill="none" viewBox="0 0 10 10"><path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button>`;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => { el.style.opacity='0'; el.style.transition='opacity .2s'; setTimeout(()=>el.remove(),200); }, 3500);
+}
+</script>
+</body>
+</html>
