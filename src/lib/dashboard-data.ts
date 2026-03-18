@@ -1,6 +1,7 @@
 import { getCampaignDelegate, prisma } from "@/lib/db";
 import { buildCampaignPublicPath } from "@/lib/campaigns";
 import { DEFAULT_WORKSPACE } from "@/lib/workspace";
+import { unstable_cache } from "next/cache";
 
 type RuntimeCampaign = {
   id: string;
@@ -29,25 +30,37 @@ type RuntimeCampaign = {
   } | null;
   submissions: Array<{
     id: string;
-    reviewerName: string;
-    reviewerEmail: string;
     reviewerRating: number | null;
     status: string;
-    videoKey: string;
-    durationSeconds: number | null;
-    aiStatus: string;
-    aiError: string | null;
-    aiGeneratedReview: string | null;
-    aiKeyPhrase: string | null;
-    aiTranscript: string | null;
-    aiProcessedAt: Date | null;
-    answers: unknown;
     createdAt: Date;
   }>;
 };
 
 type CampaignDashboardRuntimeDelegate = {
   findMany: (args: unknown) => Promise<RuntimeCampaign[]>;
+  findFirst: (args: unknown) => Promise<
+    | {
+        id: string;
+        submissions: Array<{
+          id: string;
+          reviewerName: string;
+          reviewerEmail: string;
+          reviewerRating: number | null;
+          status: string;
+          videoKey: string;
+          durationSeconds: number | null;
+          aiStatus: string;
+          aiError: string | null;
+          aiGeneratedReview: string | null;
+          aiKeyPhrase: string | null;
+          aiTranscript: string | null;
+          aiProcessedAt: Date | null;
+          answers: unknown;
+          createdAt: Date;
+        }>;
+      }
+    | null
+  >;
 };
 
 export type DashboardCampaignRow = {
@@ -125,7 +138,10 @@ function parseSubmissionAnswers(value: unknown) {
   });
 }
 
-export async function getDashboardDataForUser(userId: string) {
+async function getDashboardDataForUserUncached(
+  userId: string,
+  options?: { detailCampaignId?: string }
+) {
   const campaignDelegate = getCampaignDelegate() as unknown as
     | CampaignDashboardRuntimeDelegate
     | undefined;
@@ -185,19 +201,8 @@ export async function getDashboardDataForUser(userId: string) {
             orderBy: { createdAt: "desc" },
             select: {
               id: true,
-              reviewerName: true,
-              reviewerEmail: true,
               reviewerRating: true,
               status: true,
-              videoKey: true,
-              durationSeconds: true,
-              aiStatus: true,
-              aiError: true,
-              aiGeneratedReview: true,
-              aiKeyPhrase: true,
-              aiTranscript: true,
-              aiProcessedAt: true,
-              answers: true,
               createdAt: true,
             },
           },
@@ -239,28 +244,104 @@ export async function getDashboardDataForUser(userId: string) {
       : null,
     submissions: campaign.submissions.map((submission) => ({
       id: submission.id,
-      reviewerName: submission.reviewerName,
-      reviewerEmail: submission.reviewerEmail,
+      reviewerName: "",
+      reviewerEmail: "",
       reviewerRating: submission.reviewerRating,
       status: submission.status,
-      videoKey: submission.videoKey,
-      durationSeconds: submission.durationSeconds,
-      aiStatus: submission.aiStatus,
-      aiError: submission.aiError,
-      aiGeneratedReview: submission.aiGeneratedReview,
-      aiKeyPhrase: submission.aiKeyPhrase,
-      aiTranscript: submission.aiTranscript,
-      aiProcessedAt: submission.aiProcessedAt
-        ? submission.aiProcessedAt.toISOString()
-        : null,
-      answers: parseSubmissionAnswers(submission.answers),
+      videoKey: "",
+      durationSeconds: null,
+      aiStatus: "PENDING",
+      aiError: null,
+      aiGeneratedReview: null,
+      aiKeyPhrase: null,
+      aiTranscript: null,
+      aiProcessedAt: null,
+      answers: [],
       createdAt: submission.createdAt.toISOString(),
     })),
   }));
+
+  const detailCampaignId = options?.detailCampaignId;
+  if (campaignDelegate && detailCampaignId) {
+    try {
+      const detailedCampaign = await campaignDelegate.findFirst({
+        where: { ownerUserId: userId, id: detailCampaignId },
+        select: {
+          id: true,
+          submissions: {
+            orderBy: { createdAt: "desc" },
+            select: {
+              id: true,
+              reviewerName: true,
+              reviewerEmail: true,
+              reviewerRating: true,
+              status: true,
+              videoKey: true,
+              durationSeconds: true,
+              aiStatus: true,
+              aiError: true,
+              aiGeneratedReview: true,
+              aiKeyPhrase: true,
+              aiTranscript: true,
+              aiProcessedAt: true,
+              answers: true,
+              createdAt: true,
+            },
+          },
+        },
+      });
+
+      if (detailedCampaign) {
+        const detailedSubmissions = detailedCampaign.submissions.map((submission) => ({
+          id: submission.id,
+          reviewerName: submission.reviewerName,
+          reviewerEmail: submission.reviewerEmail,
+          reviewerRating: submission.reviewerRating,
+          status: submission.status,
+          videoKey: submission.videoKey,
+          durationSeconds: submission.durationSeconds,
+          aiStatus: submission.aiStatus,
+          aiError: submission.aiError,
+          aiGeneratedReview: submission.aiGeneratedReview,
+          aiKeyPhrase: submission.aiKeyPhrase,
+          aiTranscript: submission.aiTranscript,
+          aiProcessedAt: submission.aiProcessedAt
+            ? submission.aiProcessedAt.toISOString()
+            : null,
+          answers: parseSubmissionAnswers(submission.answers),
+          createdAt: submission.createdAt.toISOString(),
+        }));
+
+        const idx = campaignRows.findIndex((entry) => entry.id === detailCampaignId);
+        if (idx >= 0) {
+          campaignRows[idx] = {
+            ...campaignRows[idx],
+            submissions: detailedSubmissions,
+          };
+        }
+      }
+    } catch (error) {
+      console.error("Dashboard detail campaign query failed:", error);
+    }
+  }
 
   return {
     workspaceName,
     campaignRuntimeReady: Boolean(campaignDelegate) && !campaignQueryFailed,
     campaigns: campaignRows,
   };
+}
+
+const getDashboardDataCached = unstable_cache(
+  async (userId: string, detailCampaignId?: string) =>
+    getDashboardDataForUserUncached(userId, { detailCampaignId }),
+  ["dashboard-data-v1"],
+  { revalidate: 5 }
+);
+
+export async function getDashboardDataForUser(
+  userId: string,
+  options?: { detailCampaignId?: string }
+) {
+  return getDashboardDataCached(userId, options?.detailCampaignId);
 }

@@ -1,8 +1,8 @@
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import type { SettingsPanelId } from "@/components/dashboard/DashboardSettings";
-import { getDashboardDataForUser } from "@/lib/dashboard-data";
+import { getDashboardShellBase } from "@/lib/dashboard-shell-server";
 
 export const dynamic = "force-dynamic";
 
@@ -39,27 +39,15 @@ export default async function DashboardSettingsPanelPage({ params }: PageProps) 
     redirect("/dashboard/settings/general");
   }
 
-  const user = await currentUser();
-  const viewerName =
-    user?.firstName ||
-    user?.username ||
-    user?.primaryEmailAddress?.emailAddress ||
-    user?.emailAddresses[0]?.emailAddress ||
-    "Account";
-  const viewerEmail =
-    user?.primaryEmailAddress?.emailAddress ||
-    user?.emailAddresses[0]?.emailAddress ||
-    "";
-
-  const dashboardData = await getDashboardDataForUser(userId);
+  const base = await getDashboardShellBase(userId);
 
   return (
     <DashboardShell
-      viewerName={viewerName}
-      viewerEmail={viewerEmail}
-      workspaceName={dashboardData.workspaceName}
-      campaignRuntimeReady={dashboardData.campaignRuntimeReady}
-      campaigns={dashboardData.campaigns}
+      viewerName={base.viewerName}
+      viewerEmail={base.viewerEmail}
+      workspaceName={base.workspaceName}
+      campaignRuntimeReady={base.campaignRuntimeReady}
+      campaigns={base.campaigns}
       initialSection="settings"
       initialSettingsPanel={panel}
     />

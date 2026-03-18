@@ -1,7 +1,15 @@
 "use client";
 
 import { UserButton } from "@clerk/nextjs";
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -16,6 +24,9 @@ type DashboardShellProps = {
   campaignRuntimeReady: boolean;
   initialSection?: "campaigns" | "settings";
   initialSettingsPanel?: SettingsPanelId;
+  initialSelectedCampaignId?: string | null;
+  initialCampaignDetailTab?: "submissions" | "embed" | "automation" | "settings";
+  initialSelectedSubmissionId?: string | null;
   campaigns: Array<{
     id: string;
     name: string;
@@ -264,21 +275,34 @@ export default function DashboardShell({
   campaignRuntimeReady,
   initialSection = "campaigns",
   initialSettingsPanel = "general",
+  initialSelectedCampaignId = null,
+  initialCampaignDetailTab = "submissions",
+  initialSelectedSubmissionId = null,
   campaigns,
 }: DashboardShellProps) {
   const router = useRouter();
+  const [isNavigating, startNavigation] = useTransition();
   const [campaignsState, setCampaignsState] = useState(campaigns);
   const activeSection = initialSection;
   const [showBuilder, setShowBuilder] = useState(false);
   const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null);
-  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(
+    initialSelectedCampaignId
+  );
   const [campaignDetailTab, setCampaignDetailTab] = useState<
     "submissions" | "embed" | "automation" | "settings"
-  >("submissions");
+  >(initialCampaignDetailTab);
   const [selectedSubmissionRef, setSelectedSubmissionRef] = useState<{
     campaignId: string;
     submissionId: string;
-  } | null>(null);
+  } | null>(
+    initialSelectedCampaignId && initialSelectedSubmissionId
+      ? {
+          campaignId: initialSelectedCampaignId,
+          submissionId: initialSelectedSubmissionId,
+        }
+      : null
+  );
   const [submissionActionId, setSubmissionActionId] = useState<string | null>(null);
   const [playingSubmissionId, setPlayingSubmissionId] = useState<string | null>(null);
   const [webhookEndpoints, setWebhookEndpoints] = useState<DashboardWebhookEndpoint[]>([]);
@@ -321,6 +345,15 @@ export default function DashboardShell({
   const [brandLogoUploading, setBrandLogoUploading] = useState(false);
   const [brandLogoUploadProgress, setBrandLogoUploadProgress] = useState(0);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
+
+  useEffect(() => {
+    setCampaignsState(campaigns);
+  }, [campaigns]);
+
+  useEffect(() => {
+    router.prefetch("/dashboard/campaigns");
+    router.prefetch(`/dashboard/settings/${initialSettingsPanel}`);
+  }, [router, initialSettingsPanel]);
 
   useEffect(() => {
     if (activeSection !== "settings" || webhookLoaded || webhookLoading) {
@@ -433,6 +466,18 @@ export default function DashboardShell({
 
   useEffect(() => {
     if (!selectedCampaign) {
+      return;
+    }
+
+    const base = `/dashboard/campaigns/${selectedCampaign.id}`;
+    router.prefetch(`${base}/submissions`);
+    router.prefetch(`${base}/embed`);
+    router.prefetch(`${base}/automation`);
+    router.prefetch(`${base}/settings`);
+  }, [router, selectedCampaign]);
+
+  useEffect(() => {
+    if (!selectedCampaign) {
       setCampaignWebhookUrl("");
       setCampaignWebhookDescription("");
       setCampaignWebhookEvents(["submission.created", "submission.approved"]);
@@ -455,14 +500,23 @@ export default function DashboardShell({
   }, [selectedCampaignId, selectedCampaign]);
 
   useEffect(() => {
-    setCampaignDetailTab("submissions");
-  }, [selectedCampaignId]);
-
-  useEffect(() => {
     if (activeSection !== "campaigns") {
       setSelectedSubmissionRef(null);
     }
   }, [activeSection]);
+
+  useEffect(() => {
+    setSelectedCampaignId(initialSelectedCampaignId);
+    setCampaignDetailTab(initialCampaignDetailTab);
+    setSelectedSubmissionRef(
+      initialSelectedCampaignId && initialSelectedSubmissionId
+        ? {
+            campaignId: initialSelectedCampaignId,
+            submissionId: initialSelectedSubmissionId,
+          }
+        : null
+    );
+  }, [initialSelectedCampaignId, initialCampaignDetailTab, initialSelectedSubmissionId]);
 
   useEffect(() => {
     if (activeSection !== "settings" || brandLoaded || brandLoading) {
@@ -542,51 +596,10 @@ export default function DashboardShell({
     };
   }, [selectedCampaign]);
 
-  const allSubmissionRows = useMemo(() => {
-    return campaignsState.flatMap((campaign) =>
-      campaign.submissions.map((submission) => ({
-        campaignId: campaign.id,
-        campaignName: campaign.name,
-        submission,
-      }))
-    );
-  }, [campaignsState]);
-
-  const reviewsStats = useMemo(() => {
-    const total = allSubmissionRows.length;
-    if (total === 0) {
-      return {
-        total: 0,
-        avgRating: 0,
-        completionRate: 0,
-        approvedCount: 0,
-        pendingCount: 0,
-      };
-    }
-
-    const approvedCount = allSubmissionRows.filter(
-      ({ submission }) => normalizeSubmissionStatus(submission.status) === "APPROVED"
-    ).length;
-    const pendingCount = allSubmissionRows.filter(
-      ({ submission }) => normalizeSubmissionStatus(submission.status) === "PENDING"
-    ).length;
-    const ratings = allSubmissionRows
-      .map(({ submission }) => submission.reviewerRating)
-      .filter((value): value is number => typeof value === "number");
-    const avgRating =
-      ratings.length > 0
-        ? ratings.reduce((sum, value) => sum + value, 0) / ratings.length
-        : 0;
-    const completionRate = Math.round((approvedCount / total) * 100);
-
-    return {
-      total,
-      avgRating,
-      completionRate,
-      approvedCount,
-      pendingCount,
-    };
-  }, [allSubmissionRows]);
+  const totalReviewsCount = useMemo(
+    () => campaignsState.reduce((sum, campaign) => sum + campaign.submissions.length, 0),
+    [campaignsState]
+  );
 
   const campaignStats = useMemo(() => {
     const activeCount = campaignsState.filter(
@@ -1116,12 +1129,18 @@ export default function DashboardShell({
     });
   }
 
+  function navigateTo(path: string) {
+    startNavigation(() => {
+      router.push(path);
+    });
+  }
+
   function openCampaignsSection() {
     setShowBuilder(false);
     setEditingCampaignId(null);
     setSelectedCampaignId(null);
     setSelectedSubmissionRef(null);
-    router.push("/dashboard/campaigns");
+    navigateTo("/dashboard/campaigns");
     scrollDashboardToTop();
   }
 
@@ -1130,20 +1149,20 @@ export default function DashboardShell({
     setEditingCampaignId(null);
     setSelectedCampaignId(null);
     setSelectedSubmissionRef(null);
-    router.push(`/dashboard/settings/${initialSettingsPanel}`);
+    navigateTo(`/dashboard/settings/${initialSettingsPanel}`);
     scrollDashboardToTop();
   }
 
   function openSubmissionDetails(campaignId: string, submissionId: string) {
-    setSelectedSubmissionRef({
-      campaignId,
-      submissionId,
-    });
+    navigateTo(`/dashboard/campaigns/${campaignId}/submission/${submissionId}`);
     scrollDashboardToTop();
   }
 
   function closeSubmissionDetails() {
-    setSelectedSubmissionRef(null);
+    const campaignId = selectedSubmissionRef?.campaignId || selectedCampaignId;
+    if (campaignId) {
+      navigateTo(`/dashboard/campaigns/${campaignId}/submissions`);
+    }
     scrollDashboardToTop();
   }
 
@@ -1179,6 +1198,8 @@ export default function DashboardShell({
                 activeSection === "campaigns" ? "dashboard-nav-item-active" : "dashboard-nav-item-muted"
               }`}
               onClick={openCampaignsSection}
+              onMouseEnter={() => router.prefetch("/dashboard/campaigns")}
+              disabled={isNavigating}
             >
               <span className="dashboard-nav-icon" aria-hidden="true">
                 <svg viewBox="0 0 15 15" fill="none">
@@ -1206,6 +1227,8 @@ export default function DashboardShell({
                 activeSection === "settings" ? "dashboard-nav-item-active" : "dashboard-nav-item-muted"
               }`}
               onClick={openSettingsSection}
+              onMouseEnter={() => router.prefetch(`/dashboard/settings/${initialSettingsPanel}`)}
+              disabled={isNavigating}
             >
               <span className="dashboard-nav-icon" aria-hidden="true">
                 <svg viewBox="0 0 15 15" fill="none">
@@ -1242,6 +1265,11 @@ export default function DashboardShell({
       </aside>
 
       <section className="dashboard-main">
+        {isNavigating && (
+          <div className="dashboard-route-loading" role="status" aria-live="polite">
+            <span>Loading...</span>
+          </div>
+        )}
         <div
           className={`dashboard-content ${isCampaignsWorkspaceView ? "is-campaigns-workspace" : ""} ${isSettingsView ? "is-settings-view" : ""}`}
         >
@@ -1428,12 +1456,24 @@ export default function DashboardShell({
                         key={campaign.id}
                         className="dashboard-campaign-list-row"
                         role="button"
-                        tabIndex={0}
-                        onClick={() => setSelectedCampaignId(campaign.id)}
+                        tabIndex={isNavigating ? -1 : 0}
+                        aria-disabled={isNavigating}
+                        onClick={() => {
+                          if (isNavigating) {
+                            return;
+                          }
+                          navigateTo(`/dashboard/campaigns/${campaign.id}/submissions`);
+                        }}
+                        onMouseEnter={() =>
+                          router.prefetch(`/dashboard/campaigns/${campaign.id}/submissions`)
+                        }
                         onKeyDown={(event) => {
                           if (event.key === "Enter" || event.key === " ") {
                             event.preventDefault();
-                            setSelectedCampaignId(campaign.id);
+                            if (isNavigating) {
+                              return;
+                            }
+                            navigateTo(`/dashboard/campaigns/${campaign.id}/submissions`);
                           }
                         }}
                       >
@@ -1565,7 +1605,10 @@ export default function DashboardShell({
                 <button
                   type="button"
                   className="dashboard-section-btn dashboard-section-btn-secondary"
-                  onClick={() => setSelectedCampaignId(null)}
+                  onClick={() => {
+                    navigateTo("/dashboard/campaigns");
+                  }}
+                  disabled={isNavigating}
                 >
                   <svg
                     className="dashboard-button-icon"
@@ -1639,7 +1682,13 @@ export default function DashboardShell({
                     className={`dashboard-campaign-detail-tab ${
                       campaignDetailTab === "submissions" ? "is-active" : ""
                     }`}
-                    onClick={() => setCampaignDetailTab("submissions")}
+                    onClick={() => {
+                      navigateTo(`/dashboard/campaigns/${selectedCampaign.id}/submissions`);
+                    }}
+                    onMouseEnter={() =>
+                      router.prefetch(`/dashboard/campaigns/${selectedCampaign.id}/submissions`)
+                    }
+                    disabled={isNavigating}
                   >
                     Submissions
                   </button>
@@ -1648,7 +1697,13 @@ export default function DashboardShell({
                     className={`dashboard-campaign-detail-tab ${
                       campaignDetailTab === "embed" ? "is-active" : ""
                     }`}
-                    onClick={() => setCampaignDetailTab("embed")}
+                    onClick={() => {
+                      navigateTo(`/dashboard/campaigns/${selectedCampaign.id}/embed`);
+                    }}
+                    onMouseEnter={() =>
+                      router.prefetch(`/dashboard/campaigns/${selectedCampaign.id}/embed`)
+                    }
+                    disabled={isNavigating}
                   >
                     Embed
                   </button>
@@ -1657,7 +1712,13 @@ export default function DashboardShell({
                     className={`dashboard-campaign-detail-tab ${
                       campaignDetailTab === "automation" ? "is-active" : ""
                     }`}
-                    onClick={() => setCampaignDetailTab("automation")}
+                    onClick={() => {
+                      navigateTo(`/dashboard/campaigns/${selectedCampaign.id}/automation`);
+                    }}
+                    onMouseEnter={() =>
+                      router.prefetch(`/dashboard/campaigns/${selectedCampaign.id}/automation`)
+                    }
+                    disabled={isNavigating}
                   >
                     Automation
                   </button>
@@ -1666,7 +1727,13 @@ export default function DashboardShell({
                     className={`dashboard-campaign-detail-tab ${
                       campaignDetailTab === "settings" ? "is-active" : ""
                     }`}
-                    onClick={() => setCampaignDetailTab("settings")}
+                    onClick={() => {
+                      navigateTo(`/dashboard/campaigns/${selectedCampaign.id}/settings`);
+                    }}
+                    onMouseEnter={() =>
+                      router.prefetch(`/dashboard/campaigns/${selectedCampaign.id}/settings`)
+                    }
+                    disabled={isNavigating}
                   >
                     Settings
                   </button>
@@ -1784,6 +1851,12 @@ export default function DashboardShell({
                                 type="button"
                                 className="dashboard-secondary-btn dashboard-inline-action"
                                 onClick={() => openSubmissionDetails(selectedCampaign.id, submission.id)}
+                                onMouseEnter={() =>
+                                  router.prefetch(
+                                    `/dashboard/campaigns/${selectedCampaign.id}/submission/${submission.id}`
+                                  )
+                                }
+                                disabled={isNavigating}
                               >
                                 View
                               </button>
@@ -2293,7 +2366,7 @@ export default function DashboardShell({
               siteHost={siteHost}
               websiteUrl={brandWebsiteUrl}
               campaignsCount={campaignsState.length}
-              totalReviews={reviewsStats.total}
+              totalReviews={totalReviewsCount}
               webhookEndpoints={webhookEndpoints}
               webhookLoading={webhookLoading}
               webhookError={webhookError}
@@ -2652,6 +2725,11 @@ const dashboardShellStyles = `
     cursor: pointer;
   }
 
+  .dashboard-nav-item:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
   .dashboard-subnav-item:hover {
     color: var(--dashboard-text);
     background: var(--dashboard-bg-subtle);
@@ -2666,6 +2744,38 @@ const dashboardShellStyles = `
     margin-left: 232px;
     min-height: 100vh;
     background: var(--dashboard-bg);
+    position: relative;
+  }
+
+  .dashboard-route-loading {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    height: 3px;
+    background: linear-gradient(90deg, var(--brand) 0%, #ff7a5c 45%, var(--brand) 100%);
+    background-size: 220% 100%;
+    animation: dashboardRouteLoad 900ms linear infinite;
+  }
+
+  .dashboard-route-loading span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  @keyframes dashboardRouteLoad {
+    from {
+      background-position: 0% 50%;
+    }
+    to {
+      background-position: 220% 50%;
+    }
   }
 
   .dashboard-content {
@@ -2976,6 +3086,11 @@ const dashboardShellStyles = `
 
   .dashboard-campaign-list-row:hover {
     background: #fcfcfc;
+  }
+
+  .dashboard-campaign-list-row[aria-disabled="true"] {
+    opacity: 0.7;
+    cursor: wait;
   }
 
   .dashboard-campaign-list-row:last-child {
@@ -4201,6 +4316,11 @@ const dashboardShellStyles = `
 
   .dashboard-campaign-detail-tab:hover {
     color: var(--dashboard-text);
+  }
+
+  .dashboard-campaign-detail-tab:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
   }
 
   .dashboard-campaign-detail-tab.is-active {

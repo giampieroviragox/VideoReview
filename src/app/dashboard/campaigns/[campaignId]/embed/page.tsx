@@ -1,17 +1,27 @@
 import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 import DashboardShell from "@/components/dashboard/DashboardShell";
-import { getDashboardShellBase } from "@/lib/dashboard-shell-server";
+import { getCampaignDashboardShellBase } from "@/lib/dashboard-campaign-page";
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardCampaignsPage() {
+type PageProps = {
+  params: Promise<{ campaignId: string }>;
+};
+
+export default async function DashboardCampaignEmbedPage({ params }: PageProps) {
   const { userId, redirectToSignIn } = await auth();
 
   if (!userId) {
     return redirectToSignIn();
   }
 
-  const base = await getDashboardShellBase(userId);
+  const { campaignId } = await params;
+  const base = await getCampaignDashboardShellBase(userId, campaignId);
+
+  if (!base.campaignExists) {
+    redirect("/dashboard/campaigns");
+  }
 
   return (
     <DashboardShell
@@ -21,6 +31,8 @@ export default async function DashboardCampaignsPage() {
       campaignRuntimeReady={base.campaignRuntimeReady}
       campaigns={base.campaigns}
       initialSection="campaigns"
+      initialSelectedCampaignId={campaignId}
+      initialCampaignDetailTab="embed"
     />
   );
 }
