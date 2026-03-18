@@ -1,8 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
 type PageProps = {
   params: Promise<{ campaignId: string }>;
 };

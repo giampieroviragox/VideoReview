@@ -4,8 +4,6 @@ import DashboardShell from "@/components/dashboard/DashboardShell";
 import type { SettingsPanelId } from "@/components/dashboard/DashboardSettings";
 import { getDashboardShellBase } from "@/lib/dashboard-shell-server";
 
-export const dynamic = "force-dynamic";
-
 const SETTINGS_PANELS: SettingsPanelId[] = [
   "general",
   "brand",
@@ -39,7 +37,7 @@ export default async function DashboardSettingsPanelPage({ params }: PageProps) 
     redirect("/dashboard/settings/general");
   }
 
-  const base = await getDashboardShellBase(userId);
+  const base = await getDashboardShellBase(userId, { light: true });
 
   return (
     <DashboardShell
@@ -48,6 +46,7 @@ export default async function DashboardSettingsPanelPage({ params }: PageProps) 
       workspaceName={base.workspaceName}
       campaignRuntimeReady={base.campaignRuntimeReady}
       campaigns={base.campaigns}
+      initialTotalReviewsCount={base.totalReviewsCount}
       initialSection="settings"
       initialSettingsPanel={panel}
       embedded

@@ -3,8 +3,6 @@ import { redirect } from "next/navigation";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import { getCampaignDashboardShellBase } from "@/lib/dashboard-campaign-page";
 
-export const dynamic = "force-dynamic";
-
 type PageProps = {
   params: Promise<{ campaignId: string }>;
 };
@@ -30,6 +28,7 @@ export default async function DashboardCampaignSubmissionsPage({ params }: PageP
       workspaceName={base.workspaceName}
       campaignRuntimeReady={base.campaignRuntimeReady}
       campaigns={base.campaigns}
+      initialTotalReviewsCount={base.totalReviewsCount}
       initialSection="campaigns"
       initialSelectedCampaignId={campaignId}
       initialCampaignDetailTab="submissions"

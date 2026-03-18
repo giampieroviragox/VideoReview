@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 
 type DashboardWebhookEndpoint = {
@@ -1373,8 +1373,7 @@ export default function DashboardSettings({
   onSaveBrandSettings,
   initialPanel = "general",
 }: DashboardSettingsProps) {
-  const router = useRouter();
-  const [panel, setPanel] = useState<SettingsPanelId>(initialPanel);
+  const panel = initialPanel;
   const [settingsNotice, setSettingsNotice] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"Admin" | "Editor" | "Viewer">("Editor");
@@ -1423,10 +1422,6 @@ export default function DashboardSettings({
     pauseCampaignWhenBudgetRunsOut: true,
     billingEmail: viewerEmail || "",
   });
-
-  useEffect(() => {
-    setPanel(initialPanel);
-  }, [initialPanel]);
 
   useEffect(() => {
     if (!settingsNotice) {
@@ -1486,11 +1481,6 @@ export default function DashboardSettings({
 
   const apiKeyValue = "sk_live_••••••••••••••••••••••••••••••";
 
-  function goToPanel(nextPanel: SettingsPanelId) {
-    setPanel(nextPanel);
-    router.push(`/dashboard/settings/${nextPanel}`);
-  }
-
   return (
     <div className="settingsv2-root">
       <div className="dashboard-section-topbar">
@@ -1522,30 +1512,30 @@ export default function DashboardSettings({
           {navItems
             .filter((item) => item.group === "workspace")
             .map((item) => (
-              <button
+              <Link
                 key={item.id}
-                type="button"
                 className={`settingsv2-nav-item ${panel === item.id ? "is-active" : ""}`}
-                onClick={() => goToPanel(item.id)}
+                href={`/dashboard/settings/${item.id}`}
+                prefetch
               >
                 <SettingsNavIcon type={item.id} />
                 {item.label}
-              </button>
+              </Link>
             ))}
 
           <div className="settingsv2-nav-group" style={{ marginTop: 8 }}>Account</div>
           {navItems
             .filter((item) => item.group === "account")
             .map((item) => (
-              <button
+              <Link
                 key={item.id}
-                type="button"
                 className={`settingsv2-nav-item ${panel === item.id ? "is-active" : ""} ${item.danger ? "is-danger" : ""}`}
-                onClick={() => goToPanel(item.id)}
+                href={`/dashboard/settings/${item.id}`}
+                prefetch
               >
                 <SettingsNavIcon type={item.id} />
                 {item.label}
-              </button>
+              </Link>
             ))}
         </nav>
 

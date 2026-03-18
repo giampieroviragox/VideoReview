@@ -28,7 +28,7 @@ type RuntimeCampaign = {
     createdAt: Date;
     updatedAt: Date;
   } | null;
-  submissions: Array<{
+  submissions?: Array<{
     id: string;
     reviewerRating: number | null;
     status: string;
@@ -140,8 +140,9 @@ function parseSubmissionAnswers(value: unknown) {
 
 async function getDashboardDataForUserUncached(
   userId: string,
-  options?: { detailCampaignId?: string }
+  options?: { detailCampaignId?: string; light?: boolean }
 ) {
+  const includeSubmissions = !options?.light;
   const campaignDelegate = getCampaignDelegate() as unknown as
     | CampaignDashboardRuntimeDelegate
     | undefined;
@@ -164,49 +165,54 @@ async function getDashboardDataForUserUncached(
 
   if (campaignDelegate) {
     try {
+      const campaignSelect: Record<string, unknown> = {
+        id: true,
+        name: true,
+        description: true,
+        createdAt: true,
+        inviteMessage: true,
+        rewardText: true,
+        rewardValue: true,
+        hasNoEndDate: true,
+        endsAt: true,
+        questions: {
+          orderBy: { sortOrder: "asc" },
+          select: {
+            id: true,
+            text: true,
+            required: true,
+            sortOrder: true,
+          },
+        },
+        webhookEndpoint: {
+          select: {
+            id: true,
+            url: true,
+            description: true,
+            subscribedEvents: true,
+            isActive: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+      };
+
+      if (includeSubmissions) {
+        campaignSelect.submissions = {
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            reviewerRating: true,
+            status: true,
+            createdAt: true,
+          },
+        };
+      }
+
       campaigns = await campaignDelegate.findMany({
         where: { ownerUserId: userId },
         orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          name: true,
-          description: true,
-          createdAt: true,
-          inviteMessage: true,
-          rewardText: true,
-          rewardValue: true,
-          hasNoEndDate: true,
-          endsAt: true,
-          questions: {
-            orderBy: { sortOrder: "asc" },
-            select: {
-              id: true,
-              text: true,
-              required: true,
-              sortOrder: true,
-            },
-          },
-          webhookEndpoint: {
-            select: {
-              id: true,
-              url: true,
-              description: true,
-              subscribedEvents: true,
-              isActive: true,
-              createdAt: true,
-              updatedAt: true,
-            },
-          },
-          submissions: {
-            orderBy: { createdAt: "desc" },
-            select: {
-              id: true,
-              reviewerRating: true,
-              status: true,
-              createdAt: true,
-            },
-          },
-        },
+        select: campaignSelect,
       });
     } catch (error) {
       campaignQueryFailed = true;
@@ -242,7 +248,7 @@ async function getDashboardDataForUserUncached(
           updatedAt: campaign.webhookEndpoint.updatedAt.toISOString(),
         }
       : null,
-    submissions: campaign.submissions.map((submission) => ({
+    submissions: (campaign.submissions || []).map((submission) => ({
       id: submission.id,
       reviewerName: "",
       reviewerEmail: "",
@@ -325,23 +331,47 @@ async function getDashboardDataForUserUncached(
     }
   }
 
+  let totalReviewsCount = campaignRows.reduce(
+    (sum, campaign) => sum + campaign.submissions.length,
+    0
+  );
+
+  if (!includeSubmissions) {
+    try {
+      totalReviewsCount = await prisma.submission.count({
+        where: {
+          campaign: {
+            ownerUserId: userId,
+          },
+        },
+      });
+    } catch (error) {
+      console.error("Dashboard total reviews query failed:", error);
+    }
+  }
+
   return {
     workspaceName,
     campaignRuntimeReady: Boolean(campaignDelegate) && !campaignQueryFailed,
     campaigns: campaignRows,
+    totalReviewsCount,
   };
 }
 
 const getDashboardDataCached = unstable_cache(
-  async (userId: string, detailCampaignId?: string) =>
-    getDashboardDataForUserUncached(userId, { detailCampaignId }),
+  async (userId: string, detailCampaignId?: string, light?: boolean) =>
+    getDashboardDataForUserUncached(userId, { detailCampaignId, light }),
   ["dashboard-data-v1"],
   { revalidate: 5 }
 );
 
 export async function getDashboardDataForUser(
   userId: string,
-  options?: { detailCampaignId?: string }
+  options?: { detailCampaignId?: string; light?: boolean }
 ) {
-  return getDashboardDataCached(userId, options?.detailCampaignId);
+  return getDashboardDataCached(
+    userId,
+    options?.detailCampaignId,
+    options?.light ? true : undefined
+  );
 }

@@ -3,8 +3,6 @@ import { redirect } from "next/navigation";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import { getDashboardShellBase } from "@/lib/dashboard-shell-server";
 
-export const dynamic = "force-dynamic";
-
 type PageProps = {
   params: Promise<{ campaignId: string }>;
 };
@@ -17,7 +15,7 @@ export default async function DashboardCampaignEditPage({ params }: PageProps) {
   }
 
   const { campaignId } = await params;
-  const base = await getDashboardShellBase(userId);
+  const base = await getDashboardShellBase(userId, { light: true });
 
   const campaignExists = base.campaigns.some((campaign) => campaign.id === campaignId);
   if (!campaignExists) {
@@ -31,6 +29,7 @@ export default async function DashboardCampaignEditPage({ params }: PageProps) {
       workspaceName={base.workspaceName}
       campaignRuntimeReady={base.campaignRuntimeReady}
       campaigns={base.campaigns}
+      initialTotalReviewsCount={base.totalReviewsCount}
       initialSection="campaigns"
       initialShowBuilder
       initialEditingCampaignId={campaignId}

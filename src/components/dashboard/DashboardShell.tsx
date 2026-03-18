@@ -6,16 +6,17 @@ import {
   useMemo,
   useRef,
   useState,
-  useTransition,
   type ChangeEvent,
   type FormEvent,
 } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import CampaignBuilder from "@/components/dashboard/CampaignBuilder";
-import DashboardSettings from "@/components/dashboard/DashboardSettings";
+import dynamic from "next/dynamic";
+import { usePathname, useRouter } from "next/navigation";
 import type { SettingsPanelId } from "@/components/dashboard/DashboardSettings";
+
+const CampaignBuilder = dynamic(() => import("@/components/dashboard/CampaignBuilder"));
+const DashboardSettings = dynamic(() => import("@/components/dashboard/DashboardSettings"));
 
 type DashboardShellProps = {
   viewerName: string;
@@ -29,6 +30,7 @@ type DashboardShellProps = {
   initialSelectedSubmissionId?: string | null;
   initialShowBuilder?: boolean;
   initialEditingCampaignId?: string | null;
+  initialTotalReviewsCount?: number;
   embedded?: boolean;
   campaigns: Array<{
     id: string;
@@ -283,11 +285,13 @@ export default function DashboardShell({
   initialSelectedSubmissionId = null,
   initialShowBuilder = false,
   initialEditingCampaignId = null,
+  initialTotalReviewsCount,
   embedded = false,
   campaigns,
 }: DashboardShellProps) {
   const router = useRouter();
-  const [isNavigating, startNavigation] = useTransition();
+  const pathname = usePathname();
+  const isNavigating = false;
   const [campaignsState, setCampaignsState] = useState(campaigns);
   const activeSection = initialSection;
   const [showBuilder, setShowBuilder] = useState(initialShowBuilder);
@@ -610,8 +614,11 @@ export default function DashboardShell({
   }, [selectedCampaign]);
 
   const totalReviewsCount = useMemo(
-    () => campaignsState.reduce((sum, campaign) => sum + campaign.submissions.length, 0),
-    [campaignsState]
+    () =>
+      typeof initialTotalReviewsCount === "number"
+        ? initialTotalReviewsCount
+        : campaignsState.reduce((sum, campaign) => sum + campaign.submissions.length, 0),
+    [campaignsState, initialTotalReviewsCount]
   );
 
   const campaignStats = useMemo(() => {
@@ -1138,30 +1145,23 @@ export default function DashboardShell({
   function scrollDashboardToTop() {
     window.scrollTo({
       top: 0,
-      behavior: "smooth",
+      behavior: "auto",
     });
   }
 
   function navigateTo(path: string) {
-    startNavigation(() => {
-      router.push(path);
-    });
+    if (path === pathname) {
+      return;
+    }
+    router.push(path);
   }
 
   function openCampaignsSection() {
-    setShowBuilder(false);
-    setEditingCampaignId(null);
-    setSelectedCampaignId(null);
-    setSelectedSubmissionRef(null);
     navigateTo("/dashboard/campaigns");
     scrollDashboardToTop();
   }
 
   function openSettingsSection() {
-    setShowBuilder(false);
-    setEditingCampaignId(null);
-    setSelectedCampaignId(null);
-    setSelectedSubmissionRef(null);
     navigateTo(`/dashboard/settings/${initialSettingsPanel}`);
     scrollDashboardToTop();
   }

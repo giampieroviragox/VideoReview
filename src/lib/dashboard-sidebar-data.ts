@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/db";
 import { DEFAULT_WORKSPACE } from "@/lib/workspace";
+import { unstable_cache } from "next/cache";
 
-export async function getDashboardSidebarData(userId: string) {
+async function getDashboardSidebarDataUncached(userId: string) {
   let workspaceName = DEFAULT_WORKSPACE.brandName;
   let campaignsCount = 0;
 
@@ -29,4 +30,14 @@ export async function getDashboardSidebarData(userId: string) {
     workspaceName,
     campaignsCount,
   };
+}
+
+const getDashboardSidebarDataCached = unstable_cache(
+  async (userId: string) => getDashboardSidebarDataUncached(userId),
+  ["dashboard-sidebar-data-v1"],
+  { revalidate: 10 }
+);
+
+export async function getDashboardSidebarData(userId: string) {
+  return getDashboardSidebarDataCached(userId);
 }
