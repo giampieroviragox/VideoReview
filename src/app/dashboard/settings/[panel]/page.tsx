@@ -6,6 +6,7 @@ import { getDashboardShellBase } from "@/lib/dashboard-shell-server";
 
 const SETTINGS_PANELS: SettingsPanelId[] = [
   "general",
+  "profile",
   "brand",
   "notifications",
   "moderation",

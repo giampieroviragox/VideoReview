@@ -84,8 +84,6 @@ export default function CampaignBuilder({
   const [rewardDescription, setRewardDescription] = useState(initialValues?.rewardValue ?? "");
   const [hasQuestion, setHasQuestion] = useState(Boolean(initialValues?.questions?.[0]?.text));
   const [questionText, setQuestionText] = useState(initialValues?.questions?.[0]?.text ?? "");
-  const [promptTitle, setPromptTitle] = useState("");
-  const [promptSubtitle, setPromptSubtitle] = useState("");
   const [manualApproval, setManualApproval] = useState(true);
   const [allowTextReviews, setAllowTextReviews] = useState(true);
   const [starRatingEnabled, setStarRatingEnabled] = useState(true);
@@ -113,8 +111,6 @@ export default function CampaignBuilder({
       setRewardDescription(initialValues.rewardValue ?? "");
       setHasQuestion(Boolean(initialValues.questions?.[0]?.text));
       setQuestionText(initialValues.questions?.[0]?.text ?? "");
-      setPromptTitle("");
-      setPromptSubtitle("");
       setManualApproval(true);
       setAllowTextReviews(true);
       setStarRatingEnabled(true);
@@ -131,8 +127,6 @@ export default function CampaignBuilder({
     setRewardDescription("");
     setHasQuestion(false);
     setQuestionText("");
-    setPromptTitle("");
-    setPromptSubtitle("");
     setManualApproval(true);
     setAllowTextReviews(true);
     setStarRatingEnabled(true);
@@ -225,14 +219,6 @@ export default function CampaignBuilder({
   return (
     <div className="builder-shell">
       <form onSubmit={handleSubmit} className="builder-form">
-        <div className="builder-head">
-          <p className="builder-eyebrow">Campaign Builder</p>
-          <h2 className="builder-title">{isEditMode ? "Modifica campagna" : "Nuova campagna"}</h2>
-          <p className="builder-copy">
-            {isEditMode ? "Aggiorna i dettagli della campagna." : "Configura la nuova campagna."}
-          </p>
-        </div>
-
         <div className="builder-body">
           <section className="builder-section">
             <div className="builder-section-copy">
@@ -383,38 +369,6 @@ export default function CampaignBuilder({
                   </div>
                 )}
               </div>
-            </div>
-          </section>
-
-          <section className="builder-section">
-            <div className="builder-section-copy">
-              <h3 className="builder-section-title">Prompt widget</h3>
-              <p className="builder-section-text">
-                Il testo mostrato al cliente nella schermata di registrazione.
-              </p>
-            </div>
-            <div className="builder-section-panel">
-              <label className="builder-field">
-                <span className="builder-field-title">Titolo</span>
-                <input
-                  value={promptTitle}
-                  onChange={(event) => setPromptTitle(event.target.value)}
-                  placeholder="Es. Raccontaci la tua esperienza"
-                  className="builder-input"
-                />
-              </label>
-
-              <label className="builder-field">
-                <span className="builder-field-title">
-                  Sottotitolo <span className="builder-field-optional">(opzionale)</span>
-                </span>
-                <input
-                  value={promptSubtitle}
-                  onChange={(event) => setPromptSubtitle(event.target.value)}
-                  placeholder="Es. Un video di 60 secondi aiuta altri clienti a scegliere."
-                  className="builder-input"
-                />
-              </label>
             </div>
           </section>
 
@@ -632,16 +586,6 @@ const builderStyles = `
     padding: 6px 0 4px;
   }
 
-  .builder-eyebrow {
-    margin: 0 0 4px;
-    color: var(--builder-brand);
-    font-size: 11px;
-    line-height: 1;
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-  }
-
   .builder-title {
     margin: 0;
     font-size: clamp(22px, 2vw, 30px);
@@ -659,7 +603,6 @@ const builderStyles = `
 
   .builder-body {
     max-width: 900px;
-    border-top: 1px solid var(--builder-border);
   }
 
   .builder-section {

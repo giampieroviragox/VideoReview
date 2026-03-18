@@ -1,5 +1,7 @@
 "use client";
 
+import { useClerk } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
@@ -31,6 +33,7 @@ type WebhookEventOption = {
 
 export type SettingsPanelId =
   | "general"
+  | "profile"
   | "brand"
   | "notifications"
   | "moderation"
@@ -67,8 +70,6 @@ type SettingsDraft = {
   timezone: string;
   dateFormat: string;
   currency: string;
-  fullName: string;
-  email: string;
   notificationEmail: string;
   ccEmail: string;
   newReviewSubmitted: boolean;
@@ -188,6 +189,20 @@ function SettingsBadge({
 }
 
 function SettingsNavIcon({ type }: { type: SettingsPanelId }) {
+  if (type === "profile") {
+    return (
+      <svg viewBox="0 0 13 13" fill="none">
+        <circle cx="6.5" cy="4.5" r="2.1" stroke="currentColor" strokeWidth="1.2" />
+        <path
+          d="M2.2 11c.4-1.9 2.1-3.2 4.3-3.2 2.1 0 3.9 1.3 4.3 3.2"
+          stroke="currentColor"
+          strokeWidth="1.2"
+          strokeLinecap="round"
+        />
+      </svg>
+    );
+  }
+
   if (type === "notifications") {
     return (
       <svg viewBox="0 0 13 13" fill="none">
@@ -1239,6 +1254,7 @@ const navItems: Array<{
   danger?: boolean;
 }> = [
   { id: "general", label: "General", group: "workspace" },
+  { id: "profile", label: "Profile", group: "workspace" },
   { id: "brand", label: "Brand", group: "workspace" },
   { id: "notifications", label: "Notifications", group: "workspace" },
   { id: "moderation", label: "Reviews & Moderation", group: "workspace" },
@@ -1373,6 +1389,8 @@ export default function DashboardSettings({
   onSaveBrandSettings,
   initialPanel = "general",
 }: DashboardSettingsProps) {
+  const clerk = useClerk();
+  const { user } = useUser();
   const panel = initialPanel;
   const [settingsNotice, setSettingsNotice] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -1388,8 +1406,6 @@ export default function DashboardSettings({
     timezone: "UTC+1 — Rome, Paris, Berlin",
     dateFormat: "MM/DD/YYYY",
     currency: "USD — US Dollar",
-    fullName: viewerName,
-    email: viewerEmail || "",
     notificationEmail: viewerEmail || "",
     ccEmail: "",
     newReviewSubmitted: true,
@@ -1459,6 +1475,27 @@ export default function DashboardSettings({
     setSettingsNotice("Settings saved.");
   }
 
+  function handleOpenClerkProfile() {
+    clerk.openUserProfile();
+  }
+
+  function handleOpenClerkSecurity() {
+    clerk.openUserProfile({
+      __experimental_startPath: "/security",
+    });
+  }
+
+  const clerkName =
+    user?.fullName ||
+    user?.firstName ||
+    user?.username ||
+    viewerName;
+  const clerkEmail =
+    user?.primaryEmailAddress?.emailAddress ||
+    user?.emailAddresses?.[0]?.emailAddress ||
+    viewerEmail ||
+    "";
+
   function handleSendInvite() {
     const normalized = inviteEmail.trim();
     if (!normalized || !normalized.includes("@")) {
@@ -1494,6 +1531,14 @@ export default function DashboardSettings({
             disabled={brandSaving}
           >
             {brandSaving ? "Saving..." : "Save brand"}
+          </button>
+        ) : panel === "profile" ? (
+          <button
+            type="button"
+            className="dashboard-section-btn dashboard-section-btn-primary"
+            onClick={handleOpenClerkProfile}
+          >
+            Open profile
           </button>
         ) : (
           <button
@@ -1626,26 +1671,44 @@ export default function DashboardSettings({
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className={`settingsv2-panel ${panel === "profile" ? "is-active" : ""}`}>
+            <div className="settingsv2-panel-head">
+              <h2 className="settingsv2-panel-title">Profile</h2>
+              <p className="settingsv2-panel-desc">
+                Manage account profile and password from Clerk.
+              </p>
+            </div>
 
             <div className="settingsv2-block">
-              <div className="settingsv2-block-head"><p className="settingsv2-block-title">Your profile</p></div>
-              <div className="settingsv2-grid">
-                <div className="settingsv2-field">
-                  <label className="settingsv2-label">Full name</label>
-                  <input className="settingsv2-input" value={draft.fullName} onChange={(event) => updateDraft("fullName", event.target.value)} />
-                </div>
-                <div className="settingsv2-field">
-                  <label className="settingsv2-label">Email address</label>
-                  <input className="settingsv2-input" type="email" value={draft.email} onChange={(event) => updateDraft("email", event.target.value)} />
-                </div>
-              </div>
-              <div className="settingsv2-row" style={{ borderTop: "1px solid var(--dashboard-border)" }}>
+              <div className="settingsv2-block-head"><p className="settingsv2-block-title">Account</p></div>
+              <div className="settingsv2-row">
                 <div className="settingsv2-row-main">
-                  <p className="settingsv2-row-label">Change password</p>
-                  <p className="settingsv2-row-desc">Update your login password. You&apos;ll be asked for your current password.</p>
+                  <p className="settingsv2-row-label">{clerkName}</p>
+                  <p className="settingsv2-row-desc">{clerkEmail}</p>
                 </div>
-                <button type="button" className="settingsv2-btn settingsv2-btn-secondary settingsv2-btn-sm" onClick={() => setSettingsNotice("Password changes are managed from your account provider.")}>
-                  Change password
+                <button
+                  type="button"
+                  className="settingsv2-btn settingsv2-btn-secondary settingsv2-btn-sm"
+                  onClick={handleOpenClerkProfile}
+                >
+                  Modify
+                </button>
+              </div>
+              <div className="settingsv2-row">
+                <div className="settingsv2-row-main">
+                  <p className="settingsv2-row-label">Password and security</p>
+                  <p className="settingsv2-row-desc">
+                    Open the Clerk modal to update password, email and account settings.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="settingsv2-btn settingsv2-btn-secondary settingsv2-btn-sm"
+                  onClick={handleOpenClerkSecurity}
+                >
+                  Manage security
                 </button>
               </div>
             </div>
