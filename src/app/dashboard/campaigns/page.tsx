@@ -9,7 +9,7 @@ export default async function DashboardCampaignsPage() {
     return redirectToSignIn();
   }
 
-  const base = await getDashboardShellBase(userId);
+  const base = await getDashboardShellBase(userId, { light: true });
 
   return (
     <DashboardShell

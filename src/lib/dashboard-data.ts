@@ -89,6 +89,12 @@ export type DashboardCampaignRow = {
     createdAt: string;
     updatedAt: string;
   } | null;
+  submissionSummary: {
+    total: number;
+    approved: number;
+    avgRating: number;
+    thisWeek: number;
+  };
   submissions: Array<{
     id: string;
     reviewerName: string;
@@ -220,6 +226,107 @@ async function getDashboardDataForUserUncached(
     }
   }
 
+  const campaignIds = campaigns.map((campaign) => campaign.id);
+  const submissionSummaryMap = new Map<
+    string,
+    { total: number; approved: number; avgRating: number; thisWeek: number }
+  >();
+
+  if (campaignIds.length > 0) {
+    try {
+      const weekStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const [totals, approved, thisWeek] = await Promise.all([
+        prisma.submission.groupBy({
+          by: ["campaignId"],
+          where: {
+            campaignId: {
+              in: campaignIds,
+            },
+          },
+          _count: {
+            _all: true,
+          },
+          _avg: {
+            reviewerRating: true,
+          },
+        }),
+        prisma.submission.groupBy({
+          by: ["campaignId"],
+          where: {
+            campaignId: {
+              in: campaignIds,
+            },
+            status: "APPROVED",
+          },
+          _count: {
+            _all: true,
+          },
+        }),
+        prisma.submission.groupBy({
+          by: ["campaignId"],
+          where: {
+            campaignId: {
+              in: campaignIds,
+            },
+            createdAt: {
+              gte: weekStart,
+            },
+          },
+          _count: {
+            _all: true,
+          },
+        }),
+      ]);
+
+      for (const row of totals) {
+        if (!row.campaignId) {
+          continue;
+        }
+        submissionSummaryMap.set(row.campaignId, {
+          total: row._count._all,
+          approved: 0,
+          avgRating:
+            typeof row._avg.reviewerRating === "number" ? row._avg.reviewerRating : 0,
+          thisWeek: 0,
+        });
+      }
+
+      for (const row of approved) {
+        if (!row.campaignId) {
+          continue;
+        }
+        const current = submissionSummaryMap.get(row.campaignId) || {
+          total: 0,
+          approved: 0,
+          avgRating: 0,
+          thisWeek: 0,
+        };
+        submissionSummaryMap.set(row.campaignId, {
+          ...current,
+          approved: row._count._all,
+        });
+      }
+
+      for (const row of thisWeek) {
+        if (!row.campaignId) {
+          continue;
+        }
+        const current = submissionSummaryMap.get(row.campaignId) || {
+          total: 0,
+          approved: 0,
+          avgRating: 0,
+          thisWeek: 0,
+        };
+        submissionSummaryMap.set(row.campaignId, {
+          ...current,
+          thisWeek: row._count._all,
+        });
+      }
+    } catch (error) {
+      console.error("Dashboard submission summary query failed:", error);
+    }
+  }
+
   const campaignRows: DashboardCampaignRow[] = campaigns.map((campaign) => ({
     id: campaign.id,
     name: campaign.name,
@@ -248,6 +355,28 @@ async function getDashboardDataForUserUncached(
           updatedAt: campaign.webhookEndpoint.updatedAt.toISOString(),
         }
       : null,
+    submissionSummary: submissionSummaryMap.get(campaign.id) || {
+      total: campaign.submissions?.length || 0,
+      approved:
+        campaign.submissions?.filter((submission) => submission.status.toUpperCase() === "APPROVED")
+          .length || 0,
+      avgRating: (() => {
+        const rated = (campaign.submissions || []).filter(
+          (submission) => typeof submission.reviewerRating === "number"
+        );
+        if (rated.length === 0) {
+          return 0;
+        }
+        return (
+          rated.reduce((sum, submission) => sum + (submission.reviewerRating || 0), 0) /
+          rated.length
+        );
+      })(),
+      thisWeek: (campaign.submissions || []).filter((submission) => {
+        const createdAt = submission.createdAt.getTime();
+        return Number.isFinite(createdAt) && Date.now() - createdAt <= 7 * 24 * 60 * 60 * 1000;
+      }).length,
+    },
     submissions: (campaign.submissions || []).map((submission) => ({
       id: submission.id,
       reviewerName: "",
@@ -332,7 +461,7 @@ async function getDashboardDataForUserUncached(
   }
 
   let totalReviewsCount = campaignRows.reduce(
-    (sum, campaign) => sum + campaign.submissions.length,
+    (sum, campaign) => sum + campaign.submissionSummary.total,
     0
   );
 

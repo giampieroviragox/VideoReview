@@ -57,6 +57,12 @@ type DashboardShellProps = {
       createdAt: string;
       updatedAt: string;
     } | null;
+    submissionSummary: {
+      total: number;
+      approved: number;
+      avgRating: number;
+      thisWeek: number;
+    };
     submissions: Array<{
       id: string;
       reviewerName: string;
@@ -365,7 +371,16 @@ export default function DashboardShell({
   useEffect(() => {
     router.prefetch("/dashboard/campaigns");
     router.prefetch(`/dashboard/settings/${initialSettingsPanel}`);
+    router.prefetch("/dashboard/campaigns/new");
   }, [router, initialSettingsPanel]);
+
+  useEffect(() => {
+    const preload = () => {
+      void import("@/components/dashboard/CampaignBuilder");
+    };
+    const timeoutId = globalThis.setTimeout(preload, 200);
+    return () => globalThis.clearTimeout(timeoutId);
+  }, []);
 
   useEffect(() => {
     if (activeSection !== "settings" || webhookLoaded || webhookLoading) {
@@ -617,7 +632,7 @@ export default function DashboardShell({
     () =>
       typeof initialTotalReviewsCount === "number"
         ? initialTotalReviewsCount
-        : campaignsState.reduce((sum, campaign) => sum + campaign.submissions.length, 0),
+        : campaignsState.reduce((sum, campaign) => sum + campaign.submissionSummary.total, 0),
     [campaignsState, initialTotalReviewsCount]
   );
 
@@ -626,15 +641,11 @@ export default function DashboardShell({
       (campaign) => getCampaignState(campaign.hasNoEndDate, campaign.endsAt) === "Active"
     ).length;
     const totalResponses = campaignsState.reduce(
-      (sum, campaign) => sum + campaign.submissions.length,
+      (sum, campaign) => sum + campaign.submissionSummary.total,
       0
     );
     const approvedResponses = campaignsState.reduce(
-      (sum, campaign) =>
-        sum +
-        campaign.submissions.filter(
-          (submission) => normalizeSubmissionStatus(submission.status) === "APPROVED"
-        ).length,
+      (sum, campaign) => sum + campaign.submissionSummary.approved,
       0
     );
     const avgCompletion =
@@ -644,12 +655,7 @@ export default function DashboardShell({
       0
     );
     const submissionsThisWeek = campaignsState.reduce(
-      (sum, campaign) =>
-        sum +
-        campaign.submissions.filter((submission) => {
-          const createdAt = new Date(submission.createdAt).getTime();
-          return Number.isFinite(createdAt) && Date.now() - createdAt <= 7 * 24 * 60 * 60 * 1000;
-        }).length,
+      (sum, campaign) => sum + campaign.submissionSummary.thisWeek,
       0
     );
 
@@ -1438,18 +1444,9 @@ export default function DashboardShell({
                 <div className="dashboard-flat-list">
                   {campaignsState.map((campaign) => {
                     const state = getCampaignState(campaign.hasNoEndDate, campaign.endsAt);
-                    const submissionCount = campaign.submissions.length;
-                    const approvedCount = campaign.submissions.filter(
-                      (submission) => normalizeSubmissionStatus(submission.status) === "APPROVED"
-                    ).length;
-                    const avgRatingValues = campaign.submissions
-                      .map((submission) => submission.reviewerRating)
-                      .filter((value): value is number => typeof value === "number");
-                    const avgRating =
-                      avgRatingValues.length > 0
-                        ? avgRatingValues.reduce((sum, value) => sum + value, 0) /
-                          avgRatingValues.length
-                        : 0;
+                    const submissionCount = campaign.submissionSummary.total;
+                    const approvedCount = campaign.submissionSummary.approved;
+                    const avgRating = campaign.submissionSummary.avgRating;
                     const completionRate =
                       submissionCount > 0 ? Math.round((approvedCount / submissionCount) * 100) : 0;
                     const createdAtLabel = formatShortDate(campaign.createdAt);
@@ -1468,9 +1465,10 @@ export default function DashboardShell({
                           }
                           navigateTo(`/dashboard/campaigns/${campaign.id}/submissions`);
                         }}
-                        onMouseEnter={() =>
-                          router.prefetch(`/dashboard/campaigns/${campaign.id}/submissions`)
-                        }
+                        onMouseEnter={() => {
+                          router.prefetch(`/dashboard/campaigns/${campaign.id}/submissions`);
+                          router.prefetch(`/dashboard/campaigns/${campaign.id}/edit`);
+                        }}
                         onKeyDown={(event) => {
                           if (event.key === "Enter" || event.key === " ") {
                             event.preventDefault();

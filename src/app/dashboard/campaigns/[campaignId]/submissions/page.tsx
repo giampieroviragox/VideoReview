@@ -15,7 +15,9 @@ export default async function DashboardCampaignSubmissionsPage({ params }: PageP
   }
 
   const { campaignId } = await params;
-  const base = await getCampaignDashboardShellBase(userId, campaignId);
+  const base = await getCampaignDashboardShellBase(userId, campaignId, {
+    includeSubmissions: true,
+  });
 
   if (!base.campaignExists) {
     redirect("/dashboard/campaigns");
