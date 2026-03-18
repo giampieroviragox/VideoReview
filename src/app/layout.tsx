@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import Script from "next/script";
+import ConditionalIubenda from "@/components/layout/ConditionalIubenda";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -40,19 +41,10 @@ export default function RootLayout({
             strategy="afterInteractive"
             defer
           />
-          <Script
-            id="iubenda-widget"
-            src="https://embeds.iubenda.com/widgets/12381140-145d-424a-80e6-74a69fe430b8.js"
-            strategy="afterInteractive"
-          />
         </head>
         <body>
           {children}
-          <Script
-            id="iubenda-loader"
-            src="https://cdn.iubenda.com/iubenda.js"
-            strategy="afterInteractive"
-          />
+          <ConditionalIubenda />
         </body>
       </html>
     </ClerkProvider>
