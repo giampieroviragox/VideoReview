@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import DashboardShell from "@/components/dashboard/DashboardShell";
-import { getCampaignDashboardShellBase } from "@/lib/dashboard-campaign-page";
+import { getDashboardShellBase } from "@/lib/dashboard-shell-server";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +9,7 @@ type PageProps = {
   params: Promise<{ campaignId: string }>;
 };
 
-export default async function DashboardCampaignEmbedPage({ params }: PageProps) {
+export default async function DashboardCampaignEditPage({ params }: PageProps) {
   const { userId, redirectToSignIn } = await auth();
 
   if (!userId) {
@@ -17,9 +17,10 @@ export default async function DashboardCampaignEmbedPage({ params }: PageProps) 
   }
 
   const { campaignId } = await params;
-  const base = await getCampaignDashboardShellBase(userId, campaignId);
+  const base = await getDashboardShellBase(userId);
 
-  if (!base.campaignExists) {
+  const campaignExists = base.campaigns.some((campaign) => campaign.id === campaignId);
+  if (!campaignExists) {
     redirect("/dashboard/campaigns");
   }
 
@@ -31,8 +32,8 @@ export default async function DashboardCampaignEmbedPage({ params }: PageProps) 
       campaignRuntimeReady={base.campaignRuntimeReady}
       campaigns={base.campaigns}
       initialSection="campaigns"
-      initialSelectedCampaignId={campaignId}
-      initialCampaignDetailTab="embed"
+      initialShowBuilder
+      initialEditingCampaignId={campaignId}
       embedded
     />
   );

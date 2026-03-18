@@ -33,6 +33,7 @@ export default async function DashboardCampaignSettingsPage({ params }: PageProp
       initialSection="campaigns"
       initialSelectedCampaignId={campaignId}
       initialCampaignDetailTab="settings"
+      embedded
     />
   );
 }

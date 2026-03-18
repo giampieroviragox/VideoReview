@@ -33,6 +33,7 @@ export default async function DashboardCampaignSubmissionsPage({ params }: PageP
       initialSection="campaigns"
       initialSelectedCampaignId={campaignId}
       initialCampaignDetailTab="submissions"
+      embedded
     />
   );
 }

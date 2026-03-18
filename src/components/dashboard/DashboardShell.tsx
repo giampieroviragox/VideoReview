@@ -27,6 +27,9 @@ type DashboardShellProps = {
   initialSelectedCampaignId?: string | null;
   initialCampaignDetailTab?: "submissions" | "embed" | "automation" | "settings";
   initialSelectedSubmissionId?: string | null;
+  initialShowBuilder?: boolean;
+  initialEditingCampaignId?: string | null;
+  embedded?: boolean;
   campaigns: Array<{
     id: string;
     name: string;
@@ -278,14 +281,19 @@ export default function DashboardShell({
   initialSelectedCampaignId = null,
   initialCampaignDetailTab = "submissions",
   initialSelectedSubmissionId = null,
+  initialShowBuilder = false,
+  initialEditingCampaignId = null,
+  embedded = false,
   campaigns,
 }: DashboardShellProps) {
   const router = useRouter();
   const [isNavigating, startNavigation] = useTransition();
   const [campaignsState, setCampaignsState] = useState(campaigns);
   const activeSection = initialSection;
-  const [showBuilder, setShowBuilder] = useState(false);
-  const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null);
+  const [showBuilder, setShowBuilder] = useState(initialShowBuilder);
+  const [editingCampaignId, setEditingCampaignId] = useState<string | null>(
+    initialEditingCampaignId
+  );
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(
     initialSelectedCampaignId
   );
@@ -517,6 +525,11 @@ export default function DashboardShell({
         : null
     );
   }, [initialSelectedCampaignId, initialCampaignDetailTab, initialSelectedSubmissionId]);
+
+  useEffect(() => {
+    setShowBuilder(initialShowBuilder);
+    setEditingCampaignId(initialEditingCampaignId);
+  }, [initialShowBuilder, initialEditingCampaignId]);
 
   useEffect(() => {
     if (activeSection !== "settings" || brandLoaded || brandLoading) {
@@ -1167,25 +1180,19 @@ export default function DashboardShell({
   }
 
   return (
-    <div className="dashboard-shell">
-      <aside className="dashboard-sidebar">
+    <div className={`dashboard-shell ${embedded ? "is-embedded" : ""}`}>
+      {!embedded && (
+        <aside className="dashboard-sidebar">
         <div className="dashboard-sidebar-top">
           <Link href="/" className="dashboard-brand">
-            <span className="dashboard-brand-mark">
-              <Image src="/favicon.svg" alt="Tellr" width={20} height={20} />
-            </span>
-            <span className="dashboard-brand-copy">
-              <span className="dashboard-brand-name">Tellr</span>
-              <span className="dashboard-brand-workspace">tellr.me</span>
-            </span>
+            <Image
+              src="/tellr-logo.svg"
+              alt="Tellr"
+              width={184}
+              height={48}
+              className="dashboard-brand-logo"
+            />
           </Link>
-          <button type="button" className="dashboard-brand-menu" aria-label="Workspace menu">
-            <svg width="12" height="12" fill="none" viewBox="0 0 12 12">
-              <circle cx="6" cy="3" r=".85" fill="currentColor" />
-              <circle cx="6" cy="6" r=".85" fill="currentColor" />
-              <circle cx="6" cy="9" r=".85" fill="currentColor" />
-            </svg>
-          </button>
         </div>
 
         <div className="dashboard-sidebar-nav">
@@ -1262,7 +1269,8 @@ export default function DashboardShell({
             </div>
           </div>
         </div>
-      </aside>
+        </aside>
+      )}
 
       <section className="dashboard-main">
         {isNavigating && (
@@ -1288,8 +1296,7 @@ export default function DashboardShell({
                   type="button"
                   className="dashboard-section-btn dashboard-section-btn-secondary"
                   onClick={() => {
-                    setShowBuilder(false);
-                    setEditingCampaignId(null);
+                    navigateTo("/dashboard/campaigns");
                   }}
                 >
                   Close builder
@@ -1326,13 +1333,11 @@ export default function DashboardShell({
                         : null
                     }
                     onCancel={() => {
-                      setShowBuilder(false);
-                      setEditingCampaignId(null);
+                      navigateTo("/dashboard/campaigns");
                     }}
                     onSuccess={() => {
                       if (editingCampaign) {
-                        setShowBuilder(false);
-                        setEditingCampaignId(null);
+                        navigateTo("/dashboard/campaigns");
                       }
                     }}
                   />
@@ -1369,8 +1374,7 @@ export default function DashboardShell({
                   type="button"
                   className="dashboard-section-btn dashboard-section-btn-primary"
                   onClick={() => {
-                    setEditingCampaignId(null);
-                    setShowBuilder(true);
+                    navigateTo("/dashboard/campaigns/new");
                   }}
                 >
                   <svg
@@ -1535,8 +1539,7 @@ export default function DashboardShell({
                               className="dashboard-secondary-btn dashboard-inline-action"
                               onClick={(event) => {
                                 event.stopPropagation();
-                                setEditingCampaignId(campaign.id);
-                                setShowBuilder(true);
+                                navigateTo(`/dashboard/campaigns/${campaign.id}/edit`);
                               }}
                             >
                               Publish
@@ -1572,8 +1575,7 @@ export default function DashboardShell({
                             className="dashboard-campaign-kebab-btn"
                             onClick={(event) => {
                               event.stopPropagation();
-                              setEditingCampaignId(campaign.id);
-                              setShowBuilder(true);
+                              navigateTo(`/dashboard/campaigns/${campaign.id}/edit`);
                             }}
                             aria-label={`Edit ${campaign.name}`}
                           >
@@ -2123,8 +2125,7 @@ export default function DashboardShell({
                           type="button"
                           className="dashboard-secondary-btn"
                           onClick={() => {
-                            setEditingCampaignId(selectedCampaign.id);
-                            setShowBuilder(true);
+                            navigateTo(`/dashboard/campaigns/${selectedCampaign.id}/edit`);
                           }}
                         >
                           Edit
@@ -2141,8 +2142,7 @@ export default function DashboardShell({
                           type="button"
                           className="dashboard-secondary-btn"
                           onClick={() => {
-                            setEditingCampaignId(selectedCampaign.id);
-                            setShowBuilder(true);
+                            navigateTo(`/dashboard/campaigns/${selectedCampaign.id}/edit`);
                           }}
                         >
                           Edit
@@ -2457,74 +2457,25 @@ const dashboardShellStyles = `
   .dashboard-sidebar-top {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 9px;
-    border-bottom: 1px solid var(--dashboard-border);
-    height: 48px;
-    min-height: 48px;
+    height: 64px;
+    min-height: 64px;
     padding: 0 14px;
   }
 
   .dashboard-brand {
     display: flex;
     align-items: center;
-    gap: 9px;
     text-decoration: none;
     color: var(--dashboard-text);
     min-width: 0;
   }
 
-  .dashboard-brand-mark {
-    width: 24px;
-    height: 24px;
-    border-radius: 6px;
-    background: #0a0a0a;
-    display: grid;
-    place-items: center;
-    flex-shrink: 0;
-  }
-
-  .dashboard-brand-mark img {
-    width: 11px;
-    height: 11px;
-  }
-
-  .dashboard-brand-copy {
-    min-width: 0;
-    display: grid;
-    gap: 2px;
-  }
-
-  .dashboard-brand-name {
-    font-size: 14px;
-    font-weight: 600;
-    letter-spacing: -0.02em;
-    color: var(--dashboard-text);
-  }
-
-  .dashboard-brand-workspace {
-    font-size: 11px;
-    color: var(--dashboard-text-tertiary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .dashboard-brand-menu {
-    border: none;
-    background: transparent;
-    color: var(--dashboard-text-tertiary);
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
-    cursor: pointer;
-    display: grid;
-    place-items: center;
-  }
-
-  .dashboard-brand-menu:hover {
-    background: #f7f7f7;
-    color: var(--dashboard-text);
+  .dashboard-brand-logo {
+    width: auto;
+    height: 44px;
+    max-width: 100%;
   }
 
   .dashboard-sidebar-spacer {
@@ -2745,6 +2696,10 @@ const dashboardShellStyles = `
     min-height: 100vh;
     background: var(--dashboard-bg);
     position: relative;
+  }
+
+  .dashboard-shell.is-embedded .dashboard-main {
+    margin-left: 232px;
   }
 
   .dashboard-route-loading {
@@ -4952,6 +4907,10 @@ const dashboardShellStyles = `
   }
 
   @media (max-width: 960px) {
+    .dashboard-shell.is-embedded .dashboard-main {
+      margin-left: 0;
+    }
+
     .dashboard-sidebar {
       position: static;
       width: auto;

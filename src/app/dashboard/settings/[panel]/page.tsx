@@ -50,6 +50,7 @@ export default async function DashboardSettingsPanelPage({ params }: PageProps) 
       campaigns={base.campaigns}
       initialSection="settings"
       initialSettingsPanel={panel}
+      embedded
     />
   );
 }

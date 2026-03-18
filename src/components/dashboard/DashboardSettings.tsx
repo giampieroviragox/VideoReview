@@ -311,7 +311,7 @@ const styles = `
 
   .settingsv2-nav {
     position: fixed;
-    top: 48px;
+    top: 64px;
     left: 232px;
     bottom: 0;
     width: 200px;

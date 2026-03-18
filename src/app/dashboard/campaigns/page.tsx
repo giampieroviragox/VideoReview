@@ -21,6 +21,7 @@ export default async function DashboardCampaignsPage() {
       campaignRuntimeReady={base.campaignRuntimeReady}
       campaigns={base.campaigns}
       initialSection="campaigns"
+      embedded
     />
   );
 }
