@@ -9,8 +9,17 @@ export const dynamic = "force-dynamic";
 type RuntimeCampaign = {
   id: string;
   name: string;
+  description: string | null;
+  rewardText: string;
+  rewardValue: string | null;
   hasNoEndDate: boolean;
   endsAt: Date | null;
+  questions: Array<{
+    id: string;
+    text: string;
+    required: boolean;
+    sortOrder: number;
+  }>;
   webhookEndpoint: {
     id: string;
     url: string;
@@ -111,8 +120,20 @@ export default async function DashboardPage() {
         select: {
           id: true,
           name: true,
+          description: true,
+          rewardText: true,
+          rewardValue: true,
           hasNoEndDate: true,
           endsAt: true,
+          questions: {
+            orderBy: { sortOrder: "asc" },
+            select: {
+              id: true,
+              text: true,
+              required: true,
+              sortOrder: true,
+            },
+          },
           webhookEndpoint: {
             select: {
               id: true,
@@ -155,8 +176,17 @@ export default async function DashboardPage() {
   const campaignRows = campaigns.map((campaign) => ({
     id: campaign.id,
     name: campaign.name,
+    description: campaign.description,
+    rewardText: campaign.rewardText,
+    rewardValue: campaign.rewardValue,
     hasNoEndDate: campaign.hasNoEndDate,
     endsAt: campaign.endsAt ? campaign.endsAt.toISOString() : null,
+    questions: campaign.questions.map((question) => ({
+      id: question.id,
+      text: question.text,
+      required: question.required,
+      sortOrder: question.sortOrder,
+    })),
     publicPath: buildCampaignPublicPath(campaign.id),
     webhookEndpoint: campaign.webhookEndpoint
       ? {

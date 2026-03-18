@@ -14,8 +14,17 @@ type DashboardShellProps = {
   campaigns: Array<{
     id: string;
     name: string;
+    description: string | null;
+    rewardText: string;
+    rewardValue: string | null;
     hasNoEndDate: boolean;
     endsAt: string | null;
+    questions: Array<{
+      id: string;
+      text: string;
+      required: boolean;
+      sortOrder: number;
+    }>;
     publicPath: string;
     webhookEndpoint: {
       id: string;
@@ -301,7 +310,9 @@ export default function DashboardShell({
   const [activeSection, setActiveSection] = useState<"campaigns" | "wall" | "brand" | "settings">(
     "campaigns"
   );
+  const [settingsTab, setSettingsTab] = useState<"general" | "webhooks">("general");
   const [showBuilder, setShowBuilder] = useState(false);
+  const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
   const [selectedSubmissionRef, setSelectedSubmissionRef] = useState<{
     campaignId: string;
@@ -414,6 +425,8 @@ export default function DashboardShell({
 
   const selectedCampaign =
     campaignsState.find((campaign) => campaign.id === selectedCampaignId) || null;
+  const editingCampaign =
+    campaignsState.find((campaign) => campaign.id === editingCampaignId) || null;
 
   const selectedSubmissionDetail = useMemo(() => {
     if (!selectedSubmissionRef) {
@@ -1234,6 +1247,7 @@ export default function DashboardShell({
   function openCampaignsSection() {
     setActiveSection("campaigns");
     setShowBuilder(false);
+    setEditingCampaignId(null);
     setSelectedCampaignId(null);
     setSelectedSubmissionRef(null);
     scrollDashboardToTop();
@@ -1241,7 +1255,19 @@ export default function DashboardShell({
 
   function openSettingsSection() {
     setActiveSection("settings");
+    setSettingsTab("general");
     setShowBuilder(false);
+    setEditingCampaignId(null);
+    setSelectedCampaignId(null);
+    setSelectedSubmissionRef(null);
+    scrollDashboardToTop();
+  }
+
+  function openSettingsSubsection(tab: "general" | "webhooks") {
+    setActiveSection("settings");
+    setSettingsTab(tab);
+    setShowBuilder(false);
+    setEditingCampaignId(null);
     setSelectedCampaignId(null);
     setSelectedSubmissionRef(null);
     scrollDashboardToTop();
@@ -1250,6 +1276,7 @@ export default function DashboardShell({
   function openWallSection() {
     setActiveSection("wall");
     setShowBuilder(false);
+    setEditingCampaignId(null);
     setSelectedCampaignId(null);
     setSelectedSubmissionRef(null);
     scrollDashboardToTop();
@@ -1258,6 +1285,7 @@ export default function DashboardShell({
   function openBrandSection() {
     setActiveSection("brand");
     setShowBuilder(false);
+    setEditingCampaignId(null);
     setSelectedCampaignId(null);
     setSelectedSubmissionRef(null);
     scrollDashboardToTop();
@@ -1347,45 +1375,54 @@ export default function DashboardShell({
           >
             <span className="dashboard-nav-icon">⚙️</span>
             <span>Settings</span>
+            <span className={`dashboard-nav-caret ${activeSection === "settings" ? "is-open" : ""}`}>
+              ⌃
+            </span>
           </button>
+
+          {activeSection === "settings" && (
+            <div className="dashboard-subnav">
+              <button
+                type="button"
+                className={`dashboard-subnav-item ${settingsTab === "general" ? "is-active" : ""}`}
+                onClick={() => openSettingsSubsection("general")}
+              >
+                General
+              </button>
+              <button
+                type="button"
+                className={`dashboard-subnav-item ${settingsTab === "webhooks" ? "is-active" : ""}`}
+                onClick={() => openSettingsSubsection("webhooks")}
+              >
+                Webhooks
+              </button>
+            </div>
+          )}
         </div>
       </aside>
 
       <section className="dashboard-main">
-        <div className="dashboard-topbar">
-          <p className="dashboard-topbar-title">
-            {activeSection === "settings"
-              ? "Settings"
-              : activeSection === "brand"
-              ? "Brand"
-              : activeSection === "wall"
-              ? "Wall of Love"
-              : showBuilder
-              ? "New Campaign"
-              : selectedCampaign
-                ? `${selectedCampaign.name} — Submissions`
-                : "Campaigns"}
-          </p>
-        </div>
-
         <div className="dashboard-content">
           {activeSection === "campaigns" && !showBuilder && !selectedCampaign && (
-            <div className="dashboard-hero-card">
-              <div>
-                <p className="dashboard-eyebrow">Campaign</p>
-                <h1 className="dashboard-title">Your campaigns</h1>
+            <div className="dashboard-page-header">
+              <div className="dashboard-page-header-copy">
+                <h1 className="dashboard-title">Campaigns</h1>
                 <p className="dashboard-subtitle">
-                  Create and manage your public video review campaigns from here.
+                  Create, publish and manage your video review campaigns from one place.
                 </p>
               </div>
-
+              <div className="dashboard-page-header-actions">
                 <button
                   type="button"
                   className="dashboard-action-btn"
-                  onClick={() => setShowBuilder((current) => !current)}
+                  onClick={() => {
+                    setEditingCampaignId(null);
+                    setShowBuilder((current) => !current);
+                  }}
                 >
                 + New campaign
               </button>
+              </div>
             </div>
           )}
 
@@ -1401,20 +1438,55 @@ export default function DashboardShell({
                 <button
                   type="button"
                   className="dashboard-secondary-btn"
-                  onClick={() => setShowBuilder(false)}
+                  onClick={() => {
+                    setShowBuilder(false);
+                    setEditingCampaignId(null);
+                  }}
                 >
                   Close builder ×
                 </button>
               </div>
-              <CampaignBuilder />
+              <CampaignBuilder
+                mode={editingCampaign ? "edit" : "create"}
+                initialValues={
+                  editingCampaign
+                    ? {
+                        id: editingCampaign.id,
+                        name: editingCampaign.name,
+                        description: editingCampaign.description,
+                        rewardText: editingCampaign.rewardText,
+                        rewardValue: editingCampaign.rewardValue,
+                        isPublished: editingCampaign.hasNoEndDate || !editingCampaign.endsAt,
+                        questions: editingCampaign.questions,
+                      }
+                    : null
+                }
+                onCancel={() => {
+                  setShowBuilder(false);
+                  setEditingCampaignId(null);
+                }}
+                onSuccess={() => {
+                  if (editingCampaign) {
+                    setShowBuilder(false);
+                    setEditingCampaignId(null);
+                  }
+                }}
+              />
             </div>
           )}
 
           {activeSection === "campaigns" && !showBuilder && !selectedCampaign && (
-            <div className="dashboard-list-card">
-              <div className="dashboard-list-head">
-                <h2 className="dashboard-list-title">Active campaigns</h2>
-                <span className="dashboard-list-count">{campaignsState.length} campaigns</span>
+            <div className="dashboard-campaign-section">
+              <div className="dashboard-section-head">
+                <div>
+                  <h2 className="dashboard-section-title">Active campaigns</h2>
+                  <p className="dashboard-section-copy">
+                    Each campaign stays available from its public link and can be managed here.
+                  </p>
+                </div>
+                <span className="dashboard-list-count">
+                  {campaignsState.length} {campaignsState.length === 1 ? "campaign" : "campaigns"}
+                </span>
               </div>
 
               {campaignsState.length === 0 ? (
@@ -1431,7 +1503,9 @@ export default function DashboardShell({
                     >
                       <div className="dashboard-campaign-copy">
                         <p className="dashboard-campaign-name">{campaign.name}</p>
-                        <p className="dashboard-campaign-path">{campaign.publicPath}</p>
+                        <div className="dashboard-campaign-meta">
+                          <p className="dashboard-campaign-path">{campaign.publicPath}</p>
+                        </div>
                       </div>
 
                       <div className="dashboard-campaign-actions">
@@ -1451,7 +1525,18 @@ export default function DashboardShell({
 
                         <button
                           type="button"
-                          className="dashboard-secondary-btn"
+                          className="dashboard-row-action"
+                          onClick={() => {
+                            setEditingCampaignId(campaign.id);
+                            setShowBuilder(true);
+                          }}
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          type="button"
+                          className="dashboard-row-action"
                           onClick={() => setSelectedCampaignId(campaign.id)}
                         >
                           Submissions
@@ -1461,10 +1546,10 @@ export default function DashboardShell({
                           href={campaign.publicPath}
                           target="_blank"
                           rel="noreferrer"
-                          className="dashboard-icon-link"
+                          className="dashboard-row-link"
                           aria-label="Open public campaign page"
                         >
-                          ↗
+                          Open
                         </a>
                       </div>
                     </div>
@@ -1949,10 +2034,18 @@ export default function DashboardShell({
 
           {activeSection === "wall" && (
             <div className="dashboard-settings-shell">
+              <div className="dashboard-page-header">
+                <div className="dashboard-page-header-copy">
+                  <h1 className="dashboard-title">Wall of Love</h1>
+                  <p className="dashboard-subtitle">
+                    Build and publish a public page with your best approved video reviews.
+                  </p>
+                </div>
+              </div>
+
               <div className="dashboard-settings-card">
                 <div className="dashboard-settings-head">
                   <div>
-                    <p className="dashboard-eyebrow">Wall of Love</p>
                     <h2 className="dashboard-settings-title">Publish social proof wall</h2>
                     <p className="dashboard-settings-copy">
                       Build a public page with your best approved video reviews. Choose which
@@ -2097,88 +2190,90 @@ export default function DashboardShell({
                       </div>
                     )}
 
-                  <div className="dashboard-wall-selection-card">
-                    <p className="dashboard-settings-label">Wall preview data</p>
-                    {approvedSubmissionsForWall.length === 0 ? (
-                      <p className="dashboard-settings-copy">
-                        No approved submissions yet. Once you approve reviews, they will appear here
-                        and can be published on your wall.
-                      </p>
-                    ) : (
-                      <div className="dashboard-wall-preview-list">
-                        {approvedSubmissionsForWall.slice(0, 3).map((submission) => (
-                          <div key={submission.id} className="dashboard-wall-preview-item">
-                            <p>{submission.reviewerName}</p>
-                            <small>
-                              {submission.campaignName} ·{" "}
-                              {submission.reviewerRating ? `${submission.reviewerRating}★` : "No rating"}
-                            </small>
+                  <div className="dashboard-wall-panels">
+                    <div className="dashboard-wall-selection-card">
+                      <p className="dashboard-settings-label">Wall preview data</p>
+                      {approvedSubmissionsForWall.length === 0 ? (
+                        <p className="dashboard-settings-copy">
+                          No approved submissions yet. Once you approve reviews, they will appear here
+                          and can be published on your wall.
+                        </p>
+                      ) : (
+                        <div className="dashboard-wall-preview-list">
+                          {approvedSubmissionsForWall.slice(0, 3).map((submission) => (
+                            <div key={submission.id} className="dashboard-wall-preview-item">
+                              <p>{submission.reviewerName}</p>
+                              <small>
+                                {submission.campaignName} ·{" "}
+                                {submission.reviewerRating ? `${submission.reviewerRating}★` : "No rating"}
+                              </small>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {!wallIncludeAllCampaigns && (
+                      <div className="dashboard-wall-selection-card">
+                        <p className="dashboard-settings-label">Visible campaigns</p>
+                        {campaignsState.length === 0 ? (
+                          <p className="dashboard-settings-copy">No campaigns available.</p>
+                        ) : (
+                          <div className="dashboard-wall-list">
+                            {campaignsState.map((campaign) => (
+                              <label key={campaign.id} className="dashboard-webhook-event-option">
+                                <input
+                                  type="checkbox"
+                                  checked={wallSelectedCampaignIds.includes(campaign.id)}
+                                  onChange={() => {
+                                    toggleWallCampaignSelection(campaign.id);
+                                  }}
+                                />
+                                <span>
+                                  <strong>{campaign.name}</strong>
+                                  <small>{campaign.submissions.length} submissions</small>
+                                </span>
+                              </label>
+                            ))}
                           </div>
-                        ))}
+                        )}
+                      </div>
+                    )}
+
+                    {!wallIncludeAllSubmissions && (
+                      <div className="dashboard-wall-selection-card">
+                        <p className="dashboard-settings-label">Visible reviews</p>
+                        {approvedSubmissionsForWall.length === 0 ? (
+                          <p className="dashboard-settings-copy">
+                            No approved submissions available for the selected campaigns.
+                          </p>
+                        ) : (
+                          <div className="dashboard-wall-list">
+                            {approvedSubmissionsForWall.map((submission) => (
+                              <label key={submission.id} className="dashboard-webhook-event-option">
+                                <input
+                                  type="checkbox"
+                                  checked={wallSelectedSubmissionIds.includes(submission.id)}
+                                  onChange={() => {
+                                    toggleWallSubmissionSelection(submission.id);
+                                  }}
+                                />
+                                <span>
+                                  <strong>{submission.reviewerName}</strong>
+                                  <small>
+                                    {submission.campaignName} ·{" "}
+                                    {submission.reviewerRating
+                                      ? `${submission.reviewerRating}★`
+                                      : "No rating"}
+                                  </small>
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
-
-                  {!wallIncludeAllCampaigns && (
-                    <div className="dashboard-wall-selection-card">
-                      <p className="dashboard-settings-label">Visible campaigns</p>
-                      {campaignsState.length === 0 ? (
-                        <p className="dashboard-settings-copy">No campaigns available.</p>
-                      ) : (
-                        <div className="dashboard-wall-list">
-                          {campaignsState.map((campaign) => (
-                            <label key={campaign.id} className="dashboard-webhook-event-option">
-                              <input
-                                type="checkbox"
-                                checked={wallSelectedCampaignIds.includes(campaign.id)}
-                                onChange={() => {
-                                  toggleWallCampaignSelection(campaign.id);
-                                }}
-                              />
-                              <span>
-                                <strong>{campaign.name}</strong>
-                                <small>{campaign.submissions.length} submissions</small>
-                              </span>
-                            </label>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {!wallIncludeAllSubmissions && (
-                    <div className="dashboard-wall-selection-card">
-                      <p className="dashboard-settings-label">Visible reviews</p>
-                      {approvedSubmissionsForWall.length === 0 ? (
-                        <p className="dashboard-settings-copy">
-                          No approved submissions available for the selected campaigns.
-                        </p>
-                      ) : (
-                        <div className="dashboard-wall-list">
-                          {approvedSubmissionsForWall.map((submission) => (
-                            <label key={submission.id} className="dashboard-webhook-event-option">
-                              <input
-                                type="checkbox"
-                                checked={wallSelectedSubmissionIds.includes(submission.id)}
-                                onChange={() => {
-                                  toggleWallSubmissionSelection(submission.id);
-                                }}
-                              />
-                              <span>
-                                <strong>{submission.reviewerName}</strong>
-                                <small>
-                                  {submission.campaignName} ·{" "}
-                                  {submission.reviewerRating
-                                    ? `${submission.reviewerRating}★`
-                                    : "No rating"}
-                                </small>
-                              </span>
-                            </label>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
 
                   <div className="dashboard-webhook-actions">
                     <button type="submit" className="dashboard-action-btn" disabled={wallSaving}>
@@ -2214,10 +2309,18 @@ export default function DashboardShell({
 
           {activeSection === "brand" && (
             <div className="dashboard-settings-shell">
+              <div className="dashboard-page-header">
+                <div className="dashboard-page-header-copy">
+                  <h1 className="dashboard-title">Brand</h1>
+                  <p className="dashboard-subtitle">
+                    Configure the brand details used across campaigns and public pages.
+                  </p>
+                </div>
+              </div>
+
               <div className="dashboard-settings-card">
                 <div className="dashboard-settings-head">
                   <div>
-                    <p className="dashboard-eyebrow">Brand</p>
                     <h2 className="dashboard-settings-title">Brand identity</h2>
                     <p className="dashboard-settings-copy">
                       Configure your brand details for campaigns and public pages.
@@ -2511,260 +2614,249 @@ export default function DashboardShell({
 
           {activeSection === "settings" && (
             <div className="dashboard-settings-shell">
-              <div className="dashboard-settings-card">
-                <p className="dashboard-eyebrow">Settings</p>
-                <h2 className="dashboard-settings-title">Workspace profile</h2>
-                <p className="dashboard-settings-copy">
-                  Keep only the essential details for this workspace and the current user.
-                </p>
-
-                <div className="dashboard-settings-grid">
-                  <div className="dashboard-settings-item dashboard-settings-profile-item">
-                    <p className="dashboard-settings-label">Profile</p>
-                    <div className="dashboard-settings-profile-row">
-                      <div className="dashboard-avatar">
-                        <UserButton afterSignOutUrl="/" />
-                      </div>
-                      <div>
-                        <p className="dashboard-settings-value">{viewerName}</p>
-                        <p className="dashboard-settings-subvalue">Current user</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="dashboard-settings-item">
-                    <p className="dashboard-settings-label">Workspace</p>
-                    <p className="dashboard-settings-value">{workspaceName}</p>
-                  </div>
-                  <div className="dashboard-settings-item">
-                    <p className="dashboard-settings-label">Campaigns</p>
-                    <p className="dashboard-settings-value">
-                      {campaignsState.length} {campaignsState.length === 1 ? "campaign" : "campaigns"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="dashboard-settings-card">
-                <div className="dashboard-settings-head">
-                  <div>
-                    <p className="dashboard-eyebrow">Automation</p>
-                    <h2 className="dashboard-settings-title">Webhook endpoints</h2>
-                    <p className="dashboard-settings-copy">
-                      Connect Tellr to external tools and receive signed events for new
-                      submissions and approvals.
-                    </p>
-                  </div>
-                  <div className="dashboard-settings-pill">
-                    Dispatches immediately; retries every 15 min
-                  </div>
-                </div>
-
-                {webhookError && (
-                  <div className="dashboard-settings-alert dashboard-settings-alert-error">
-                    {webhookError}
-                  </div>
-                )}
-
-                {webhookNotice && (
-                  <div className="dashboard-settings-alert dashboard-settings-alert-success">
-                    {webhookNotice}
-                  </div>
-                )}
-
-                {latestWebhookSecret && (
-                  <div className="dashboard-secret-card">
-                    <div>
-                      <p className="dashboard-settings-label">Signing secret</p>
-                      <p className="dashboard-secret-value">{latestWebhookSecret}</p>
-                    </div>
-                    <button
-                      type="button"
-                      className="dashboard-action-btn dashboard-secondary-action"
-                      onClick={() => {
-                        copyText(latestWebhookSecret);
-                      }}
-                    >
-                      Copy secret
-                    </button>
-                  </div>
-                )}
-
-                <form className="dashboard-webhook-form" onSubmit={handleCreateWebhook}>
-                  <div className="dashboard-webhook-form-grid">
-                    <label className="dashboard-webhook-field">
-                      <span className="dashboard-settings-label">Endpoint URL</span>
-                      <input
-                        type="url"
-                        className="dashboard-webhook-input"
-                        placeholder="https://hooks.zapier.com/..."
-                        value={webhookUrl}
-                        onChange={(event) => {
-                          setWebhookUrl(event.target.value);
-                        }}
-                        required
-                      />
-                    </label>
-                    <label className="dashboard-webhook-field">
-                      <span className="dashboard-settings-label">Description</span>
-                      <input
-                        type="text"
-                        className="dashboard-webhook-input"
-                        placeholder="Zapier, Make, n8n, custom API..."
-                        value={webhookDescription}
-                        onChange={(event) => {
-                          setWebhookDescription(event.target.value);
-                        }}
-                      />
-                    </label>
-                  </div>
-
-                  <div className="dashboard-webhook-events">
-                    {WEBHOOK_EVENT_OPTIONS.map((option) => (
-                      <label key={option.value} className="dashboard-webhook-event-option">
-                        <input
-                          type="checkbox"
-                          checked={webhookEvents.includes(option.value)}
-                          onChange={() => {
-                            toggleWebhookEventSelection(option.value);
-                          }}
-                        />
-                        <span>
-                          <strong>{option.label}</strong>
-                          <small>{option.helper}</small>
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-
-                  <div className="dashboard-webhook-actions">
-                    <button
-                      type="submit"
-                      className="dashboard-action-btn"
-                      disabled={webhookFormSaving || webhookEvents.length === 0}
-                    >
-                      {webhookFormSaving ? "Saving..." : "Add endpoint"}
-                    </button>
-                    <button
-                      type="button"
-                      className="dashboard-action-btn dashboard-secondary-action"
-                      onClick={() => {
-                        refreshWebhookEndpoints();
-                      }}
-                      disabled={webhookLoading}
-                    >
-                      {webhookLoading ? "Refreshing..." : "Refresh status"}
-                    </button>
-                  </div>
-                </form>
-
-                <div className="dashboard-signature-card">
-                  <p className="dashboard-settings-label">Signature contract</p>
-                  <p className="dashboard-settings-copy dashboard-signature-copy">
-                    Verify requests with <code>X-Tellr-Signature</code> by computing an
-                    HMAC SHA-256 of <code>X-Tellr-Timestamp + {'.'} + rawBody</code> using
-                    the signing secret. Every delivery also includes
-                    <code> X-Tellr-Event</code>, <code>X-Tellr-Event-Id</code> and
-                    <code> X-Tellr-Delivery-Id</code> for idempotency and tracing.
+              <div className="dashboard-page-header">
+                <div className="dashboard-page-header-copy">
+                  <h1 className="dashboard-title">Settings</h1>
+                  <p className="dashboard-subtitle">
+                    Configure your workspace details and external automations.
                   </p>
                 </div>
+              </div>
 
-                <div className="dashboard-webhook-list">
-                  {webhookEndpoints.length === 0 ? (
-                    <div className="dashboard-empty-state">
-                      {webhookLoading
-                        ? "Loading webhook endpoints..."
-                        : "No webhook endpoints yet. Add one to start sending events."}
-                    </div>
-                  ) : (
-                    webhookEndpoints.map((endpoint) => (
-                      <div key={endpoint.id} className="dashboard-webhook-card">
-                        <div className="dashboard-webhook-card-head">
-                          <div>
-                            <p className="dashboard-webhook-url">{endpoint.url}</p>
-                            <p className="dashboard-webhook-meta">
-                              {endpoint.description || "No description"} ·{" "}
-                              {endpoint.isActive ? "Active" : "Paused"}
-                            </p>
-                          </div>
-                          <div className="dashboard-webhook-card-actions">
-                            <button
-                              type="button"
-                              className="dashboard-action-btn dashboard-secondary-action dashboard-inline-action"
-                              onClick={() => {
-                                handleSendWebhookTest(endpoint.id);
-                              }}
-                              disabled={webhookActionId === `test:${endpoint.id}`}
-                            >
-                              {webhookActionId === `test:${endpoint.id}` ? "Sending..." : "Send test"}
-                            </button>
-                            <button
-                              type="button"
-                              className="dashboard-action-btn dashboard-secondary-action dashboard-inline-action"
-                              onClick={() => {
-                                handleRotateWebhookSecret(endpoint.id);
-                              }}
-                              disabled={webhookActionId === `rotate:${endpoint.id}`}
-                            >
-                              {webhookActionId === `rotate:${endpoint.id}` ? "Rotating..." : "Rotate secret"}
-                            </button>
-                            <button
-                              type="button"
-                              className="dashboard-action-btn dashboard-secondary-action dashboard-inline-action"
-                              onClick={() => {
-                                handleToggleWebhook(endpoint);
-                              }}
-                              disabled={webhookActionId === `toggle:${endpoint.id}`}
-                            >
-                              {webhookActionId === `toggle:${endpoint.id}`
-                                ? "Saving..."
-                                : endpoint.isActive
-                                  ? "Pause"
-                                  : "Enable"}
-                            </button>
-                            <button
-                              type="button"
-                              className="dashboard-action-btn dashboard-inline-action"
-                              onClick={() => {
-                                handleDeleteWebhook(endpoint.id);
-                              }}
-                              disabled={webhookActionId === `delete:${endpoint.id}`}
-                            >
-                              {webhookActionId === `delete:${endpoint.id}` ? "Deleting..." : "Delete"}
-                            </button>
-                          </div>
+              {settingsTab === "general" && (
+                <div className="dashboard-settings-card">
+                  <h2 className="dashboard-settings-title">Workspace profile</h2>
+                  <p className="dashboard-settings-copy">
+                    Keep only the essential details for this workspace and the current user.
+                  </p>
+
+                  <div className="dashboard-settings-grid">
+                    <div className="dashboard-settings-item dashboard-settings-profile-item">
+                      <p className="dashboard-settings-label">Profile</p>
+                      <div className="dashboard-settings-profile-row">
+                        <div className="dashboard-avatar">
+                          <UserButton afterSignOutUrl="/" />
                         </div>
-
-                        <div className="dashboard-webhook-tag-row">
-                          {endpoint.subscribedEvents.map((eventType) => (
-                            <span key={eventType} className="dashboard-webhook-tag">
-                              {eventType}
-                            </span>
-                          ))}
-                        </div>
-
-                        <div className="dashboard-webhook-deliveries">
-                          <p className="dashboard-settings-label">Recent deliveries</p>
-                          {endpoint.deliveries.length === 0 ? (
-                            <p className="dashboard-webhook-meta">No deliveries yet.</p>
-                          ) : (
-                            endpoint.deliveries.map((delivery) => (
-                              <div key={delivery.id} className="dashboard-webhook-delivery-row">
-                                <span>{delivery.eventType}</span>
-                                <span>{delivery.status}</span>
-                                <span>
-                                  {delivery.responseStatus
-                                    ? `HTTP ${delivery.responseStatus}`
-                                    : `Attempt ${delivery.attemptCount}`}
-                                </span>
-                              </div>
-                            ))
-                          )}
+                        <div>
+                          <p className="dashboard-settings-value">{viewerName}</p>
+                          <p className="dashboard-settings-subvalue">Current user</p>
                         </div>
                       </div>
-                    ))
-                  )}
+                    </div>
+                    <div className="dashboard-settings-item">
+                      <p className="dashboard-settings-label">Workspace</p>
+                      <p className="dashboard-settings-value">{workspaceName}</p>
+                    </div>
+                    <div className="dashboard-settings-item">
+                      <p className="dashboard-settings-label">Campaigns</p>
+                      <p className="dashboard-settings-value">
+                        {campaignsState.length} {campaignsState.length === 1 ? "campaign" : "campaigns"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {settingsTab === "webhooks" && (
+                <div className="dashboard-settings-card">
+                  <div className="dashboard-settings-head">
+                    <div>
+                      <h2 className="dashboard-settings-title">Webhook endpoints</h2>
+                      <p className="dashboard-settings-copy">
+                        Connect Tellr to external tools and receive new submission and approval events.
+                      </p>
+                    </div>
+                  </div>
+
+                  {webhookError && (
+                    <div className="dashboard-settings-alert dashboard-settings-alert-error">
+                      {webhookError}
+                    </div>
+                  )}
+
+                  {webhookNotice && (
+                    <div className="dashboard-settings-alert dashboard-settings-alert-success">
+                      {webhookNotice}
+                    </div>
+                  )}
+
+                  {latestWebhookSecret && (
+                    <div className="dashboard-secret-card">
+                      <div>
+                        <p className="dashboard-settings-label">Signing secret</p>
+                        <p className="dashboard-secret-value">{latestWebhookSecret}</p>
+                      </div>
+                      <button
+                        type="button"
+                        className="dashboard-action-btn dashboard-secondary-action"
+                        onClick={() => {
+                          copyText(latestWebhookSecret);
+                        }}
+                      >
+                        Copy secret
+                      </button>
+                    </div>
+                  )}
+
+                  <form className="dashboard-webhook-form" onSubmit={handleCreateWebhook}>
+                    <div className="dashboard-webhook-form-grid">
+                      <label className="dashboard-webhook-field">
+                        <span className="dashboard-settings-label">Endpoint URL</span>
+                        <input
+                          type="url"
+                          className="dashboard-webhook-input"
+                          placeholder="https://hooks.zapier.com/..."
+                          value={webhookUrl}
+                          onChange={(event) => {
+                            setWebhookUrl(event.target.value);
+                          }}
+                          required
+                        />
+                      </label>
+                      <label className="dashboard-webhook-field">
+                        <span className="dashboard-settings-label">Description</span>
+                        <input
+                          type="text"
+                          className="dashboard-webhook-input"
+                          placeholder="Zapier, Make, n8n, custom API..."
+                          value={webhookDescription}
+                          onChange={(event) => {
+                            setWebhookDescription(event.target.value);
+                          }}
+                        />
+                      </label>
+                    </div>
+
+                    <div className="dashboard-settings-alert dashboard-settings-alert-neutral">
+                      Tellr sends webhook calls with the <strong>POST</strong> method to the endpoint
+                      you enter here. Make sure your URL accepts POST requests.
+                    </div>
+
+                    <div className="dashboard-webhook-events">
+                      {WEBHOOK_EVENT_OPTIONS.map((option) => (
+                        <label key={option.value} className="dashboard-webhook-event-option">
+                          <input
+                            type="checkbox"
+                            checked={webhookEvents.includes(option.value)}
+                            onChange={() => {
+                              toggleWebhookEventSelection(option.value);
+                            }}
+                          />
+                          <span>
+                            <strong>{option.label}</strong>
+                            <small>{option.helper}</small>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+
+                    <div className="dashboard-webhook-actions">
+                      <button
+                        type="submit"
+                        className="dashboard-action-btn"
+                        disabled={webhookFormSaving || webhookEvents.length === 0}
+                      >
+                        {webhookFormSaving ? "Saving..." : "Add endpoint"}
+                      </button>
+                    </div>
+                  </form>
+
+                  <div className="dashboard-webhook-list">
+                    {webhookEndpoints.length === 0 ? (
+                      <div className="dashboard-empty-state">
+                        No webhook endpoints yet. Add one to start sending events.
+                      </div>
+                    ) : (
+                      webhookEndpoints.map((endpoint) => (
+                        <div key={endpoint.id} className="dashboard-webhook-card">
+                          <div className="dashboard-webhook-card-head">
+                            <div>
+                              <p className="dashboard-webhook-url">{endpoint.url}</p>
+                              <p className="dashboard-webhook-meta">
+                                {endpoint.description || "No description"} ·{" "}
+                                {endpoint.isActive ? "Active" : "Paused"}
+                              </p>
+                            </div>
+                            <div className="dashboard-webhook-card-actions">
+                              <button
+                                type="button"
+                                className="dashboard-action-btn dashboard-secondary-action dashboard-inline-action"
+                                onClick={() => {
+                                  handleSendWebhookTest(endpoint.id);
+                                }}
+                                disabled={webhookActionId === `test:${endpoint.id}`}
+                              >
+                                {webhookActionId === `test:${endpoint.id}` ? "Sending..." : "Send test"}
+                              </button>
+                              <button
+                                type="button"
+                                className="dashboard-action-btn dashboard-secondary-action dashboard-inline-action"
+                                onClick={() => {
+                                  handleRotateWebhookSecret(endpoint.id);
+                                }}
+                                disabled={webhookActionId === `rotate:${endpoint.id}`}
+                              >
+                                {webhookActionId === `rotate:${endpoint.id}` ? "Rotating..." : "Rotate secret"}
+                              </button>
+                              <button
+                                type="button"
+                                className="dashboard-action-btn dashboard-secondary-action dashboard-inline-action"
+                                onClick={() => {
+                                  handleToggleWebhook(endpoint);
+                                }}
+                                disabled={webhookActionId === `toggle:${endpoint.id}`}
+                              >
+                                {webhookActionId === `toggle:${endpoint.id}`
+                                  ? "Saving..."
+                                  : endpoint.isActive
+                                    ? "Pause"
+                                    : "Enable"}
+                              </button>
+                              <button
+                                type="button"
+                                className="dashboard-action-btn dashboard-inline-action"
+                                onClick={() => {
+                                  handleDeleteWebhook(endpoint.id);
+                                }}
+                                disabled={webhookActionId === `delete:${endpoint.id}`}
+                              >
+                                {webhookActionId === `delete:${endpoint.id}` ? "Deleting..." : "Delete"}
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="dashboard-webhook-tag-row">
+                            {endpoint.subscribedEvents.map((eventType) => (
+                              <span key={eventType} className="dashboard-webhook-tag">
+                                {eventType}
+                              </span>
+                            ))}
+                          </div>
+
+                          <div className="dashboard-webhook-deliveries">
+                            <p className="dashboard-settings-label">Recent deliveries</p>
+                            {endpoint.deliveries.length === 0 ? (
+                              <p className="dashboard-webhook-meta">No deliveries yet.</p>
+                            ) : (
+                              endpoint.deliveries.map((delivery) => (
+                                <div key={delivery.id} className="dashboard-webhook-delivery-row">
+                                  <span>{delivery.eventType}</span>
+                                  <span>{delivery.status}</span>
+                                  <span>
+                                    {delivery.responseStatus
+                                      ? `HTTP ${delivery.responseStatus}`
+                                      : `Attempt ${delivery.attemptCount}`}
+                                  </span>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -2785,7 +2877,7 @@ const dashboardShellStyles = `
     top: 0;
     left: 0;
     bottom: 0;
-    width: 232px;
+    width: 212px;
     background: #ffffff;
     border-right: 1px solid rgba(24, 24, 32, 0.08);
     display: flex;
@@ -2800,88 +2892,88 @@ const dashboardShellStyles = `
   .dashboard-brand {
     display: flex;
     align-items: center;
-    padding: 14px 16px;
+    padding: 12px 14px 10px;
     text-decoration: none;
     color: #14141b;
   }
 
   .dashboard-brand-image {
     display: block;
-    height: 42px;
+    height: 36px;
     width: auto;
-    max-width: 160px;
+    max-width: 138px;
   }
 
   .dashboard-profile-card {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 6px 16px 16px;
+    gap: 10px;
+    padding: 4px 14px 12px;
   }
 
   .dashboard-avatar {
-    width: 46px;
-    height: 46px;
+    width: 40px;
+    height: 40px;
     display: grid;
     place-items: center;
     flex-shrink: 0;
   }
 
   .dashboard-avatar :where(.cl-userButtonBox, .cl-userButtonTrigger, .cl-avatarBox) {
-    width: 46px;
-    height: 46px;
-    border-radius: 14px;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
   }
 
   .dashboard-profile-name {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 800;
     color: #14141b;
     letter-spacing: -0.02em;
   }
 
   .dashboard-profile-workspace {
-    font-size: 13px;
+    font-size: 12px;
     color: rgba(24, 24, 32, 0.42);
   }
 
   .dashboard-sidebar-nav {
-    padding: 16px 12px;
+    padding: 12px 10px;
     display: grid;
-    gap: 8px;
+    gap: 2px;
   }
 
   .dashboard-nav-label {
-    font-size: 12px;
+    font-size: 10px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     font-weight: 800;
     color: rgba(24, 24, 32, 0.22);
-    margin: 14px 8px 8px;
+    margin: 10px 8px 6px;
   }
 
   .dashboard-nav-item {
     width: 100%;
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 12px 14px;
-    border-radius: 16px;
+    gap: 9px;
+    min-height: 36px;
+    padding: 8px 10px;
+    border-radius: 10px;
     border: 1px solid transparent;
     background: transparent;
     color: rgba(24, 24, 32, 0.66);
     font-family: "Figtree", sans-serif;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
     text-align: left;
     cursor: pointer;
   }
 
   .dashboard-nav-item-active {
-    border-color: rgba(255, 92, 53, 0.22);
-    background: #fff5f1;
+    border-color: transparent;
+    background: rgba(255, 92, 53, 0.1);
     color: var(--brand);
-    box-shadow: inset 0 0 0 1px rgba(255, 92, 53, 0.06);
   }
 
   .dashboard-nav-item-muted:hover {
@@ -2890,59 +2982,89 @@ const dashboardShellStyles = `
   }
 
   .dashboard-nav-icon {
-    width: 20px;
+    width: 18px;
     text-align: center;
-    font-size: 16px;
+    font-size: 14px;
     flex-shrink: 0;
   }
 
   .dashboard-nav-count {
     margin-left: auto;
-    min-width: 24px;
-    height: 24px;
-    padding: 0 8px;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
     border-radius: 999px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     background: var(--brand);
     color: #fff;
-    font-size: 12px;
+    font-size: 10px;
     font-weight: 800;
     font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   }
 
-  .dashboard-main {
-    margin-left: 232px;
-    min-height: 100vh;
-    background: #f7f6f4;
-  }
-
-  .dashboard-topbar {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    height: 62px;
-    display: flex;
+  .dashboard-nav-caret {
+    margin-left: auto;
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
     align-items: center;
-    padding: 0 22px;
-    border-bottom: 1px solid rgba(24, 24, 32, 0.08);
-    background: rgba(255, 255, 255, 0.84);
-    backdrop-filter: blur(10px);
-  }
-
-  .dashboard-topbar-title {
+    justify-content: center;
+    color: rgba(24, 24, 32, 0.4);
     font-size: 16px;
     font-weight: 800;
+    line-height: 1;
+    transform: rotate(180deg);
+    transition: transform 160ms ease, color 160ms ease;
+  }
+
+  .dashboard-nav-caret.is-open {
+    transform: rotate(0deg);
+    color: rgba(24, 24, 32, 0.7);
+  }
+
+  .dashboard-subnav {
+    display: grid;
+    gap: 2px;
+    margin: 2px 0 4px 28px;
+  }
+
+  .dashboard-subnav-item {
+    min-height: 30px;
+    padding: 0 10px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: rgba(24, 24, 32, 0.48);
+    font-size: 12px;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .dashboard-subnav-item:hover {
     color: #14141b;
-    letter-spacing: -0.02em;
+    background: rgba(24, 24, 32, 0.04);
+  }
+
+  .dashboard-subnav-item.is-active {
+    color: #14141b;
+    background: rgba(24, 24, 32, 0.06);
+  }
+
+  .dashboard-main {
+    margin-left: 212px;
+    min-height: 100vh;
+    background: #fbfaf8;
   }
 
   .dashboard-content {
     display: grid;
-    gap: 22px;
-    padding: 22px;
+    gap: 16px;
+    padding: 32px 24px 32px;
     width: 100%;
+    max-width: 1280px;
   }
 
   .dashboard-hero-card,
@@ -2950,17 +3072,31 @@ const dashboardShellStyles = `
   .dashboard-submissions-card,
   .dashboard-alert-card {
     border: 1px solid rgba(24, 24, 32, 0.08);
-    border-radius: 24px;
+    border-radius: 16px;
     background: rgba(255, 255, 255, 0.92);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04), 0 12px 28px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 8px 22px rgba(0, 0, 0, 0.025);
   }
 
-  .dashboard-hero-card {
+  .dashboard-page-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     gap: 18px;
-    padding: 28px 34px;
+    padding: 2px 0 6px;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .dashboard-page-header-copy {
+    min-width: 0;
+  }
+
+  .dashboard-page-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
   }
 
   .dashboard-eyebrow {
@@ -2969,45 +3105,47 @@ const dashboardShellStyles = `
     text-transform: uppercase;
     font-weight: 700;
     color: var(--brand);
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   }
 
   .dashboard-title {
-    font-size: clamp(28px, 3.2vw, 44px);
-    line-height: 0.96;
-    letter-spacing: -0.05em;
+    font-size: clamp(28px, 3vw, 36px);
+    line-height: 1.02;
+    letter-spacing: -0.06em;
     color: #121218;
     margin: 0 0 8px;
   }
 
   .dashboard-subtitle {
-    max-width: 720px;
+    max-width: 640px;
     font-size: 14px;
-    color: rgba(24, 24, 32, 0.54);
+    line-height: 1.55;
+    color: rgba(24, 24, 32, 0.56);
   }
 
   .dashboard-action-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 50px;
-    padding: 0 22px;
+    min-height: 38px;
+    padding: 0 15px;
     border-radius: 999px;
     border: none;
     background: var(--brand);
     color: #fff;
     font-family: "Figtree", sans-serif;
-    font-size: 16px;
+    font-size: 13px;
     font-weight: 800;
     text-decoration: none;
-    box-shadow: 0 10px 24px rgba(255, 92, 53, 0.2);
     cursor: pointer;
   }
 
   .dashboard-builder-wrap {
     display: grid;
-    gap: 12px;
+    gap: 10px;
+    border-top: 1px solid rgba(24, 24, 32, 0.08);
+    padding-top: 14px;
   }
 
   .dashboard-builder-toolbar {
@@ -3021,45 +3159,62 @@ const dashboardShellStyles = `
   }
 
   .dashboard-alert-card {
-    padding: 14px 18px;
+    padding: 12px 14px;
     color: #925c00;
     background: #fff8e8;
     border-color: rgba(217, 119, 6, 0.16);
   }
 
-  .dashboard-list-card {
-    overflow: hidden;
+  .dashboard-campaign-section {
+    display: grid;
+    gap: 0;
+    border-top: 1px solid rgba(24, 24, 32, 0.08);
   }
 
-  .dashboard-list-head {
+  .dashboard-campaign-section .dashboard-empty-state {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    padding: 18px 0 6px;
+  }
+
+  .dashboard-section-head {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: space-between;
     gap: 16px;
-    padding: 18px 28px;
+    padding: 16px 0 10px;
     border-bottom: 1px solid rgba(24, 24, 32, 0.08);
   }
 
-  .dashboard-list-title {
-    font-size: 18px;
+  .dashboard-section-title {
+    font-size: 17px;
     font-weight: 800;
     color: #14141b;
     letter-spacing: -0.03em;
+    margin: 0;
+  }
+
+  .dashboard-section-copy {
+    margin: 6px 0 0;
+    font-size: 13px;
+    color: rgba(24, 24, 32, 0.5);
   }
 
   .dashboard-list-count {
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 700;
-    color: rgba(24, 24, 32, 0.34);
+    color: rgba(24, 24, 32, 0.38);
     font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    white-space: nowrap;
   }
 
   .dashboard-campaign-row {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    gap: 14px;
-    padding: 18px 28px;
+    gap: 16px;
+    padding: 14px 0;
   }
 
   .dashboard-campaign-row.with-divider {
@@ -3068,20 +3223,33 @@ const dashboardShellStyles = `
 
   .dashboard-campaign-copy {
     min-width: 0;
+    display: grid;
+    gap: 4px;
   }
 
   .dashboard-campaign-name {
-    font-size: 16px;
-    font-weight: 800;
+    font-size: 15px;
+    font-weight: 700;
     color: #14141b;
     letter-spacing: -0.03em;
-    margin: 0 0 3px;
+    margin: 0;
+  }
+
+  .dashboard-campaign-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
   }
 
   .dashboard-campaign-path {
-    font-size: 13px;
-    color: rgba(24, 24, 32, 0.34);
+    font-size: 11px;
+    color: rgba(24, 24, 32, 0.42);
     font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .dashboard-campaign-actions {
@@ -3095,29 +3263,31 @@ const dashboardShellStyles = `
   .dashboard-video-count {
     display: inline-flex;
     align-items: center;
-    padding: 5px 12px;
+    min-height: 24px;
+    padding: 0 8px;
     border-radius: 999px;
-    background: #fff1eb;
+    background: rgba(255, 92, 53, 0.08);
     color: var(--brand);
-    font-size: 12px;
+    font-size: 10px;
     font-weight: 700;
   }
 
   .dashboard-status-badge {
     display: inline-flex;
     align-items: center;
-    gap: 7px;
-    min-height: 34px;
-    padding: 0 13px;
+    gap: 6px;
+    min-height: 24px;
+    padding: 0 8px;
     border-radius: 999px;
-    font-size: 13px;
+    font-size: 10px;
     font-weight: 700;
+    letter-spacing: 0.02em;
   }
 
   .dashboard-status-badge::before {
     content: "";
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
     border-radius: 999px;
     display: inline-block;
   }
@@ -3144,16 +3314,37 @@ const dashboardShellStyles = `
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 40px;
-    padding: 0 18px;
+    min-height: 34px;
+    padding: 0 12px;
     border-radius: 999px;
     border: 1px solid rgba(24, 24, 32, 0.14);
     background: #fff;
     color: #14141b;
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 800;
     text-decoration: none;
     cursor: pointer;
+  }
+
+  .dashboard-row-action,
+  .dashboard-row-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: rgba(24, 24, 32, 0.62);
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .dashboard-row-action:hover,
+  .dashboard-row-link:hover {
+    color: #14141b;
   }
 
   .dashboard-secondary-btn:hover {
@@ -3161,30 +3352,10 @@ const dashboardShellStyles = `
     background: #faf8f6;
   }
 
-  .dashboard-icon-link {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid rgba(24, 24, 32, 0.1);
-    background: #fff;
-    color: rgba(24, 24, 32, 0.5);
-    text-decoration: none;
-    font-size: 16px;
-    font-weight: 700;
-    cursor: pointer;
-  }
-
   .dashboard-action-btn:disabled,
-  .dashboard-secondary-btn:disabled {
+  .dashboard-secondary-btn:disabled,
+  .dashboard-row-action:disabled {
     cursor: not-allowed;
-  }
-
-  .dashboard-icon-link:hover {
-    color: #14141b;
-    background: #faf8f6;
   }
 
   .dashboard-submissions-card {
@@ -3199,41 +3370,41 @@ const dashboardShellStyles = `
   }
 
   .dashboard-campaign-webhook-card {
-    border: 1px solid rgba(24, 24, 32, 0.08);
-    border-radius: 24px;
-    background: rgba(255, 255, 255, 0.92);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04), 0 12px 28px rgba(0, 0, 0, 0.03);
-    padding: 22px;
+    border-top: 1px solid rgba(24, 24, 32, 0.08);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    padding: 18px 0 0;
     display: grid;
-    gap: 14px;
+    gap: 12px;
   }
 
   .dashboard-campaign-embed-card {
-    border: 1px solid rgba(24, 24, 32, 0.08);
-    border-radius: 24px;
-    background: rgba(255, 255, 255, 0.92);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04), 0 12px 28px rgba(0, 0, 0, 0.03);
-    padding: 22px;
+    border-top: 1px solid rgba(24, 24, 32, 0.08);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    padding: 18px 0 0;
     display: grid;
-    gap: 14px;
+    gap: 12px;
   }
 
   .dashboard-embed-block {
     display: grid;
-    gap: 8px;
+    gap: 6px;
   }
 
   .dashboard-inline-code,
   .dashboard-embed-textarea {
     width: 100%;
     border: 1px solid rgba(24, 24, 32, 0.14);
-    border-radius: 14px;
+    border-radius: 12px;
     background: #f8f6f3;
     color: rgba(24, 24, 32, 0.76);
     font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 11px;
+    font-size: 10px;
     line-height: 1.5;
-    padding: 12px;
+    padding: 10px 12px;
   }
 
   .dashboard-inline-code {
@@ -3249,19 +3420,19 @@ const dashboardShellStyles = `
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 14px;
+    gap: 10px;
   }
 
   .dashboard-campaign-webhook-title {
-    font-size: 24px;
+    font-size: 20px;
     line-height: 1;
     letter-spacing: -0.03em;
     color: #121218;
-    margin: 0 0 8px;
+    margin: 0 0 6px;
   }
 
   .dashboard-campaign-webhook-copy {
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1.5;
     color: rgba(24, 24, 32, 0.54);
     margin: 0;
@@ -3270,49 +3441,54 @@ const dashboardShellStyles = `
 
   .dashboard-settings-shell {
     width: 100%;
-    max-width: 1040px;
     display: grid;
-    gap: 18px;
+    gap: 22px;
   }
 
   .dashboard-settings-card {
-    border: 1px solid rgba(24, 24, 32, 0.08);
-    border-radius: 24px;
-    background: rgba(255, 255, 255, 0.92);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04), 0 12px 28px rgba(0, 0, 0, 0.03);
-    padding: 28px;
+    border-top: 1px solid rgba(24, 24, 32, 0.08);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    padding: 18px 0 0;
+    width: 100%;
+  }
+
+  .dashboard-settings-shell > .dashboard-settings-card:first-child {
+    border-top: none;
+    padding-top: 0;
   }
 
   .dashboard-settings-head {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 16px;
+    gap: 14px;
   }
 
   .dashboard-settings-title {
-    font-size: 28px;
-    line-height: 1;
+    font-size: 20px;
+    line-height: 1.05;
     letter-spacing: -0.04em;
     color: #121218;
-    margin: 0 0 10px;
+    margin: 0 0 4px;
   }
 
   .dashboard-settings-copy {
-    font-size: 14px;
+    font-size: 13px;
     line-height: 1.6;
     color: rgba(24, 24, 32, 0.54);
-    margin: 0 0 22px;
+    margin: 0 0 14px;
     max-width: 560px;
   }
 
   .dashboard-settings-pill {
     border-radius: 999px;
     border: 1px solid rgba(24, 24, 32, 0.08);
-    background: #faf8f6;
+    background: rgba(255, 255, 255, 0.72);
     color: rgba(24, 24, 32, 0.56);
-    padding: 8px 12px;
-    font-size: 12px;
+    padding: 5px 9px;
+    font-size: 11px;
     font-weight: 700;
     white-space: nowrap;
   }
@@ -3320,14 +3496,14 @@ const dashboardShellStyles = `
   .dashboard-settings-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
+    gap: 10px;
   }
 
   .dashboard-settings-item {
     border: 1px solid rgba(24, 24, 32, 0.08);
-    border-radius: 18px;
-    background: #ffffff;
-    padding: 16px 18px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.72);
+    padding: 11px 12px;
   }
 
   .dashboard-settings-profile-item {
@@ -3337,7 +3513,7 @@ const dashboardShellStyles = `
   .dashboard-settings-profile-row {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 10px;
   }
 
   .dashboard-settings-label {
@@ -3346,12 +3522,12 @@ const dashboardShellStyles = `
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: rgba(24, 24, 32, 0.34);
-    margin: 0 0 8px;
+    margin: 0 0 6px;
     font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   }
 
   .dashboard-settings-value {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 800;
     color: #14141b;
     letter-spacing: -0.02em;
@@ -3360,14 +3536,14 @@ const dashboardShellStyles = `
 
   .dashboard-settings-subvalue {
     margin: 4px 0 0;
-    font-size: 12px;
+    font-size: 11px;
     color: rgba(24, 24, 32, 0.42);
   }
 
   .dashboard-settings-alert {
-    border-radius: 16px;
-    padding: 12px 14px;
-    font-size: 13px;
+    border-radius: 14px;
+    padding: 10px 12px;
+    font-size: 12px;
     font-weight: 700;
     margin-bottom: 16px;
   }
@@ -3394,17 +3570,17 @@ const dashboardShellStyles = `
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 14px;
+    gap: 10px;
     border: 1px solid rgba(24, 24, 32, 0.08);
-    border-radius: 18px;
-    background: #ffffff;
-    padding: 14px 16px;
-    margin-bottom: 18px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.72);
+    padding: 10px 12px;
+    margin-bottom: 14px;
   }
 
   .dashboard-secret-value {
     margin: 4px 0 0;
-    font-size: 13px;
+    font-size: 12px;
     color: #14141b;
     font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     word-break: break-all;
@@ -3412,50 +3588,57 @@ const dashboardShellStyles = `
 
   .dashboard-webhook-form {
     display: grid;
-    gap: 16px;
-    margin-bottom: 20px;
+    gap: 10px;
+    margin-bottom: 16px;
   }
 
   .dashboard-webhook-form-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
+    gap: 10px;
+  }
+
+  .dashboard-wall-panels {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    align-items: start;
   }
 
   .dashboard-webhook-field {
     display: grid;
-    gap: 8px;
+    gap: 6px;
   }
 
   .dashboard-brand-color-field {
     display: grid;
-    grid-template-columns: 48px minmax(0, 1fr);
-    gap: 10px;
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 8px;
     align-items: center;
   }
 
   .dashboard-brand-color-chip {
-    width: 48px;
-    height: 48px;
+    width: 42px;
+    height: 42px;
     border: 1.5px solid rgba(24, 24, 32, 0.14);
-    border-radius: 12px;
+    border-radius: 10px;
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.65), 0 6px 16px rgba(0, 0, 0, 0.08);
   }
 
   .dashboard-brand-color-composer {
     border: 1px solid rgba(24, 24, 32, 0.08);
-    border-radius: 14px;
-    background: #faf8f6;
-    padding: 10px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.72);
+    padding: 8px;
     display: grid;
-    gap: 8px;
+    gap: 6px;
   }
 
   .dashboard-brand-slider-row {
     display: grid;
-    grid-template-columns: 78px minmax(0, 1fr);
+    grid-template-columns: 68px minmax(0, 1fr);
     align-items: center;
-    gap: 10px;
+    gap: 8px;
   }
 
   .dashboard-brand-slider-row span {
@@ -3470,7 +3653,7 @@ const dashboardShellStyles = `
   .dashboard-brand-slider {
     appearance: none;
     width: 100%;
-    height: 10px;
+    height: 8px;
     border-radius: 999px;
     border: 1px solid rgba(24, 24, 32, 0.12);
     outline: none;
@@ -3478,8 +3661,8 @@ const dashboardShellStyles = `
 
   .dashboard-brand-slider::-webkit-slider-thumb {
     appearance: none;
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     border-radius: 999px;
     border: 2px solid #ffffff;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
@@ -3488,8 +3671,8 @@ const dashboardShellStyles = `
   }
 
   .dashboard-brand-slider::-moz-range-thumb {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     border-radius: 999px;
     border: 2px solid #ffffff;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
@@ -3498,7 +3681,7 @@ const dashboardShellStyles = `
   }
 
   .dashboard-brand-slider::-moz-range-track {
-    height: 10px;
+    height: 8px;
     border-radius: 999px;
     border: 1px solid rgba(24, 24, 32, 0.12);
   }
@@ -3506,7 +3689,7 @@ const dashboardShellStyles = `
   .dashboard-brand-logo-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: 10px;
+    gap: 8px;
     align-items: center;
   }
 
@@ -3516,7 +3699,7 @@ const dashboardShellStyles = `
 
   .dashboard-brand-upload-progress {
     width: 100%;
-    height: 8px;
+    height: 6px;
     border-radius: 999px;
     background: rgba(24, 24, 32, 0.08);
     overflow: hidden;
@@ -3532,17 +3715,17 @@ const dashboardShellStyles = `
   .dashboard-brand-preview {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 10px;
     border: 1px solid rgba(24, 24, 32, 0.08);
-    border-radius: 18px;
-    background: #ffffff;
-    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.72);
+    padding: 10px 12px;
   }
 
   .dashboard-brand-preview-logo {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
     border: 1px solid rgba(24, 24, 32, 0.12);
     background: #f6f4ef;
     display: grid;
@@ -3565,14 +3748,14 @@ const dashboardShellStyles = `
 
   .dashboard-brand-preview-name {
     margin: 0;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 800;
     color: #14141b;
   }
 
   .dashboard-brand-preview-url {
     margin: 4px 0 0;
-    font-size: 12px;
+    font-size: 11px;
     color: rgba(24, 24, 32, 0.5);
     word-break: break-word;
   }
@@ -3581,24 +3764,24 @@ const dashboardShellStyles = `
     margin-left: auto;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
   }
 
   .dashboard-brand-preview-colors span {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
     border-radius: 999px;
     border: 1px solid rgba(24, 24, 32, 0.1);
   }
 
   .dashboard-webhook-input {
     width: 100%;
-    min-height: 48px;
-    border-radius: 14px;
+    min-height: 42px;
+    border-radius: 12px;
     border: 1px solid rgba(24, 24, 32, 0.1);
-    background: #ffffff;
-    padding: 0 14px;
-    font-size: 14px;
+    background: rgba(255, 255, 255, 0.86);
+    padding: 0 12px;
+    font-size: 13px;
     color: #14141b;
     outline: none;
   }
@@ -3611,38 +3794,39 @@ const dashboardShellStyles = `
   .dashboard-webhook-events {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+    gap: 10px;
   }
 
   .dashboard-wall-toggle-grid {
     display: grid;
-    gap: 12px;
+    gap: 10px;
   }
 
   .dashboard-wall-selection-card {
     border: 1px solid rgba(24, 24, 32, 0.08);
-    border-radius: 18px;
-    background: #ffffff;
-    padding: 14px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.72);
+    padding: 12px;
     display: grid;
-    gap: 12px;
+    gap: 10px;
+    align-self: stretch;
   }
 
   .dashboard-wall-link-card {
     border: 1px solid rgba(24, 24, 32, 0.08);
-    border-radius: 18px;
-    background: #ffffff;
-    padding: 14px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.72);
+    padding: 12px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 14px;
+    gap: 10px;
     flex-wrap: wrap;
   }
 
   .dashboard-wall-link-value {
     margin: 0;
-    font-size: 13px;
+    font-size: 12px;
     color: rgba(24, 24, 32, 0.6);
     font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     word-break: break-all;
@@ -3650,7 +3834,7 @@ const dashboardShellStyles = `
 
   .dashboard-wall-list {
     display: grid;
-    gap: 10px;
+    gap: 8px;
     max-height: 280px;
     overflow: auto;
     padding-right: 4px;
@@ -3658,19 +3842,19 @@ const dashboardShellStyles = `
 
   .dashboard-wall-preview-list {
     display: grid;
-    gap: 10px;
+    gap: 8px;
   }
 
   .dashboard-wall-preview-item {
     border: 1px solid rgba(24, 24, 32, 0.08);
-    border-radius: 14px;
-    background: #faf8f6;
-    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.72);
+    padding: 8px 10px;
   }
 
   .dashboard-wall-preview-item p {
     margin: 0;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
     color: #14141b;
   }
@@ -3678,18 +3862,18 @@ const dashboardShellStyles = `
   .dashboard-wall-preview-item small {
     display: block;
     margin-top: 4px;
-    font-size: 12px;
+    font-size: 11px;
     color: rgba(24, 24, 32, 0.5);
   }
 
   .dashboard-webhook-event-option {
     display: flex;
     align-items: flex-start;
-    gap: 10px;
+    gap: 8px;
     border: 1px solid rgba(24, 24, 32, 0.08);
-    border-radius: 16px;
-    background: #ffffff;
-    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.72);
+    padding: 10px 12px;
     cursor: pointer;
   }
 
@@ -3703,12 +3887,12 @@ const dashboardShellStyles = `
   }
 
   .dashboard-webhook-event-option strong {
-    font-size: 14px;
+    font-size: 13px;
     color: #14141b;
   }
 
   .dashboard-webhook-event-option small {
-    font-size: 12px;
+    font-size: 11px;
     line-height: 1.5;
     color: rgba(24, 24, 32, 0.5);
   }
@@ -3716,12 +3900,12 @@ const dashboardShellStyles = `
   .dashboard-webhook-actions {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 6px;
     flex-wrap: wrap;
   }
 
   .dashboard-secondary-action {
-    background: #ffffff;
+    background: rgba(255, 255, 255, 0.8);
     border: 1px solid rgba(24, 24, 32, 0.12);
     color: #14141b;
     box-shadow: none;
@@ -3733,15 +3917,15 @@ const dashboardShellStyles = `
 
   .dashboard-webhook-list {
     display: grid;
-    gap: 14px;
+    gap: 10px;
   }
 
   .dashboard-signature-card {
     border: 1px solid rgba(24, 24, 32, 0.08);
-    border-radius: 18px;
-    background: #ffffff;
-    padding: 14px 16px;
-    margin-bottom: 20px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.72);
+    padding: 12px 14px;
+    margin-bottom: 16px;
   }
 
   .dashboard-signature-copy {
@@ -3750,7 +3934,7 @@ const dashboardShellStyles = `
   }
 
   .dashboard-signature-copy code {
-    font-size: 12px;
+    font-size: 11px;
     padding: 2px 6px;
     border-radius: 999px;
     background: #faf8f6;
@@ -3760,40 +3944,40 @@ const dashboardShellStyles = `
 
   .dashboard-empty-state {
     border: 1px dashed rgba(24, 24, 32, 0.16);
-    border-radius: 18px;
+    border-radius: 14px;
     background: rgba(255, 255, 255, 0.72);
-    padding: 18px;
+    padding: 16px;
     color: rgba(24, 24, 32, 0.5);
-    font-size: 14px;
+    font-size: 13px;
   }
 
   .dashboard-webhook-card {
-    border: 1px solid rgba(24, 24, 32, 0.08);
-    border-radius: 20px;
-    background: #ffffff;
-    padding: 18px;
+    border-top: 1px solid rgba(24, 24, 32, 0.08);
+    border-radius: 0;
+    background: transparent;
+    padding: 14px 0 0;
     display: grid;
-    gap: 14px;
+    gap: 10px;
   }
 
   .dashboard-webhook-card-head {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 14px;
+    gap: 10px;
   }
 
   .dashboard-webhook-card-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     flex-wrap: wrap;
     justify-content: flex-end;
   }
 
   .dashboard-webhook-url {
     margin: 0;
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 800;
     color: #14141b;
     word-break: break-all;
@@ -3801,22 +3985,22 @@ const dashboardShellStyles = `
 
   .dashboard-webhook-meta {
     margin: 6px 0 0;
-    font-size: 13px;
+    font-size: 12px;
     color: rgba(24, 24, 32, 0.48);
   }
 
   .dashboard-webhook-tag-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
   }
 
   .dashboard-webhook-tag {
     border-radius: 999px;
     background: #faf8f6;
     color: rgba(24, 24, 32, 0.64);
-    padding: 7px 10px;
-    font-size: 11px;
+    padding: 6px 9px;
+    font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -3825,16 +4009,16 @@ const dashboardShellStyles = `
 
   .dashboard-webhook-deliveries {
     display: grid;
-    gap: 8px;
+    gap: 6px;
   }
 
   .dashboard-webhook-delivery-row {
     display: grid;
     grid-template-columns: minmax(0, 1.6fr) 110px 110px;
-    gap: 12px;
-    font-size: 12px;
+    gap: 10px;
+    font-size: 11px;
     color: rgba(24, 24, 32, 0.62);
-    padding-top: 8px;
+    padding-top: 6px;
     border-top: 1px solid rgba(24, 24, 32, 0.06);
     font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   }
@@ -3843,35 +4027,35 @@ const dashboardShellStyles = `
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 16px;
-    padding: 22px 26px;
-    border: 1.5px solid rgba(24, 24, 32, 0.08);
-    border-radius: 20px;
-    background: #ffffff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    gap: 14px;
+    padding: 0 0 14px;
+    border-bottom: 1px solid rgba(24, 24, 32, 0.08);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
   }
 
   .dashboard-submissions-title {
-    font-size: 24px;
+    font-size: 20px;
     line-height: 1;
     letter-spacing: -0.04em;
     color: #121218;
-    margin: 0 0 8px;
+    margin: 0 0 6px;
   }
 
   .dashboard-submissions-link {
-    font-size: 12px;
+    font-size: 11px;
     color: rgba(24, 24, 32, 0.34);
     font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   }
 
   .dashboard-back-btn {
-    min-height: 34px;
-    padding: 0 10px;
+    min-height: 30px;
+    padding: 0 8px;
     border: none;
     background: transparent;
     color: rgba(24, 24, 32, 0.42);
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
   }
 
@@ -3881,47 +4065,47 @@ const dashboardShellStyles = `
   }
 
   .dashboard-copy-btn {
-    min-height: 36px;
-    padding: 0 14px;
-    font-size: 12px;
+    min-height: 32px;
+    padding: 0 12px;
+    font-size: 11px;
     font-weight: 700;
   }
 
   .dashboard-count-badge {
     display: inline-flex;
     align-items: center;
-    min-height: 32px;
-    padding: 0 12px;
+    min-height: 28px;
+    padding: 0 10px;
     border-radius: 999px;
     background: rgba(255, 92, 53, 0.08);
     color: var(--brand);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
   }
 
   .dashboard-metrics-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
+    gap: 10px;
   }
 
   .dashboard-metric-card {
-    padding: 16px;
-    border: 1.5px solid rgba(24, 24, 32, 0.08);
-    border-radius: 20px;
-    background: #ffffff;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    padding: 12px 0 0;
+    border-top: 1px solid rgba(24, 24, 32, 0.08);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
   }
 
   .dashboard-metric-label {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     color: rgba(24, 24, 32, 0.36);
-    margin-bottom: 8px;
+    margin-bottom: 6px;
   }
 
   .dashboard-metric-value {
-    font-size: 28px;
+    font-size: 22px;
     line-height: 1;
     letter-spacing: -0.05em;
     font-weight: 900;
@@ -3929,11 +4113,11 @@ const dashboardShellStyles = `
   }
 
   .dashboard-reviews-shell {
-    overflow: hidden;
-    border: 1.5px solid rgba(24, 24, 32, 0.08);
-    border-radius: 20px;
-    background: #ffffff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    overflow: visible;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
   }
 
   .dashboard-reviews-head {
@@ -3941,12 +4125,12 @@ const dashboardShellStyles = `
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    padding: 16px 18px;
+    padding: 0 0 12px;
     border-bottom: 1px solid rgba(24, 24, 32, 0.08);
   }
 
   .dashboard-reviews-title {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 800;
     color: #14141b;
     letter-spacing: -0.03em;
@@ -3954,26 +4138,26 @@ const dashboardShellStyles = `
 
   .dashboard-review-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, 220px);
-    gap: 14px;
-    padding: 16px;
+    grid-template-columns: repeat(auto-fill, 200px);
+    gap: 12px;
+    padding: 14px 0 0;
     align-items: start;
     justify-content: start;
   }
 
   .dashboard-review-card {
     overflow: hidden;
-    border: 1.5px solid rgba(24, 24, 32, 0.08);
-    border-radius: 20px;
-    background: #ffffff;
+    border: 1px solid rgba(24, 24, 32, 0.08);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.72);
     display: flex;
     flex-direction: column;
     min-height: 100%;
-    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    transition: border-color 0.2s ease, transform 0.2s ease;
   }
 
   .dashboard-review-card:hover {
-    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+    border-color: rgba(24, 24, 32, 0.16);
     transform: translateY(-2px);
   }
 
@@ -3996,14 +4180,14 @@ const dashboardShellStyles = `
 
   .dashboard-review-badge {
     position: absolute;
-    top: 10px;
-    left: 10px;
+    top: 8px;
+    left: 8px;
     display: inline-flex;
     align-items: center;
-    min-height: 24px;
-    padding: 0 10px;
+    min-height: 22px;
+    padding: 0 8px;
     border-radius: 999px;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
   }
 
@@ -4024,15 +4208,15 @@ const dashboardShellStyles = `
 
   .dashboard-review-play {
     position: absolute;
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     border-radius: 999px;
     display: grid;
     place-items: center;
     background: rgba(255, 255, 255, 0.14);
     border: 2px solid rgba(255, 255, 255, 0.25);
     color: #ffffff;
-    font-size: 16px;
+    font-size: 14px;
     padding-left: 2px;
     cursor: pointer;
     transition: transform 0.2s ease, background 0.2s ease;
@@ -4045,14 +4229,14 @@ const dashboardShellStyles = `
 
   .dashboard-review-time {
     position: absolute;
-    right: 8px;
-    bottom: 8px;
-    min-height: 20px;
-    padding: 0 7px;
+    right: 6px;
+    bottom: 6px;
+    min-height: 18px;
+    padding: 0 6px;
     border-radius: 999px;
     background: rgba(0, 0, 0, 0.48);
     color: #ffffff;
-    font-size: 9px;
+    font-size: 8px;
     font-weight: 700;
     display: inline-flex;
     align-items: center;
@@ -4060,13 +4244,13 @@ const dashboardShellStyles = `
   }
 
   .dashboard-review-body {
-    padding: 12px 14px;
+    padding: 8px 10px;
     border-top: 1px solid rgba(24, 24, 32, 0.08);
     flex: 1;
   }
 
   .dashboard-review-name {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 800;
     color: #14141b;
     letter-spacing: -0.01em;
@@ -4074,9 +4258,9 @@ const dashboardShellStyles = `
   }
 
   .dashboard-review-email {
-    font-size: 11px;
+    font-size: 10px;
     color: rgba(24, 24, 32, 0.34);
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -4084,10 +4268,10 @@ const dashboardShellStyles = `
   }
 
   .dashboard-review-stars {
-    font-size: 11px;
+    font-size: 10px;
     letter-spacing: 0.03em;
     color: var(--brand);
-    margin-bottom: 6px;
+    margin-bottom: 4px;
   }
 
   .dashboard-review-stars-muted {
@@ -4095,7 +4279,7 @@ const dashboardShellStyles = `
   }
 
   .dashboard-review-note {
-    font-size: 12px;
+    font-size: 11px;
     line-height: 1.45;
     color: rgba(24, 24, 32, 0.58);
     display: -webkit-box;
@@ -4108,23 +4292,23 @@ const dashboardShellStyles = `
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    gap: 8px;
-    padding: 10px 14px;
+    gap: 6px;
+    padding: 8px 12px;
     border-top: 1px solid rgba(24, 24, 32, 0.08);
-    background: #f7f6f4;
+    background: transparent;
     flex-wrap: wrap;
   }
 
   .dashboard-inline-action {
-    min-height: 32px;
-    padding: 0 12px;
-    font-size: 12px;
+    min-height: 28px;
+    padding: 0 10px;
+    font-size: 11px;
   }
 
   .dashboard-review-status {
-    min-height: 30px;
-    padding: 0 12px;
-    font-size: 11px;
+    min-height: 26px;
+    padding: 0 10px;
+    font-size: 10px;
   }
 
   .dashboard-inline-action:disabled {
@@ -4133,7 +4317,7 @@ const dashboardShellStyles = `
   }
 
   .dashboard-empty-state {
-    padding: 22px 18px;
+    padding: 16px;
     color: rgba(24, 24, 32, 0.48);
     font-size: 13px;
   }
@@ -4150,14 +4334,14 @@ const dashboardShellStyles = `
 
   .dashboard-table th,
   .dashboard-table td {
-    padding: 10px 8px;
+    padding: 8px 6px;
     text-align: left;
     border-top: 1px solid rgba(24, 24, 32, 0.08);
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .dashboard-table th {
-    font-size: 10px;
+    font-size: 9px;
     text-transform: uppercase;
     letter-spacing: 0.12em;
     color: rgba(24, 24, 32, 0.34);
@@ -4168,7 +4352,7 @@ const dashboardShellStyles = `
   .dashboard-table-id {
     font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     color: rgba(24, 24, 32, 0.42);
-    font-size: 11px;
+    font-size: 10px;
   }
 
   .dashboard-table-strong {
@@ -4184,23 +4368,23 @@ const dashboardShellStyles = `
   .dashboard-video-badge {
     display: inline-flex;
     align-items: center;
-    min-height: 28px;
-    padding: 0 10px;
+    min-height: 24px;
+    padding: 0 8px;
     border-radius: 999px;
     background: #f6f4ef;
     color: rgba(24, 24, 32, 0.58);
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
   }
 
   .dashboard-inline-link {
-    min-height: 32px;
-    padding: 0 12px;
-    font-size: 12px;
+    min-height: 28px;
+    padding: 0 10px;
+    font-size: 11px;
   }
 
   .dashboard-submission-detail-page {
-    gap: 16px;
+    gap: 12px;
   }
 
   .dashboard-submission-page-head {
@@ -4208,16 +4392,16 @@ const dashboardShellStyles = `
   }
 
   .dashboard-submission-detail-frame {
-    padding: 18px;
-    border-radius: 18px;
-    border: 1px solid rgba(24, 24, 32, 0.08);
-    background: #f7f4ef;
+    padding: 16px 0 0;
+    border-radius: 0;
+    border-top: 1px solid rgba(24, 24, 32, 0.08);
+    background: transparent;
   }
 
   .dashboard-submission-detail-player {
     width: min(430px, 100%);
     margin: 0 auto;
-    border-radius: 18px;
+    border-radius: 16px;
     overflow: hidden;
     background: #09090c;
     aspect-ratio: 4 / 5;
@@ -4232,17 +4416,17 @@ const dashboardShellStyles = `
   }
 
   .dashboard-submission-detail-grid {
-    margin-top: 14px;
+    margin-top: 12px;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    gap: 8px;
   }
 
   .dashboard-submission-detail-item {
     border: 1px solid rgba(24, 24, 32, 0.1);
-    border-radius: 12px;
+    border-radius: 10px;
     background: #fff;
-    padding: 10px 12px;
+    padding: 8px 10px;
   }
 
   .dashboard-submission-detail-item strong {
@@ -4257,7 +4441,7 @@ const dashboardShellStyles = `
 
   .dashboard-submission-detail-item p {
     margin: 0;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     color: #14141b;
     line-height: 1.4;
@@ -4265,16 +4449,16 @@ const dashboardShellStyles = `
   }
 
   .dashboard-submission-ai-block {
-    margin-top: 12px;
+    margin-top: 10px;
     border: 1px solid rgba(24, 24, 32, 0.1);
-    border-radius: 12px;
+    border-radius: 10px;
     background: #fff;
-    padding: 10px 12px;
+    padding: 8px 10px;
   }
 
   .dashboard-submission-ai-copy {
     margin-top: 6px;
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1.5;
     color: rgba(24, 24, 32, 0.76);
     white-space: pre-wrap;
@@ -4293,29 +4477,22 @@ const dashboardShellStyles = `
       margin-left: 0;
     }
 
-    .dashboard-topbar {
-      position: static;
-    }
-
     .dashboard-content {
-      padding: 18px;
+      padding: 14px;
       gap: 18px;
     }
 
-    .dashboard-hero-card {
-      padding: 22px;
+    .dashboard-page-header,
+    .dashboard-section-head {
       flex-direction: column;
       align-items: flex-start;
     }
 
-    .dashboard-list-head,
     .dashboard-campaign-row {
-      padding-left: 20px;
-      padding-right: 20px;
+      grid-template-columns: 1fr;
     }
 
     .dashboard-campaign-row {
-      flex-direction: column;
       align-items: flex-start;
     }
 
@@ -4324,10 +4501,14 @@ const dashboardShellStyles = `
     }
 
     .dashboard-review-grid {
-      grid-template-columns: repeat(auto-fill, 220px);
+      grid-template-columns: repeat(auto-fill, 200px);
     }
 
     .dashboard-settings-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .dashboard-wall-panels {
       grid-template-columns: 1fr;
     }
 
@@ -4369,7 +4550,6 @@ const dashboardShellStyles = `
   @media (max-width: 720px) {
     .dashboard-brand,
     .dashboard-profile-card,
-    .dashboard-topbar,
     .dashboard-content {
       padding-left: 14px;
       padding-right: 14px;
@@ -4393,14 +4573,21 @@ const dashboardShellStyles = `
       width: 100%;
     }
 
+    .dashboard-page-header-actions {
+      width: 100%;
+    }
+
     .dashboard-secondary-action {
       width: 100%;
     }
 
-    .dashboard-list-head,
     .dashboard-campaign-row {
-      padding-left: 16px;
-      padding-right: 16px;
+      padding-top: 12px;
+      padding-bottom: 12px;
+    }
+
+    .dashboard-campaign-actions {
+      gap: 8px 12px;
     }
 
     .dashboard-submissions-summary {
@@ -4410,7 +4597,7 @@ const dashboardShellStyles = `
 
     .dashboard-campaign-webhook-card,
     .dashboard-campaign-embed-card {
-      padding: 18px;
+      padding: 14px;
     }
 
     .dashboard-metrics-grid,

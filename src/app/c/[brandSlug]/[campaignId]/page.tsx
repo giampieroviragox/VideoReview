@@ -1,6 +1,6 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { getCampaignDelegate } from "@/lib/db";
+import { getCampaignDelegate, prisma } from "@/lib/db";
 import CampaignSubmissionForm from "@/components/CampaignSubmissionForm";
 
 type CampaignMetadataRuntimeDelegate = {
@@ -14,6 +14,9 @@ type CampaignMetadataRuntimeDelegate = {
 type CampaignPublicRuntimeDelegate = {
   findFirst: (args: unknown) => Promise<{
     id: string;
+    ownerUserId: string;
+    hasNoEndDate: boolean;
+    endsAt: Date | null;
     brandName: string;
     brandLogoUrl: string | null;
     name: string;
@@ -87,7 +90,18 @@ export default async function CampaignPublicPage({ params, searchParams }: PageP
       id: campaignId,
       brandSlug,
     },
-    include: {
+    select: {
+      id: true,
+      ownerUserId: true,
+      hasNoEndDate: true,
+      endsAt: true,
+      brandName: true,
+      brandLogoUrl: true,
+      name: true,
+      description: true,
+      rewardText: true,
+      rewardValue: true,
+      questionDisplayMode: true,
       questions: {
         orderBy: { sortOrder: "asc" },
       },
@@ -95,6 +109,24 @@ export default async function CampaignPublicPage({ params, searchParams }: PageP
   });
 
   if (!campaign) {
+    notFound();
+  }
+
+  const isPublished = campaign.hasNoEndDate || !campaign.endsAt;
+
+  if (!isPublished) {
+    const wall = await prisma.wallOfLove.findFirst({
+      where: {
+        ownerUserId: campaign.ownerUserId,
+        isPublished: true,
+      },
+      select: { slug: true },
+    });
+
+    if (wall) {
+      redirect(`/wall/${wall.slug}`);
+    }
+
     notFound();
   }
 
