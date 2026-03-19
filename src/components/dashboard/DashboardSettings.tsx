@@ -326,12 +326,12 @@ const styles = `
 
   .settingsv2-nav {
     position: fixed;
-    top: 64px;
+    top: 48px;
     left: 232px;
     bottom: 0;
     width: 200px;
     border-right: 1px solid var(--dashboard-border);
-    padding: 16px 8px;
+    padding: 10px 8px;
     overflow-y: auto;
     background: var(--dashboard-bg-subtle);
     z-index: 5;
