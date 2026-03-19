@@ -1,6 +1,7 @@
 "use client";
 
 import { UserButton } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -18,11 +19,23 @@ export default function DashboardPersistentSidebar({
   workspaceName,
   campaignsCount,
 }: DashboardPersistentSidebarProps) {
+  const { user } = useUser();
   const pathname = usePathname();
   const isCampaigns = pathname.startsWith("/dashboard/campaigns");
   const isSettings = pathname.startsWith("/dashboard/settings");
 
-  const viewerInitials = viewerName
+  const displayName =
+    user?.fullName ||
+    user?.firstName ||
+    user?.username ||
+    viewerName;
+  const displayEmail =
+    user?.primaryEmailAddress?.emailAddress ||
+    user?.emailAddresses?.[0]?.emailAddress ||
+    viewerEmail ||
+    workspaceName;
+
+  const viewerInitials = displayName
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
@@ -103,8 +116,8 @@ export default function DashboardPersistentSidebar({
             </div>
           </div>
           <div>
-            <p className="dashboard-persistent-name">{viewerName}</p>
-            <p className="dashboard-persistent-workspace">{viewerEmail || workspaceName}</p>
+            <p className="dashboard-persistent-name">{displayName}</p>
+            <p className="dashboard-persistent-workspace">{displayEmail}</p>
           </div>
         </div>
       </div>
