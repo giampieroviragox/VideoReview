@@ -26,6 +26,26 @@ function parseStringArray(value: unknown) {
   return Array.from(unique);
 }
 
+function normalizeSlug(input: unknown) {
+  if (typeof input !== "string") {
+    return null;
+  }
+
+  const normalized = input
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 80);
+
+  if (normalized.length < 3) {
+    return null;
+  }
+
+  return normalized;
+}
+
 export async function GET() {
   try {
     const { userId } = await auth();
@@ -103,9 +123,33 @@ export async function PUT(request: NextRequest) {
         ? body.subtitle.trim().slice(0, 240)
         : null;
 
+    const slug = normalizeSlug(body.slug) || wall.slug;
+
+    if (slug !== wall.slug) {
+      const existing = await prisma.wallOfLove.findFirst({
+        where: {
+          slug,
+          NOT: {
+            id: wall.id,
+          },
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (existing) {
+        return NextResponse.json(
+          { error: "This wall slug is already taken." },
+          { status: 409 }
+        );
+      }
+    }
+
     const updated = await prisma.wallOfLove.update({
       where: { id: wall.id },
       data: {
+        slug,
         isPublished,
         title,
         subtitle,

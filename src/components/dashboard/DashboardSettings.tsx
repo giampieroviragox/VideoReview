@@ -364,6 +364,11 @@ const styles = `
     font-weight: 400;
     text-align: left;
     cursor: pointer;
+    text-decoration: none;
+  }
+
+  .settingsv2-nav-item:visited {
+    color: var(--dashboard-text-secondary);
   }
 
   .settingsv2-nav-item:hover {

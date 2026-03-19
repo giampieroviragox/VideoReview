@@ -22,6 +22,7 @@ export default function DashboardPersistentSidebar({
   const { user } = useUser();
   const pathname = usePathname();
   const isCampaigns = pathname.startsWith("/dashboard/campaigns");
+  const isWallOfLove = pathname.startsWith("/dashboard/wall-of-love");
   const isSettings = pathname.startsWith("/dashboard/settings");
 
   const displayName =
@@ -78,6 +79,24 @@ export default function DashboardPersistentSidebar({
             </span>
             <span>Campaigns</span>
             <span className="dashboard-persistent-nav-count">{campaignsCount}</span>
+          </Link>
+          <Link
+            href="/dashboard/wall-of-love"
+            className={`dashboard-persistent-nav-item ${
+              isWallOfLove ? "is-active" : "is-muted"
+            }`}
+          >
+            <span className="dashboard-persistent-nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 15 15" fill="none">
+                <path
+                  d="M7.5 12.2S2.3 8.8 2.3 5.2a2.7 2.7 0 0 1 4.7-1.8 2.7 2.7 0 0 1 4.7 1.8c0 3.6-5.2 7-5.2 7z"
+                  stroke="currentColor"
+                  strokeWidth="1.2"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+            <span>Wall of Love</span>
           </Link>
         </div>
 
