@@ -457,11 +457,11 @@ export default function DashboardShell({
     };
   }, [campaignsState, selectedSubmissionRef]);
 
-  const selectedSubmissionStatus = selectedSubmissionDetail
-    ? normalizeSubmissionStatus(selectedSubmissionDetail.submission.status)
-    : null;
   const selectedSubmissionState = selectedSubmissionDetail
     ? getSubmissionState(selectedSubmissionDetail.submission.status)
+    : null;
+  const selectedSubmissionStatus = selectedSubmissionDetail
+    ? normalizeSubmissionStatus(selectedSubmissionDetail.submission.status)
     : null;
   const selectedSubmissionApproveActionKey = selectedSubmissionDetail
     ? `${selectedSubmissionDetail.submission.id}:APPROVED`
@@ -489,6 +489,12 @@ export default function DashboardShell({
     : "";
   const selectedCampaignEmbedSnippet = selectedCampaignEmbedUrl
     ? `<iframe src="${selectedCampaignEmbedUrl}" width="100%" height="900" style="border:0;border-radius:10px;max-width:1040px;" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="camera; microphone; autoplay"></iframe>`
+    : "";
+  const selectedSubmissionEmbedVideoUrl = selectedSubmissionDetail
+    ? `${siteOrigin}/api/public/campaigns/${selectedSubmissionDetail.campaign.id}/submissions/${selectedSubmissionDetail.submission.id}/view`
+    : "";
+  const selectedSubmissionEmbedSnippet = selectedSubmissionEmbedVideoUrl
+    ? `<video src="${selectedSubmissionEmbedVideoUrl}" controls controlslist="nodownload" playsinline preload="metadata" style="width:100%;max-width:420px;border-radius:12px;background:#000"></video>`
     : "";
 
   useEffect(() => {
@@ -702,6 +708,15 @@ export default function DashboardShell({
         throw new Error("Failed to update submission");
       }
 
+      const payload = (await response.json()) as {
+        submission?: { status?: string; rewardPending?: boolean };
+      };
+      const resolvedStatus = payload.submission?.status || nextStatus;
+      const resolvedRewardPending =
+        typeof payload.submission?.rewardPending === "boolean"
+          ? payload.submission.rewardPending
+          : resolvedStatus === "APPROVED";
+
       setCampaignsState((current) =>
         current.map((campaign) =>
           campaign.id !== campaignId
@@ -713,13 +728,13 @@ export default function DashboardShell({
                     ? submission
                     : {
                         ...submission,
-                        status: nextStatus,
+                        status: resolvedStatus,
+                        rewardPending: resolvedRewardPending,
                       }
                 ),
               }
         )
       );
-      router.refresh();
     } catch (error) {
       console.error(error);
     } finally {
@@ -1510,7 +1525,7 @@ export default function DashboardShell({
                           <div className="dashboard-campaign-list-metric">
                             <span>Rating</span>
                             <strong className={avgRating > 0 ? "is-rating" : ""}>
-                              {avgRating > 0 ? `${avgRating.toFixed(1)}★` : "—"}
+                              {avgRating > 0 ? `${avgRating.toFixed(1)}⭐` : "—"}
                             </strong>
                           </div>
                           <div className="dashboard-campaign-list-progress">
@@ -1751,8 +1766,8 @@ export default function DashboardShell({
                       <p className="dashboard-detail-stat-label">Avg. rating</p>
                       <p className="dashboard-detail-stat-value">
                         {selectedCampaignStats && selectedCampaignStats.total > 0
-                          ? `${selectedCampaignStats.avgRating.toFixed(1)}★`
-                          : "0.0★"}
+                          ? `${selectedCampaignStats.avgRating.toFixed(1)}⭐`
+                          : "0.0⭐"}
                       </p>
                     </div>
                     <div className="dashboard-detail-stat">
@@ -1787,8 +1802,8 @@ export default function DashboardShell({
                   ) : (
                     <div className="dashboard-detail-review-list">
                       {selectedCampaign.submissions.map((submission) => {
-                        const normalizedStatus = normalizeSubmissionStatus(submission.status);
-                        const isApproved = normalizedStatus === "APPROVED";
+                        const isSubmissionApproved =
+                          normalizeSubmissionStatus(submission.status) === "APPROVED";
                         const submissionState = getSubmissionState(submission.status);
                         const approveActionKey = `${submission.id}:APPROVED`;
                         const rejectActionKey = `${submission.id}:REJECTED`;
@@ -1833,9 +1848,9 @@ export default function DashboardShell({
                               </p>
                             </div>
                             <p className="dashboard-detail-review-stars">
-                              {"★".repeat(submission.reviewerRating || 0)}
+                              {"⭐".repeat(submission.reviewerRating || 0)}
                               <span>
-                                {"★".repeat(Math.max(5 - (submission.reviewerRating || 0), 0))}
+                                {"⭐".repeat(Math.max(5 - (submission.reviewerRating || 0), 0))}
                               </span>
                             </p>
                             <span
@@ -1846,7 +1861,7 @@ export default function DashboardShell({
                             <span className="dashboard-detail-review-date">
                               {formatShortDate(submission.createdAt) || "—"}
                             </span>
-                            {isApproved ? (
+                            <div className="dashboard-detail-review-actions">
                               <button
                                 type="button"
                                 className="dashboard-secondary-btn dashboard-inline-action"
@@ -1858,24 +1873,27 @@ export default function DashboardShell({
                                 }
                                 disabled={isNavigating}
                               >
-                                View
+                                Apri
                               </button>
-                            ) : (
-                              <div className="dashboard-detail-review-actions">
-                                <button
-                                  type="button"
-                                  className="dashboard-secondary-btn dashboard-inline-action"
-                                  onClick={() =>
-                                    handleSubmissionAction(
-                                      selectedCampaign.id,
-                                      submission.id,
-                                      "REJECTED"
-                                    )
-                                  }
-                                  disabled={submissionActionId === rejectActionKey}
-                                >
-                                  {submissionActionId === rejectActionKey ? "Saving..." : "Reject"}
-                                </button>
+                              <button
+                                type="button"
+                                className="dashboard-secondary-btn dashboard-inline-action"
+                                onClick={() =>
+                                  handleSubmissionAction(
+                                    selectedCampaign.id,
+                                    submission.id,
+                                    "REJECTED"
+                                  )
+                                }
+                                disabled={submissionActionId === rejectActionKey}
+                              >
+                                {submissionActionId === rejectActionKey ? "Saving..." : "Reject"}
+                              </button>
+                              {isSubmissionApproved ? (
+                                <span className="dashboard-campaign-list-badge is-active">
+                                  Approved
+                                </span>
+                              ) : (
                                 <button
                                   type="button"
                                   className="dashboard-action-btn dashboard-inline-action"
@@ -1890,8 +1908,8 @@ export default function DashboardShell({
                                 >
                                   {submissionActionId === approveActionKey ? "Saving..." : "Approve"}
                                 </button>
-                              </div>
-                            )}
+                              )}
+                            </div>
                           </div>
                         );
                       })}
@@ -2179,43 +2197,41 @@ export default function DashboardShell({
                   </svg>
                   Back to submissions
                 </button>
-                {selectedSubmissionStatus === "PENDING" && (
-                  <>
-                    <button
-                      type="button"
-                      className="dashboard-section-btn dashboard-section-btn-secondary"
-                      onClick={() =>
-                        handleSubmissionAction(
-                          selectedSubmissionDetail.campaign.id,
-                          selectedSubmissionDetail.submission.id,
-                          "REJECTED"
-                        )
-                      }
-                      disabled={submissionActionId === selectedSubmissionRejectActionKey}
-                    >
-                      {submissionActionId === selectedSubmissionRejectActionKey
-                        ? "Saving..."
-                        : "Reject"}
-                    </button>
-                    <button
-                      type="button"
-                      className="dashboard-section-btn dashboard-section-btn-primary"
-                      onClick={() =>
-                        handleSubmissionAction(
-                          selectedSubmissionDetail.campaign.id,
-                          selectedSubmissionDetail.submission.id,
-                          "APPROVED"
-                        )
-                      }
-                      disabled={submissionActionId === selectedSubmissionApproveActionKey}
-                    >
-                      {submissionActionId === selectedSubmissionApproveActionKey
-                        ? "Saving..."
-                        : "Approve"}
-                    </button>
-                  </>
+                {selectedSubmissionStatus !== "REJECTED" && (
+                  <button
+                    type="button"
+                    className="dashboard-section-btn dashboard-section-btn-secondary"
+                    onClick={() =>
+                      handleSubmissionAction(
+                        selectedSubmissionDetail.campaign.id,
+                        selectedSubmissionDetail.submission.id,
+                        "REJECTED"
+                      )
+                    }
+                    disabled={submissionActionId === selectedSubmissionRejectActionKey}
+                  >
+                    {submissionActionId === selectedSubmissionRejectActionKey ? "Saving..." : "Reject"}
+                  </button>
                 )}
-                {selectedSubmissionState && selectedSubmissionStatus !== "PENDING" && (
+                {selectedSubmissionStatus !== "APPROVED" && (
+                  <button
+                    type="button"
+                    className="dashboard-section-btn dashboard-section-btn-primary"
+                    onClick={() =>
+                      handleSubmissionAction(
+                        selectedSubmissionDetail.campaign.id,
+                        selectedSubmissionDetail.submission.id,
+                        "APPROVED"
+                      )
+                    }
+                    disabled={submissionActionId === selectedSubmissionApproveActionKey}
+                  >
+                    {submissionActionId === selectedSubmissionApproveActionKey
+                      ? "Saving..."
+                      : "Approve"}
+                  </button>
+                )}
+                {selectedSubmissionState && (
                   <span
                     className={`dashboard-campaign-list-badge ${selectedSubmissionState.badgeClassName}`}
                   >
@@ -2239,9 +2255,9 @@ export default function DashboardShell({
                 </div>
                 <div className="dashboard-submission-detail-head-meta">
                   <div className="dashboard-detail-review-stars dashboard-detail-review-stars-static">
-                    {"★".repeat(selectedSubmissionDetail.submission.reviewerRating || 0)}
+                    {"⭐".repeat(selectedSubmissionDetail.submission.reviewerRating || 0)}
                     <span>
-                      {"★".repeat(
+                      {"⭐".repeat(
                         Math.max(5 - (selectedSubmissionDetail.submission.reviewerRating || 0), 0)
                       )}
                     </span>
@@ -2260,6 +2276,7 @@ export default function DashboardShell({
                     <div className="dashboard-submission-detail-player">
                       <video
                         controls
+                        controlsList="nodownload"
                         playsInline
                         preload="metadata"
                         src={`/api/campaigns/${selectedSubmissionDetail.campaign.id}/submissions/${selectedSubmissionDetail.submission.id}/view`}
@@ -2295,10 +2312,49 @@ export default function DashboardShell({
                           ) || "—"}
                         </strong>
                       </div>
-                      <div className="dashboard-submission-fact-row">
-                        <span>AI status</span>
-                        <strong>{selectedSubmissionDetail.submission.aiStatus}</strong>
-                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="dashboard-detail-section">
+                  <div className="dashboard-campaign-webhook-head">
+                    <div>
+                      <h3 className="dashboard-campaign-webhook-title">Embed this video</h3>
+                      <p className="dashboard-campaign-webhook-copy">
+                        Copy the direct video URL or paste the HTML snippet on your website.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="dashboard-campaign-embed-card">
+                    <div className="dashboard-embed-block">
+                      <p className="dashboard-settings-label">Direct URL</p>
+                      <code className="dashboard-inline-code">
+                        {selectedSubmissionEmbedVideoUrl || "Loading..."}
+                      </code>
+                      <button
+                        type="button"
+                        className="dashboard-secondary-btn dashboard-copy-btn"
+                        onClick={() => copyText(selectedSubmissionEmbedVideoUrl)}
+                        disabled={!selectedSubmissionEmbedVideoUrl}
+                      >
+                        Copy URL
+                      </button>
+                    </div>
+                    <div className="dashboard-embed-block">
+                      <p className="dashboard-settings-label">HTML snippet</p>
+                      <textarea
+                        readOnly
+                        value={selectedSubmissionEmbedSnippet}
+                        className="dashboard-embed-textarea"
+                      />
+                      <button
+                        type="button"
+                        className="dashboard-secondary-btn dashboard-copy-btn"
+                        onClick={() => copyText(selectedSubmissionEmbedSnippet)}
+                        disabled={!selectedSubmissionEmbedSnippet}
+                      >
+                        Copy snippet
+                      </button>
                     </div>
                   </div>
                 </section>
@@ -2330,14 +2386,6 @@ export default function DashboardShell({
                     </p>
                   </section>
                 )}
-
-                <section className="dashboard-detail-section">
-                  <p className="dashboard-settings-label">Transcript</p>
-                  <p className="dashboard-submission-ai-copy">
-                    {selectedSubmissionDetail.submission.aiTranscript ||
-                      "Transcript not available yet."}
-                  </p>
-                </section>
 
                 {selectedSubmissionDetail.submission.answers.length > 0 && (
                   <section className="dashboard-detail-section">

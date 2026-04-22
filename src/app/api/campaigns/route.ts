@@ -64,10 +64,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Reward name is required." }, { status: 400 });
     }
 
-    if (rewardEnabled && (!rewardValue || typeof rewardValue !== "string" || !rewardValue.trim())) {
-      return NextResponse.json({ error: "Reward description is required." }, { status: 400 });
-    }
-
     if (questionEnabled && (!questionText || typeof questionText !== "string" || !questionText.trim())) {
       return NextResponse.json({ error: "Question text is required." }, { status: 400 });
     }
@@ -96,7 +92,10 @@ export async function POST(request: NextRequest) {
         name: name.trim(),
         description: description?.trim() || null,
         rewardText: rewardEnabled ? rewardText.trim() : "",
-        rewardValue: rewardEnabled ? rewardValue.trim() : null,
+        rewardValue:
+          rewardEnabled && typeof rewardValue === "string" && rewardValue.trim()
+            ? rewardValue.trim()
+            : null,
         hasNoEndDate: true,
         endsAt: null,
         questionDisplayMode: "ALL_AT_ONCE",

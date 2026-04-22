@@ -79,7 +79,6 @@ export default function CampaignBuilder({
   const [name, setName] = useState(initialValues?.name ?? "");
   const [description, setDescription] = useState(initialValues?.description ?? "");
   const [hasReward, setHasReward] = useState(Boolean(initialValues?.rewardText));
-  const [rewardType, setRewardType] = useState(initialValues?.rewardText ? "Custom" : "Codice sconto");
   const [rewardName, setRewardName] = useState(initialValues?.rewardText ?? "");
   const [rewardDescription, setRewardDescription] = useState(initialValues?.rewardValue ?? "");
   const [hasQuestion, setHasQuestion] = useState(Boolean(initialValues?.questions?.[0]?.text));
@@ -106,7 +105,6 @@ export default function CampaignBuilder({
       setName(initialValues.name);
       setDescription(initialValues.description ?? "");
       setHasReward(Boolean(initialValues.rewardText));
-      setRewardType(initialValues.rewardText ? "Custom" : "Codice sconto");
       setRewardName(initialValues.rewardText);
       setRewardDescription(initialValues.rewardValue ?? "");
       setHasQuestion(Boolean(initialValues.questions?.[0]?.text));
@@ -122,7 +120,6 @@ export default function CampaignBuilder({
     setName("");
     setDescription("");
     setHasReward(false);
-    setRewardType("Codice sconto");
     setRewardName("");
     setRewardDescription("");
     setHasQuestion(false);
@@ -149,7 +146,7 @@ export default function CampaignBuilder({
           description,
           hasReward,
           rewardText: rewardName,
-          rewardValue: rewardDescription.trim() || rewardType,
+          rewardValue: rewardDescription.trim() || null,
           hasQuestion,
           questionText,
         }),
@@ -281,36 +278,18 @@ export default function CampaignBuilder({
 
                 {hasReward && (
                   <div className="builder-toggle-card-body">
-                    <div className="builder-grid-two">
-                      <label className="builder-field">
-                        <span className="builder-field-title">Tipo di reward</span>
-                        <div className="builder-select-wrap">
-                          <select
-                            value={rewardType}
-                            onChange={(event) => setRewardType(event.target.value)}
-                            className="builder-input builder-select"
-                          >
-                            <option>Codice sconto</option>
-                            <option>Gift card</option>
-                            <option>Accesso premium</option>
-                            <option>Custom</option>
-                          </select>
-                        </div>
-                      </label>
-
-                      <label className="builder-field">
-                        <span className="builder-field-title">
-                          Valore <span className="builder-required">*</span>
-                        </span>
-                        <input
-                          value={rewardName}
-                          onChange={(event) => setRewardName(event.target.value)}
-                          required={hasReward}
-                          placeholder="Es. 20% off, 30 giorni premium..."
-                          className="builder-input"
-                        />
-                      </label>
-                    </div>
+                    <label className="builder-field">
+                      <span className="builder-field-title">
+                        Titolo reward <span className="builder-required">*</span>
+                      </span>
+                      <input
+                        value={rewardName}
+                        onChange={(event) => setRewardName(event.target.value)}
+                        required={hasReward}
+                        placeholder="Es. 20% off, 30 giorni premium..."
+                        className="builder-input"
+                      />
+                    </label>
 
                     <label className="builder-field">
                       <span className="builder-field-title">
@@ -358,10 +337,13 @@ export default function CampaignBuilder({
                 {hasQuestion && (
                   <div className="builder-toggle-card-body">
                     <label className="builder-field">
-                      <span className="builder-field-title">La tua domanda</span>
+                      <span className="builder-field-title">
+                        La tua domanda <span className="builder-required">*</span>
+                      </span>
                       <input
                         value={questionText}
                         onChange={(event) => setQuestionText(event.target.value)}
+                        required={hasQuestion}
                         placeholder="Es. Cosa hai apprezzato di più del prodotto?"
                         className="builder-input"
                       />

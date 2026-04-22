@@ -154,10 +154,6 @@ export async function PUT(
       return NextResponse.json({ error: "Reward name is required." }, { status: 400 });
     }
 
-    if (rewardEnabled && (!rewardValue || typeof rewardValue !== "string" || !rewardValue.trim())) {
-      return NextResponse.json({ error: "Reward description is required." }, { status: 400 });
-    }
-
     if (questionEnabled && (!questionText || typeof questionText !== "string" || !questionText.trim())) {
       return NextResponse.json({ error: "Question text is required." }, { status: 400 });
     }
@@ -178,7 +174,10 @@ export async function PUT(
         name: trimmedName,
         description: description?.trim() || null,
         rewardText: rewardEnabled ? rewardText.trim() : "",
-        rewardValue: rewardEnabled ? rewardValue.trim() : null,
+        rewardValue:
+          rewardEnabled && typeof rewardValue === "string" && rewardValue.trim()
+            ? rewardValue.trim()
+            : null,
         inviteMessage,
         questions: {
           deleteMany: {},

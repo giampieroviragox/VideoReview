@@ -70,7 +70,7 @@ function renderStars(rating: number | null) {
     return "No rating";
   }
 
-  return `${"★".repeat(rating)}${"☆".repeat(5 - rating)}`;
+  return `${"⭐".repeat(rating)}${"⭐".repeat(5 - rating)}`;
 }
 
 export default function CampaignCard({ campaign }: CampaignCardProps) {

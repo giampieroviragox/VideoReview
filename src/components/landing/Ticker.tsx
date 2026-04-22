@@ -17,7 +17,7 @@ export default function Ticker() {
                 {items.map((item, index) => (
                     <div key={`${item.name}-${index}`} className="landing-marquee-item">
                         <div className="landing-marquee-avatar">{item.avatar}</div>
-                        <span className="landing-marquee-stars">★★★★★</span>
+                        <span className="landing-marquee-stars">⭐⭐⭐⭐⭐</span>
                         <strong>{item.name}</strong>
                         <span>— “{item.quote}”</span>
                         <span className="landing-marquee-sep">·</span>

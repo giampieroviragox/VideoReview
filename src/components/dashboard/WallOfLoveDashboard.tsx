@@ -402,7 +402,7 @@ export default function WallOfLoveDashboard({
                 Included reviews: <strong>{includedCount}</strong>
               </p>
               <p className="wold-meta">
-                Avg rating: <strong>{avgIncludedRating.toFixed(1)}★</strong>
+                Avg rating: <strong>{avgIncludedRating.toFixed(1)}⭐</strong>
               </p>
             </div>
           )}
@@ -573,7 +573,7 @@ export default function WallOfLoveDashboard({
                           >
                             <div className="wold-review-head">
                               <div className="wold-stars">
-                                {Array.from({ length: review.rating }, () => "★")}
+                                {Array.from({ length: review.rating }, () => "⭐")}
                               </div>
                               <button
                                 type="button"

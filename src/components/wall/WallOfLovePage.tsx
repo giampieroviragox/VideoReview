@@ -148,14 +148,14 @@ export default function WallOfLovePage({ wall, reviews }: WallOfLovePageProps) {
           className={`wol-filter ${activeFilter === "5" ? "active" : ""}`}
           onClick={() => setActiveFilter("5")}
         >
-          ★★★★★ 5 stars
+          ⭐⭐⭐⭐⭐ 5 stars
         </button>
         <button
           type="button"
           className={`wol-filter ${activeFilter === "4" ? "active" : ""}`}
           onClick={() => setActiveFilter("4")}
         >
-          ★★★★ 4 stars
+          ⭐⭐⭐⭐ 4 stars
         </button>
         <button
           type="button"
@@ -181,8 +181,8 @@ export default function WallOfLovePage({ wall, reviews }: WallOfLovePageProps) {
                 <div className="wol-card-overlay" />
                 <div className="wol-card-play">▶</div>
                 <div className="wol-card-stars">
-                  {"★".repeat(review.rating)}
-                  <span>{"★".repeat(5 - review.rating)}</span>
+                  {"⭐".repeat(review.rating)}
+                  <span>{"⭐".repeat(5 - review.rating)}</span>
                 </div>
                 {review.isFeatured && <div className="wol-featured-badge">Featured</div>}
                 <div className="wol-duration">
@@ -237,8 +237,8 @@ export default function WallOfLovePage({ wall, reviews }: WallOfLovePageProps) {
             </div>
             <div className="wol-lightbox-copy">
               <p className="wol-lightbox-stars">
-                {"★".repeat(selectedReview.rating)}
-                <span>{"★".repeat(5 - selectedReview.rating)}</span>
+                {"⭐".repeat(selectedReview.rating)}
+                <span>{"⭐".repeat(5 - selectedReview.rating)}</span>
               </p>
               <p className="wol-lightbox-quote">&quot;{selectedReview.quote}&quot;</p>
               <div className="wol-author">

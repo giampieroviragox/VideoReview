@@ -491,7 +491,7 @@ const getDashboardDataCached = unstable_cache(
   async (userId: string, detailCampaignId?: string, light?: boolean) =>
     getDashboardDataForUserUncached(userId, { detailCampaignId, light }),
   ["dashboard-data-v1"],
-  { revalidate: 5 }
+  { revalidate: 5, tags: ["dashboard-data"] }
 );
 
 export async function getDashboardDataForUser(

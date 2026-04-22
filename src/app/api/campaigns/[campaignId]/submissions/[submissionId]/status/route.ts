@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { prisma } from "@/lib/db";
 import { queueWebhookEvent } from "@/lib/webhooks/emit";
 import { buildSubmissionWebhookPayload } from "@/lib/webhooks/payloads";
@@ -100,6 +101,11 @@ export async function PATCH(
         console.error("Webhook enqueue failed for submission.approved:", error);
       }
     }
+
+    revalidateTag("dashboard-data");
+    revalidatePath("/dashboard/campaigns");
+    revalidatePath(`/dashboard/campaigns/${campaignId}/submissions`);
+    revalidatePath(`/dashboard/campaigns/${campaignId}/submission/${submissionId}`);
 
     return NextResponse.json({ submission });
   } catch (error) {
