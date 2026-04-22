@@ -102,7 +102,7 @@ export async function PATCH(
       }
     }
 
-    revalidateTag("dashboard-data");
+    revalidateTag("dashboard-data", "max");
     revalidatePath("/dashboard/campaigns");
     revalidatePath(`/dashboard/campaigns/${campaignId}/submissions`);
     revalidatePath(`/dashboard/campaigns/${campaignId}/submission/${submissionId}`);
